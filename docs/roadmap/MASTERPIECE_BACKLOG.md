@@ -30,14 +30,14 @@ Status legend:
 |---|---|---|---|
 | A1 | 🟠 30+ Hull goldens ✅ (v0.5.0) — extend to 100+ across Hull, McDonald, Wilmott | partial | `docs/roadmap/5-prompt-sequence.md:64` |
 | A2 | 🟠 Hypothesis property suite: put-call parity ✅ (v0.5.0) — add greeks-bounds, monotonicity, analytical-vs-numerical Δ within 1e-3, IV solver round-trip within 1e-4 | partial | `docs/roadmap/5-prompt-sequence.md:61-64` |
-| A3 | 🟠 `py_vollib_vectorized` round-trip — price→σ→price on 50k Hypothesis grid, <1e-6 reconstruction | not started | research stream 2 |
-| A4 | 🟠 `QuantLib-Python` golden cross-check — `ql.AnalyticEuropeanEngine` agreement <1e-8 with our BSM | not started | research stream 2 |
-| A5 | 🟠 HV-estimator validation — generate log-normal returns with known σ, recover via CC/Parkinson/GK/YZ | not started | `docs/roadmap/5-prompt-sequence.md:67` |
+| A3 | 🟠 `py_vollib_vectorized` round-trip — price→σ→price on 50k Hypothesis grid, <1e-6 reconstruction | ✅ DONE (v0.6.0) | research stream 2 |
+| A4 | 🟠 `QuantLib-Python` golden cross-check — `ql.AnalyticEuropeanEngine` agreement <1e-8 with our BSM | ✅ DONE (v0.6.0) | research stream 2 |
+| A5 | 🟠 HV-estimator validation — generate log-normal returns with known σ, recover via CC/Parkinson/GK/YZ | ✅ DONE (v0.6.0) | `docs/roadmap/5-prompt-sequence.md:67` |
 | A6 | 🟡 Strike selection at target Δ — interpolation between brackets; real 45-DTE 16Δ chain test | not started | `docs/roadmap/5-prompt-sequence.md:68` |
 | A7 | 🟡 IVR vs IVP definitional tests + single-spike contamination robustness | not started | `docs/roadmap/5-prompt-sequence.md:69` |
 | A8 | 🟡 Date arithmetic edge cases — NYSE business days, 3rd-Friday expiries, weeklies, negative rates, very long T | not started | `docs/roadmap/5-prompt-sequence.md:70` |
 | A9 | 🟠 `mutmut` 2.5.0 mutation testing — target ≥80% kill rate on `volscope/analytics/`, CI fail <70% | not started | research stream 2 |
-| A10 | 🟠 `MATHEMATICAL_FOUNDATIONS.md` — LaTeX formulas + Hull/QuantLib citations + known approximation limits | not started | `docs/roadmap/5-prompt-sequence.md:109` |
+| A10 | 🟠 `MATHEMATICAL_FOUNDATIONS.md` — LaTeX formulas + Hull/QuantLib citations + known approximation limits | ✅ DONE (v0.6.0) | `docs/roadmap/5-prompt-sequence.md:109` |
 | A11 | 🟡 IV data-quality `valid_iv` boolean — migration + scraper rejection | not started | `docs/roadmap/5-prompt-sequence.md:28-29` |
 
 **v0.6.0 target:** A3 + A4 + A5 + A9 + A10. ~4-5 hours focused.
@@ -106,8 +106,8 @@ Status legend:
 | D3 | 🟠 Slippage calibration vs spintwig — entry/exit haircut from tastytrade published benchmarks | not started | `ROADMAP.md:12` |
 | D4 | 🟠 Survivorship-bias hardening — historical S&P 500 constituent lists (CRSP); "name was in index at time T" filter | not started | `docs/process/MASTERPLAN_TO_PERFECTION.md:230-231` |
 | D5 | 🟠 Bootstrap confidence intervals — 1000-sample BCa CI 95% on backtest Sharpe + Calmar; publish only if lower bound > 0 | not started | `docs/process/MASTERPLAN_TO_PERFECTION.md:212-226` |
-| D6 | 🔴 Backtest chain ingest — populate `bot_chain_snapshots` for 60d-1100d expiries across top-50 universe | broken | `memory/roadmaps/leaps-lab-product.md:131-142` |
-| D7 | 🔴 `sector_daily` table resurrection — currently 0 rows; `compute_sector_rotation.py` failing silently | broken | `memory/roadmaps/leaps-lab-product.md:134-136` |
+| D6 | 🔴 Backtest chain ingest — populate `bot_chain_snapshots` for 60d-1100d expiries across top-50 universe | ✅ DONE (v0.6.0) | `memory/roadmaps/leaps-lab-product.md:131-142` |
+| D7 | 🔴 `sector_daily` table resurrection — currently 0 rows; `compute_sector_rotation.py` failing silently | ✅ DONE (v0.6.0) | `memory/roadmaps/leaps-lab-product.md:134-136` |
 | D8 | 🟠 ML mean-reversion classifier — XGBoost on 15 features; reversion-within-20/40/60d labels; filters `iv_perc<25 AND score>60` | research-only | `memory/roadmaps/giga-plan.md` |
 | D9 | 🟠 Walk-forward retraining — rolling 252d train, 63d test, 63d step | not started | `memory/roadmaps/giga-plan.md` |
 | D10 | 🟠 HMM on real history — quarterly retrain, rolling 2y window, 9-feature cross-asset (SPY r, VIX, TLT, GLD, ICE HY OAS + second moments + VIX9D/VIX + VIX/VIX3M + VRP) | not started | research stream 2 |
@@ -125,7 +125,7 @@ Status legend:
 
 | ID | Item | Status | Source |
 |---|---|---|---|
-| E1 | 🟠 Branch protection on main — awaiting CI green | pending v0.5.0 J | `docs/roadmap/MASTER_PLAN.md:129` |
+| E1 | 🟠 Branch protection on main — awaiting CI green | ✅ DONE (v0.5.0) | `docs/roadmap/MASTER_PLAN.md:129` |
 | E2 | 🟠 DuckDB encrypted backup + restore drill scripts — `backup_db.py` + `restore_db.py` + monthly `make restore-drill` | pending v0.5.0 F | plan |
 | E3 | 🟠 NTP/chrony automation — `chrony` config + `chronyc tracking` health check in CI + drift-alarm > 100 ms | not started | research stream 2 |
 | E4 | 🟠 `zoneinfo` boundary enforcement — `core/time.py` UTC-only API; `pandas_market_calendars` v5+ for NYSE half-days | not started | research stream 2 |
@@ -145,8 +145,8 @@ Status legend:
 
 | ID | Item | Status | Source |
 |---|---|---|---|
-| F1 | 🟠 CLAUDE.md trim to ≤220 lines — move path-scoped content to `.claude/rules/{analytics,ui,persistence}.md` | pending v0.5.0 A | plan |
-| F2 | 🟠 MATHEMATICAL_FOUNDATIONS.md — LaTeX + Hull/QuantLib citations + known limits | not started | A10 above |
+| F1 | 🟠 CLAUDE.md trim to ≤220 lines — move path-scoped content to `.claude/rules/{analytics,ui,persistence}.md` | ✅ DONE (v0.5.0) | plan |
+| F2 | 🟠 MATHEMATICAL_FOUNDATIONS.md — LaTeX + Hull/QuantLib citations + known limits | ✅ DONE (v0.6.0) | A10 above |
 | F3 | 🟡 Onboarding tour of top-5 pages — `st.dialog` modal + driver.js overlay | not started | C3 above |
 | F4 | 🟡 In-page glossary tooltips — IV / IVR / IVP / VRP / Greeks on hover | not started | C2 above |
 | F5 | 🟡 VOLSCOPE_AGENT_HANDOFF.md refresh — add Validation Framework + Phase 2.5 readiness | not started | `docs/process/MASTERPLAN_TO_PERFECTION.md:305-307` |
@@ -165,7 +165,7 @@ Status legend:
 | G2 | 🟠 10 skills in `.claude/skills/` — BSM, IV solver, HV estimators, regime, composite, audit-chain verifier, DuckDB migrations, IBKR adapter, paper engine, kill switch | pending | plan |
 | G3 | 🟠 5 slash commands — `/morning-standup`, `/pre-merge-check`, `/full-review`, `/restore-drill`, `/audit-chain-verify` | pending | plan |
 | G4 | 🟠 5 path-scoped rules — analytics, ui, persistence, live-trading, secrets | pending | plan |
-| G5 | 🟡 **`/full-review` 5-agent panel** — parallel subprocess invocation, JSON `ReviewArtifact` schema with `schema_version`, aggregator + dedupe on (file, line, category), PASS/REVISE/REJECT loop max 3 iterations | research-only | research stream 2 |
+| G5 | 🟡 **`/full-review` 5-agent panel** — parallel subprocess invocation, JSON `ReviewArtifact` schema with `schema_version`, aggregator + dedupe on (file, line, category), PASS/REVISE/REJECT loop max 3 iterations | ✅ DONE (v0.6.0) | research stream 2 |
 
 **v0.6.0 target:** G5 (the real implementation; v0.5.0 just defines).
 

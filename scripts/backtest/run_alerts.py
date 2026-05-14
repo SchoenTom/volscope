@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 # Ensure project root is on the path when called from anywhere.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from volscope.alerts.alert_engine import AlertRule, dispatch_alert, evaluate_rules
 from volscope.data.database import VolScopeDB

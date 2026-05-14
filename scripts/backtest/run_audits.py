@@ -30,7 +30,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-ROOT       = Path(__file__).resolve().parent.parent
+ROOT       = Path(__file__).resolve().parent.parent.parent  # v0.2.0 reorg: repo root is 3 levels up
 AUDIT_DIR  = ROOT / "data" / "audit"
 AGENTS_DIR = AUDIT_DIR / "agents"
 

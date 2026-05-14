@@ -19,6 +19,66 @@ or future-agent doesn't have to spelunk through commits.
 
 ---
 
+## 2026-05-14 Wire `/full-review` as a real 5-agent panel
+
+**Choice:** Implement `volscope/orchestration/full_review.py` +
+`scripts/ops/full_review.py` to spawn 5 parallel `claude -p`
+subprocesses (signal-engineer, risk-auditor, security-reviewer,
+code-reviewer, observability-engineer), each with role-specific
+rubric + isolated context. Aggregate via dedupe-by-(file, line±3,
+category) with severity × agreement scoring.
+**Alternatives:** Sequential agent calls inside one Claude session
+(loses independence); single super-agent reviewer (less diversification);
+keep it as a spec-only command (theatre).
+**Why:** Operator's iid-ness question — without subprocess isolation
++ JSON contracts, the 7 subagent specs are decoration, not a review
+committee. Real independence rewards rediscovery and surfaces
+real disagreement.
+**Evidence:** TradingAgents v0.2.4, wshobson/agents, Paperclip
+6-agent postmortem (no direct A→B messaging — JSON via shared state).
+**Reversibility:** reversible — orchestration layer is pure Python;
+removing it leaves agent specs intact.
+**Confidence:** high.
+
+## 2026-05-14 Apply DuckDB migrations 001-005 to the live DB
+
+**Choice:** Run `apply_migrations()` against
+`~/Library/Application Support/VolScope/volscope.db` — adds 6 `bot_*`
+tables + `bot_chain_latest` view that have been defined since v0.3.0
+but never instantiated on the operator's actual DB.
+**Alternatives:** Wait for live IBKR wiring (Phase 2.5+) to apply
+migrations as part of that work.
+**Why:** Without the live tables, `bot_chain_snapshots` cannot store
+the option-chain data the paper engine needs for daily MTM. The
+operator's DB has been running with v0.2.0 schema for 2 weeks while
+v0.3.0+ test DBs had the new schema.
+**Evidence:** Phase 1 exploration confirmed `bot_chain_snapshots`
+returned ParserException ("Table not found") on the live DB.
+**Reversibility:** hard — creating tables is non-destructive but
+rolling back would require manual `DROP TABLE` + cleanup of any rows
+the paper engine writes after migration.
+**Confidence:** high.
+
+## 2026-05-14 Fix `.parent.parent` → `.parent.parent.parent` in 17 scripts
+
+**Choice:** Mass-rewrite the `_ROOT = Path(__file__).resolve().parent.parent`
+pattern across `scripts/` to use 3 levels (the post-v0.2.0-reorg correct
+path to the repo root). Used a Python regex sweep to ensure consistency.
+**Alternatives:** Switch every script to use `pip install -e .`
+exclusively (no sys.path manipulation needed).
+**Why:** The bug was introduced by the v0.2.0 script reorg that moved
+files from `scripts/foo.py` (2 levels above root) to
+`scripts/<group>/foo.py` (3 levels). 14 of 18 scripts had the broken
+2-level path, causing `ModuleNotFoundError: No module named 'volscope'`
+when invoked. The operator hit this on a fresh ZIP download from
+GitHub — exactly the "must work first-try" expectation.
+**Evidence:** Operator's bug report 2026-05-14 (16:32 ET) + my Python
+sweep that fixed 14 files.
+**Reversibility:** reversible — the pattern is mechanically detectable.
+**Confidence:** high.
+
+---
+
 ## 2026-05-14 Make memory/ chat-archive a committed folder (31 MB of RTFs)
 
 **Choice:** Commit the 31 MB of chat-dump RTFs as `memory/chat-archive/`.

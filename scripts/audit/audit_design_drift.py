@@ -27,7 +27,7 @@ import sys
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # v0.2.0 reorg: repo root is 3 levels up
 UI_DIR = ROOT / "volscope" / "ui"
 
 # Files that are allowed to use hex literals (Plotly-driven charts).

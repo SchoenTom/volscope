@@ -66,15 +66,43 @@ every script + how they chain together — see
 
 ## Quick start
 
+Works on any Mac / Linux with Python 3.11+ pre-installed. Pick ONE
+path — they're equivalent:
+
+**Path A — pip (always works):**
+
 ```bash
-git clone <your-fork> volscope && cd volscope
-uv sync --all-extras
-cp .env.example .env                   # fill in IBKR / Finnhub / Telegram keys
-uv run pre-commit install
+git clone https://github.com/SchoenTom/volscope.git && cd volscope
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -e .                       # makes "import volscope" work everywhere
+cp .env.example .env                   # then open .env and fill in keys
 make quickstart                        # seeds 8 tickers + launches Streamlit
 ```
 
-Open http://localhost:8501.
+**Path B — uv (faster, requires uv installed):**
+
+```bash
+# Install uv first: curl -LsSf https://astral.sh/uv/install.sh | sh
+git clone https://github.com/SchoenTom/volscope.git && cd volscope
+uv sync --all-extras
+uv pip install -e .
+cp .env.example .env                   # then open .env and fill in keys
+uv run pre-commit install
+make quickstart
+```
+
+Then open **http://localhost:8501**.
+
+**Downloading the repo as a ZIP from GitHub?** Same as Path A, but
+skip the `git clone` line (you already have the unpacked folder).
+`cd` into it before the `python3 -m venv` step.
+
+**Note on the `.env` step:** the line is `cp .env.example .env` — the
+`# fill in keys` is just a comment for the README; do not type it.
+After the copy succeeds, open `.env` in your editor and fill in the
+keys (or leave them blank for read-only research mode).
 
 ## Architecture
 

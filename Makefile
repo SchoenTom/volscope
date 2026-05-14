@@ -22,6 +22,7 @@ kill-stale: unlock
 # Total runtime on a fresh checkout: ~30 seconds.
 quickstart:
 	pip install -q -r requirements.txt
+	pip install -q -e .                                    # makes volscope importable from anywhere
 	@python scripts/ops/release_db_lock.py --force
 	python scripts/ops/seed_database.py --tickers SPY,QQQ,AAPL,NVDA,TSLA,META,GLD,TLT
 	$(MAKE) run
@@ -29,6 +30,7 @@ quickstart:
 # ── Individual stages ───────────────────────────────────────────────
 setup:
 	pip install -r requirements.txt
+	pip install -e .                                       # editable install: scripts/ can `import volscope`
 
 test:
 	python -m pytest tests/ -v --tb=short
@@ -254,3 +256,19 @@ pre-merge-check:
 		(.venv/bin/python -m scripts.audit.verify_chain 2>&1 || echo "(no DB yet — OK on fresh)")
 	@echo "── risk-thresholds unchanged ──" && \
 		.venv/bin/python scripts/audit/check_risk_thresholds_unchanged.py
+
+# ── v0.6.0 data foundation + math gate + agent orchestration ──
+migrate:
+	@.venv/bin/python -m scripts.ops.apply_migrations
+
+migrate-dry-run:
+	@.venv/bin/python -m scripts.ops.apply_migrations --dry-run
+
+scrape-chains:
+	@.venv/bin/python -m scripts.scrape.scrape_chains
+
+full-review:
+	@.venv/bin/python -m scripts.ops.full_review $(if $(REF),--ref $(REF))
+
+compute-sectors:
+	@.venv/bin/python -m scripts.compute.compute_sector_rotation

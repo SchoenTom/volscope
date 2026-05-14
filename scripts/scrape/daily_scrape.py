@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from volscope.analytics.historical_vol import (  # noqa: E402
     hv_close_to_close,

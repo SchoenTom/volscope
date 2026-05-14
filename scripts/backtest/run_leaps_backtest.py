@@ -26,7 +26,7 @@ from datetime import date
 from pathlib import Path
 
 # Allow running from project root without an install.
-_ROOT = Path(__file__).resolve().parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent  # v0.2.0 reorg: repo root is 3 levels up
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 

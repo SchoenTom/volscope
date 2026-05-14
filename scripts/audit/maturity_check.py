@@ -30,7 +30,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # v0.2.0 reorg: repo root is 3 levels up
 sys.path.insert(0, str(ROOT))
 
 DATA_DIR    = ROOT / "data"

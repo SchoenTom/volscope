@@ -66,15 +66,33 @@ After all 5 finish:
 - REJECT → operator stops, opens an ADR or post-mortem before
   proceeding.
 
-## Implementation
+## Implementation (v0.6.0 — WIRED)
 
-(v0.6.0 scope per `docs/roadmap/MASTERPIECE_BACKLOG.md` G5)
-v0.5.0 just defines the command + agents; v0.6.0 wires the
-subprocess-based runner that spawns 5 agents in parallel via
-`claude --output-format json -p ...` and aggregates the JSON.
+Orchestration: `volscope/orchestration/full_review.py`.
+CLI: `scripts/ops/full_review.py`.
 
-Until v0.6.0: invoke each agent manually with the `Agent` tool +
-`subagent_type=<name>`; copy-paste their verdicts; eyeball the dedupe.
+Invoke:
+
+```bash
+make full-review                       # diff = HEAD~1..HEAD
+make full-review REF=main..feat/foo    # specific range
+python -m scripts.ops.full_review --mock    # no API calls (CI default)
+```
+
+Mock mode runs when the `claude` CLI is not in PATH (CI). Real mode
+spawns 5 parallel `claude --output-format json -p <rubric>` subprocesses
+— full process isolation, role-specific rubrics from the agent
+frontmatter, JSON-only output. Independence by construction.
+
+Aggregator clusters findings by `(file, line_range±3, category)`,
+severity merged as MAX, scored by `severity_weight × agreement_count`.
+Markdown report at `docs/reviews/<YYYY-MM-DD-HHMM>-<ref>.md`.
+
+Exit code: PASS=0, REVISE=1, REJECT=2.
+
+Tests: `tests/test_full_review.py` covers dedupe + severity merge +
+verdict resolution + iteration cap + JSON round-trip + markdown
+rendering. **12 tests, all green.**
 
 ## Anti-patterns to avoid
 
