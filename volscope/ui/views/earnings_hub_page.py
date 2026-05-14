@@ -345,10 +345,19 @@ def _apply_filters(events, sector_filter, watchlist_only, db) -> list[dict]:
 
 def _enrich(db, ev: dict) -> dict:
     """Compute the 4 headline analytics for one event. Cached at the
-    per-(ticker, date) level inside the called functions."""
+    per-(ticker, date) level inside the called functions.
+
+    Note on the date normalisation: ``pd.Timestamp`` is a *subclass*
+    of ``datetime.date`` (via ``datetime.datetime``), so a naive
+    ``isinstance(x, date)`` check returns True even for Timestamps —
+    they then leak into downstream date-arithmetic (``ts - date``
+    is unsupported and crashes ``_render_week_grid``). We therefore
+    normalise unconditionally via ``pd.Timestamp(...).date()`` which
+    accepts every shape (Timestamp, datetime, date, ISO string) and
+    always emits a plain ``datetime.date``.
+    """
     ticker = str(ev["ticker"])
-    er_date = pd.to_datetime(ev["earnings_date"]).date() \
-              if not isinstance(ev["earnings_date"], date) else ev["earnings_date"]
+    er_date = pd.Timestamp(ev["earnings_date"]).date()
 
     out = dict(ev)
     out["earnings_date"] = er_date
@@ -427,7 +436,14 @@ def _render_week_grid(db, week_start: date, events: list[dict]) -> None:
         i: {b: [] for b in _BAND_ORDER} for i in range(5)
     }
     for ev in events:
-        d = ev["earnings_date"]
+        # Defensive normalisation: ``earnings_date`` should already be a
+        # plain ``date`` after ``_enrich``, but ``pd.Timestamp`` *is* a
+        # subclass of ``datetime.date`` and slips through naive isinstance
+        # checks. ``Timestamp - date`` raises TypeError, so we coerce here
+        # too — cheap and prevents Earnings Hub from crashing on any
+        # future code path that bypasses ``_enrich``.
+        raw_d = ev["earnings_date"]
+        d = pd.Timestamp(raw_d).date() if hasattr(raw_d, "to_pydatetime") else raw_d
         idx = (d - week_start).days
         if idx < 0 or idx > 4:
             continue
