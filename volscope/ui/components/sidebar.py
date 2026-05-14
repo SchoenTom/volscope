@@ -109,20 +109,22 @@ def _render_ticker_picker(st, db) -> str:
         'letter-spacing:0.02em;">Add symbol</div>',
     )
     with st.form("add_ticker_form", clear_on_submit=True):
-        c1, c2 = st.columns([3, 1])
-        with c1:
-            raw = st.text_input(
-                "Symbol",
-                placeholder="z.B. PLTR oder ^VIX",
-                label_visibility="collapsed",
-                help=(
-                    "Single symbol per add. Digit-only codes auto-resolve to "
-                    "HK / TW / Shanghai. Alpha codes that fail bare also try "
-                    "London / XETRA / Paris."
-                ),
-            )
-        with c2:
-            submitted = st.form_submit_button("+ ADD", use_container_width=True)
+        # Stacked layout — input on top at full width, button below
+        # at full width. Prior side-by-side split (st.columns([3, 1]))
+        # crammed the placeholder against the button in a ~200px
+        # sidebar; vertical stacking gives both elements room to
+        # breathe and reads cleanly on narrow viewports.
+        raw = st.text_input(
+            "Symbol",
+            placeholder="z.B. PLTR oder ^VIX",
+            label_visibility="collapsed",
+            help=(
+                "Single symbol per add. Digit-only codes auto-resolve to "
+                "HK / TW / Shanghai. Alpha codes that fail bare also try "
+                "London / XETRA / Paris."
+            ),
+        )
+        submitted = st.form_submit_button("+ ADD", use_container_width=True)
         if submitted and raw:
             with st.spinner(f"Resolving {raw.strip().upper()}..."):
                 result = resolve_and_ingest(db, raw)
