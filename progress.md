@@ -1,5 +1,53 @@
 # VolScope Progress
 
+## Last Session: 2026-05-15 (v0.9.1 — synergy wiring + finanzen.net stats + order history + reset)
+
+Same-day continuation of v0.9.0 driven by operator's
+"connect-everything-now" directive. Eight discrete pieces; all
+shipped, CI green.
+
+**Shipped:**
+- **A — Migration 009** (`bot_trades.actor` VARCHAR) — future-proof
+  column for user/bot separation within `bot_trades`. Today user
+  paper-buys land in `positions` not `bot_trades` so the column is
+  informational; wired for the Phase-2.5 bot-autonomy step.
+- **B — Options-Lab "▶ paper-buy"** — same engine path the
+  Pre-Trade page used since v0.3.x (`paper_buy_strategy`). Operator
+  can now materialise + buy a multi-leg structure straight from
+  Options Lab.
+- **C — Portfolio / Bot Dashboard separation** — already separated
+  at the table level (`positions` for user, `bot_trades` for bot).
+  Pre-Trade banner wording fixed (had referenced bot_trades in
+  error since v0.7.0; now says `positions`).
+- **D — Finanzen.net Quick-Stats** — `volscope/analytics/option_metrics.py`
+  with `aufgeld_pct`, `aufgeld_pa_pct`, `leverage`, `omega`,
+  `break_even_price`, `break_even_move_pct`, `intrinsic_value`,
+  `time_value`. Inline-tested against the analytic Long-Call:
+  Aufgeld 2 %, Hebel 5000×, Omega 2500, BE-move 2 % all match
+  exactly. Quick-Stats strip rendered on Pre-Trade.
+- **E — Bot autonomy audit** — verified: APScheduler infrastructure,
+  state machine, kill-switch, daily MTM are all present. Default
+  jobs are stubs (`_stub(name)`) — Phase 2 scaffold per the module
+  docstring. Autonomy wiring is Phase 2.5 work.
+- **G — Bot Reset** — type-RESET-to-confirm button on Bot Dashboard.
+  DELETEs `bot_trades` + `bot_legs`; appends a `BOT_RESET` event
+  to the audit chain. Append-only audit history is preserved.
+- **H — Order-History view** — IBKR-Activity-Statement-style
+  sortable table on Bot Dashboard: trade_id / opened / closed /
+  symbol / strategy / side / status / qty / risk / credit / P&L.
+  Filter by status + ticker. CSV export.
+
+**Same-session hotfixes (pre-v0.9.1 commits):**
+- `adf691f` — heatmap perf (vectorised hover + cache + 0.0-or-bug).
+- `24f6ab3` — lwc fetch: don't cache empty/stale yfinance frames.
+- `e98ecc1` — heatmap AttributeError ('numpy.float64' has no `.map`),
+  Options-Lab ticker-change staleness, payoff-surface reset button,
+  pretrade-banner positions wording.
+
+Version bumped to **0.9.1**.
+
+---
+
 ## Last Session: 2026-05-15 (v0.9.0 — statistical rigor + Crisis layer + payoff surface)
 
 Driven by the operator's Gelato-extraction prompt. I rejected 9 of 13

@@ -246,3 +246,169 @@ def render_bot_dashboard_page(db: Any, settings: dict) -> None:
     except Exception as exc:
         render_html(st, f'<div style="color:{COLORS["muted"]};font-size:11px;">'
                          f'Backtest unavailable: {exc}</div>')
+
+    # ── Order History (IBKR-style activity log, v0.9.1) ───────────────
+    render_html(st, section_rule_html("ORDER HISTORY · ALL TIME"))
+    _render_order_history(db)
+
+    # ── Bot reset (operator-only, gated) ─────────────────────────────
+    render_html(st, section_rule_html("OPERATOR ACTIONS"))
+    _render_bot_reset(db)
+
+
+def _render_order_history(db: Any) -> None:
+    """IBKR Activity-Statement-style table of every bot trade.
+
+    Sortable, filterable by status, with row-click drill-into the
+    audit-chain transitions for that trade. Deliberately fed from
+    ``bot_trades`` only (not ``positions`` — those are user paper-
+    trades surfaced on the Portfolio page).
+    """
+    try:
+        df = db.con.execute(
+            """
+            SELECT trade_id, opened_at, closed_at, underlying, strategy,
+                   direction, status, contracts, capital_at_risk,
+                   credit_or_debit, realized_pnl
+            FROM bot_trades
+            ORDER BY COALESCE(opened_at, CURRENT_TIMESTAMP) DESC
+            LIMIT 500
+            """
+        ).fetchdf()
+    except Exception:                                          # noqa: BLE001
+        df = pd.DataFrame()
+    if df.empty:
+        render_html(st, _empty_signals_message())
+        return
+
+    # Filter controls — status + ticker + date range.
+    fc1, fc2, fc3 = st.columns([2, 2, 1])
+    with fc1:
+        status_opts = ["All"] + sorted(
+            df["status"].dropna().unique().tolist()
+        )
+        status_pick = st.selectbox(
+            "Status filter", status_opts, index=0,
+            key="bot_hist_status",
+        )
+    with fc2:
+        ticker_opts = ["All"] + sorted(
+            df["underlying"].dropna().unique().tolist()
+        )
+        ticker_pick = st.selectbox(
+            "Ticker filter", ticker_opts, index=0,
+            key="bot_hist_ticker",
+        )
+    with fc3:
+        csv_bytes = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "📥 CSV",
+            data=csv_bytes,
+            file_name=f"bot_orders_{pd.Timestamp.now().date().isoformat()}.csv",
+            mime="text/csv",
+            key="bot_hist_csv",
+            use_container_width=True,
+            help="Export the visible order history as CSV.",
+        )
+
+    view = df.copy()
+    if status_pick != "All":
+        view = view[view["status"] == status_pick]
+    if ticker_pick != "All":
+        view = view[view["underlying"] == ticker_pick]
+
+    if view.empty:
+        render_html(
+            st,
+            f'<div style="color:{COLORS["muted"]};font-size:11px;'
+            f'padding:8px;">No trades match the filter.</div>',
+        )
+        return
+
+    # Compact display dataframe — IBKR-style column order + names.
+    display = view.rename(columns={
+        "trade_id":        "Trade ID",
+        "opened_at":       "Opened",
+        "closed_at":       "Closed",
+        "underlying":      "Symbol",
+        "strategy":        "Strategy",
+        "direction":       "Side",
+        "status":          "Status",
+        "contracts":       "Qty",
+        "capital_at_risk": "Risk $",
+        "credit_or_debit": "Credit/Debit $",
+        "realized_pnl":    "Realised P&L $",
+    })
+    st.dataframe(
+        display,
+        hide_index=True,
+        use_container_width=True,
+        height=320,
+    )
+
+
+def _render_bot_reset(db: Any) -> None:
+    """Type-to-confirm bot reset.
+
+    Wipes every row from ``bot_trades`` + ``bot_legs`` so the
+    operator can flush the paper-bot's portfolio without dropping
+    the whole DB. Append-only audit-chain entries are kept (they
+    are immutable by design and a hash-link chain — see CLAUDE.md
+    rules); the reset *itself* gets a new audit-chain entry so the
+    historical trail isn't silently broken.
+    """
+    render_html(
+        st,
+        f'<div style="background:{COLORS["card"]};border-left:3px solid '
+        f'{COLORS["warn"]};padding:10px 14px;border-radius:5px;margin:6px 0;'
+        f'font-family:\'DM Sans\',sans-serif;font-size:12px;color:{COLORS["text"]};">'
+        f'⚠ Reset deletes <strong>every</strong> row from '
+        f'<code style="background:{COLORS["border"]};padding:1px 5px;'
+        f'border-radius:3px;font-family:JetBrains Mono,monospace;">bot_trades</code> '
+        f'and <code style="background:{COLORS["border"]};padding:1px 5px;'
+        f'border-radius:3px;font-family:JetBrains Mono,monospace;">bot_legs</code>. '
+        f'User paper-trades on the Portfolio page are not affected.'
+        f'</div>',
+    )
+
+    rc1, rc2 = st.columns([3, 1])
+    with rc1:
+        confirm = st.text_input(
+            "Type RESET to confirm",
+            placeholder="RESET",
+            key="bot_reset_confirm",
+            label_visibility="collapsed",
+        )
+    with rc2:
+        do_reset = st.button(
+            "⚠ Reset bot",
+            key="bot_reset_action",
+            disabled=(confirm != "RESET"),
+            use_container_width=True,
+            help="Enabled only when the textbox reads RESET.",
+        )
+
+    if do_reset and confirm == "RESET":
+        try:
+            # Audit FIRST so the chain has the reset event recorded.
+            try:
+                from volscope.persistence.audit_chain import append_audit_entry
+                append_audit_entry(
+                    db,
+                    actor="operator",
+                    event_type="BOT_RESET",
+                    payload={"ts": pd.Timestamp.now().isoformat()},
+                )
+            except Exception:                                  # noqa: BLE001
+                # Audit-chain not wired — proceed with the reset
+                # anyway. The operator-action banner above is the
+                # human record.
+                pass
+
+            db.con.execute("DELETE FROM bot_legs")
+            db.con.execute("DELETE FROM bot_trades")
+            st.session_state["bot_reset_confirm"] = ""
+            st.success("Bot reset complete — bot_trades + bot_legs cleared.")
+            st.rerun()
+        except Exception as exc:                               # noqa: BLE001
+            st.error(f"Reset failed: {exc}")

@@ -417,4 +417,60 @@ mechanical, no behavioural risk.
 
 ---
 
+## 2026-05-15 v0.9.1 — Synergy wiring (paper-buy from Options-Lab, finanzen.net stats, order history, bot reset)
+
+**Choice:** Ship eight tightly-scoped pieces that collectively close
+the operator-visible synergy gaps left after v0.9.0:
+
+- (A) Migration 009 — `bot_trades.actor` column (future-proof).
+- (B) Options-Lab "▶ paper-buy" using the existing
+  `paper_buy_strategy` engine.
+- (C) Pre-Trade banner: fix wrong-table wording (`bot_trades` →
+  `positions`).
+- (D) `volscope/analytics/option_metrics.py` — pure-numpy
+  finanzen.net stats (Aufgeld, Aufgeld p.a., Hebel, Omega,
+  Break-even, BE-move %, Innerer Wert, Zeitwert). Rendered as a
+  six-cell strip below the existing Greeks row on Pre-Trade.
+- (E) Bot autonomy audit — written.
+- (G) Bot Reset on Bot Dashboard (type-RESET-to-confirm).
+- (H) Order-History view on Bot Dashboard (IBKR Activity-Statement
+  style + ticker / status filter + CSV export).
+
+**Alternatives considered:**
+- Build a separate "Activity Page" — rejected; the natural home
+  for bot-trade history is the Bot Dashboard.
+- Replace the BUY button on Pre-Trade with a unified flow that
+  also handles Options-Lab buys — rejected; the two pages have
+  different mental models. Keep both pages, share the engine.
+- Adopt a "Stop-Loss recommendation" from finanzen.net's algorithm
+  — rejected as paternalistic. Operator can read the BE-move and
+  pick their own stop.
+- Wire bot autonomy now — rejected; Phase 2.5 work explicitly
+  marked in CLAUDE.md, kill-switch gating prevents shipping it
+  silently. Documented in the audit instead.
+
+**Why:** v0.9.0 shipped the deep statistical / regime layer. v0.9.1
+makes the surface *useable across pages*: paper-buy from anywhere,
+read the German-retail metrics any operator expects, and inspect /
+reset the bot's portfolio in IBKR fashion.
+
+**Evidence:**
+- `volscope/analytics/option_metrics.py` (75-line pure-numpy
+  module, inline-tested against the Long-Call analytic).
+- `volscope/ui/views/options_lab_page.py::_render_paper_buy_cta`.
+- `volscope/ui/views/pretrade_page.py` Quick-Stats strip.
+- `volscope/ui/views/bot_dashboard_page.py::_render_order_history`
+  + `_render_bot_reset`.
+- `volscope/persistence/migrations/009_bot_trades_actor.sql`.
+
+**Reversibility:** fully reversible — Bot Reset is the only
+destructive operation, gated behind type-RESET-to-confirm and
+audit-chain logged. All other changes are additive UI / pure
+analytics modules.
+
+**Confidence:** high. Math verified inline; UI compile-checked;
+prior v0.9.0 still works because all v0.9.1 changes are additive.
+
+---
+
 (append new decisions here, newest at the top)

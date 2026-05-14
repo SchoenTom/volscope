@@ -413,6 +413,30 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
     _kpi(cols[2], "ν Vega",    f"${vega:.2f} /1% IV")
     _kpi(cols[3], "Θ Theta",   f"${theta:.2f} /day")
 
+    # ── Finanzen.net-style Quick-Stats (v0.9.1) ──────────────────────
+    # Operator-asked: the German-retail metric family that BSM
+    # Greeks don't directly carry — Aufgeld, Hebel, Omega, BE-move.
+    # Pure-numpy math via ``volscope.analytics.option_metrics``.
+    from volscope.analytics.option_metrics import compute_all
+    qs = compute_all(
+        spot=float(spot), strike=float(strike), premium=float(entry_price),
+        option_type=option_type, delta=float(delta), dte=int(dte),
+        ratio=100.0,
+    )
+    qs_cols = st.columns(6)
+    _kpi(qs_cols[0], "Aufgeld",      f"{qs.aufgeld:+.2f}%",
+          help_text="Premium over intrinsic — % move from spot needed to break even at expiry.")
+    _kpi(qs_cols[1], "Aufgeld p.a.", f"{qs.aufgeld_pa:+.1f}%",
+          help_text="Annualised Aufgeld — same metric scaled to one year for cross-tenor comparison.")
+    _kpi(qs_cols[2], "Hebel",        f"{qs.leverage:.1f}×",
+          help_text="(Spot / Premium) × 100. Raw leverage; Omega is the effective P&L leverage.")
+    _kpi(qs_cols[3], "Omega",        f"{qs.omega:.2f}",
+          help_text="Effective leverage = Hebel × |Δ|. ~1% spot move = Omega% premium move.")
+    _kpi(qs_cols[4], "Break-even",   f"${qs.break_even:,.2f}",
+          help_text="Spot price at expiry where the trade is flat.")
+    _kpi(qs_cols[5], "BE move",      f"{qs.break_even_pct:+.2f}%",
+          help_text="% move from current spot to the break-even price.")
+
     # ── P&L curve across IV scenarios ────────────────────────────────
     iv_scenarios_pct = np.linspace(max(2.0, iv_used - 20.0), iv_used + 20.0, 41)
     pnl_per_contract = []
