@@ -207,10 +207,25 @@ def _render_ranking_scrollable(tab, spec: RankingSpec, df: pd.DataFrame) -> None
             else "—"
         )
 
-        # Subtitle — the second line of context
+        # Subtitle — the second line of context.
+        # Operator-asked enrichment (v0.7.x): show HV + the matched
+        # IV-HV spread alongside IV so the card carries the headline
+        # cheap/rich signal at a glance, not just IV.
         ctx_parts = []
-        if pd.notna(row.get("iv_30d")):
-            ctx_parts.append(f"iv {float(row['iv_30d']):.1f}%")
+        iv_val = float(row["iv_30d"]) if pd.notna(row.get("iv_30d")) else None
+        # Prefer matched-horizon HV (Yang-Zhang 30d, v0.7.1); fall
+        # back to legacy CC HV20 if not yet computed.
+        hv_val = (
+            float(row["hv_yz_30d"]) if pd.notna(row.get("hv_yz_30d"))
+            else float(row["hv_20d"]) if pd.notna(row.get("hv_20d"))
+            else None
+        )
+        if iv_val is not None:
+            ctx_parts.append(f"IV {iv_val:.1f}%")
+        if hv_val is not None:
+            ctx_parts.append(f"HV {hv_val:.1f}%")
+        if iv_val is not None and hv_val is not None:
+            ctx_parts.append(f"Δ {iv_val - hv_val:+.1f}")
         if spec.sort_key != "iv_percentile" and pd.notna(row.get("iv_percentile")):
             ctx_parts.append(f"perc {float(row['iv_percentile']):.0f}")
         if spec.sort_key != "iv_change_1d" and pd.notna(row.get("iv_change_1d")):
