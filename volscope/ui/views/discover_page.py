@@ -25,7 +25,7 @@ from volscope.analytics.opportunity import (
     find_richest_premium,
 )
 from volscope.data.ticker_resolver import resolve_and_ingest
-from volscope.ui.components.html_utils import render_html
+from volscope.ui.components.html_utils import page_banner_html, render_html
 from volscope.ui.styles.theme import COLORS
 from volscope.utils.safe import safe_num, safe_str
 
@@ -741,6 +741,14 @@ def render_discover_page(db, settings: dict | None = None) -> None:
     from volscope.ui.components.auto_refresh import auto_refresh_toggle
 
     st.markdown("## ◈ Discover")
+    render_html(
+        st,
+        page_banner_html(
+            title="Discover",
+            what="ranked opportunity board across the universe",
+            when="idea-generation mode",
+        ),
+    )
     st.caption("Where volatility is cheap, rich, moving, or crowded — right now.")
     # v3: explicit data-freshness bar + 1-click refresh
     from volscope.ui.components.data_freshness_bar import render_data_freshness_bar

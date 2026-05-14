@@ -1,5 +1,51 @@
 # VolScope Progress
 
+## Last Session: 2026-05-14 (v0.6.2 — performance + design polish)
+
+On top of v0.6.1 (IV-robustness subsystem) we shipped seven coordinated
+polish items so the surface feels paid-product, not lab-notebook:
+
+- **A1 — cache `compute_sector_aggregates`.** New
+  `compute_sector_aggregates_cached(cache_key, full_df)` wrapper in
+  `volscope/ui/components/cached_data.py`, decorated with
+  `@st.cache_data(ttl=600)`. Wired into Rotation (two call sites) +
+  Flow. Eliminates ~100-200 ms pandas groupby per render on three
+  sector pages. Cache invalidates on a fresh scrape via
+  `make_cache_key(db)` (last-scrape-date).
+- **A2 — read-only DuckDB in the UI.** `VolScopeDB(read_only=True)`
+  ctor flag now opens via `duckdb.connect(path, read_only=True)`,
+  bypasses schema bootstrap + legacy migration. `get_db()` in
+  `volscope/ui/app.py` prefers read-only with a writable bootstrap
+  fallback on the last retry (covers fresh-checkout case). Removes a
+  whole class of UI ↔ scheduler write-lock contention.
+- **A3 — `@st.fragment(run_every="30s")` on Bot Dashboard.** Live
+  signals, open trades, and equity curve panels lifted into three
+  fragment helpers in `volscope/ui/views/bot_dashboard_page.py`. Each
+  polls its own DuckDB query in isolation; the rest of the page no
+  longer re-renders every 30s.
+- **B1 — centralised glossary.** `volscope/ui/glossary.py` defines
+  ~41 terms (IV / IVR / IVP / VRP / Greeks / DTE / regime /
+  signal-engine vocab / quality-score / contamination / structural
+  break / bot-specific) + a `tooltip()` helper. Six unit tests cover
+  emptiness, canonical lookup, missing-term fallback, no duplicate
+  definitions, core-term presence, and absence of raw HTML tags.
+- **B2 — `page_banner_html` orientation banner.** New helper in
+  `volscope/ui/components/html_utils.py`; wired into the 8 top
+  pages (Command Center, Discover, Signals, Bot, Scope, Earnings
+  Hub, LEAPS Lab, Pre-Trade). Each opens with "what · when" so a
+  fresh operator gets purpose + timing in two lines.
+- **B3 — version + commit-SHA footer.** `volscope/__init__.py`
+  exposes `__version__ = "0.6.2"` and `__commit__` (short HEAD SHA,
+  read once at import). Fixed-position footer rendered after
+  `_render_page_safely()` in `volscope/ui/app.py` — bottom-right,
+  JetBrains Mono 9 px, opacity 0.55, pointer-events:none.
+
+Tests: `tests/test_glossary.py` 6/6 green. Decisions logged at
+`docs/decisions.md` as "2026-05-14 v0.6.2 — Performance + design
+polish wave".
+
+---
+
 ## Last Session: 2026-05-14 (v0.6.0 — data foundation + math gate + agent orchestration)
 
 Today's wave on top of v0.5.0:

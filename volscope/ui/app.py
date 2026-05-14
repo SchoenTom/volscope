@@ -146,13 +146,31 @@ def get_db() -> VolScopeDB:
     friendly card instead of a raw traceback.
     """
     import time
+    from pathlib import Path
 
+    from volscope.config import DB_PATH
+
+    # Prefer read-only — eliminates writer contention with the scheduler.
+    # On a fresh checkout the DB file may not exist yet; in that case open
+    # writable once to bootstrap the schema, then a subsequent rerun will
+    # successfully open read-only.
+    db_exists = Path(DB_PATH).exists()
     last_exc: Exception | None = None
     for attempt in range(5):
         try:
+            if db_exists:
+                return VolScopeDB(read_only=True)
             return VolScopeDB()
         except Exception as exc:  # duckdb.IOException subclasses Exception
             last_exc = exc
+            # Read-only open can fail if file briefly missing or another
+            # process holds an exclusive lock during a write. Fall back to
+            # writable on the last attempt so first-launch bootstrap works.
+            if attempt == 4 and db_exists:
+                try:
+                    return VolScopeDB()
+                except Exception as exc2:
+                    last_exc = exc2
             time.sleep(0.4 * (attempt + 1))
     raise last_exc  # type: ignore[misc]
 
@@ -230,6 +248,27 @@ def main() -> None:
     # Lazy + isolated: any single page failure no longer kills the app.
     target = page if page in _PAGE_REGISTRY else "Discover"
     _render_page_safely(target, db, settings)
+
+    # Footer — version + commit SHA. Bottom-right, low-emphasis. Lets the
+    # operator confirm at a glance which build is running.
+    _render_footer()
+
+
+def _render_footer() -> None:
+    """Render the fixed bottom-right version + commit-SHA badge."""
+    from volscope import __commit__, __version__
+    from volscope.ui.components.html_utils import render_html
+    from volscope.ui.styles.theme import COLORS
+
+    html = (
+        f'<div style="position:fixed;bottom:6px;right:10px;'
+        f'font-family:\'JetBrains Mono\', monospace;font-size:9px;'
+        f'color:{COLORS.get("label", "#424666")};opacity:0.55;'
+        f'pointer-events:none;z-index:9999;">'
+        f'VolScope v{__version__} · {__commit__}'
+        f'</div>'
+    )
+    render_html(st, html)
 
 
 if __name__ == "__main__":

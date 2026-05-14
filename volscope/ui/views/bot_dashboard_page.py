@@ -26,7 +26,7 @@ import pandas as pd
 import streamlit as st
 
 from volscope.ui.components.html_utils import (
-    kpi_grid_html, render_html, section_rule_html,
+    kpi_grid_html, page_banner_html, render_html, section_rule_html,
 )
 from volscope.ui.styles.theme import COLORS
 
@@ -78,8 +78,72 @@ def _regime_card(p_calm: float | None) -> str:
     )
 
 
+@st.fragment(run_every="30s")
+def _live_signals_fragment(db: Any) -> None:
+    """Auto-refreshes every 30s without re-running the whole page.
+
+    Streamlit fragments rerun in isolation — the rest of the dashboard
+    stays put while this panel polls ``bot_signals_log``. Acceptable
+    poll cost (one tiny indexed SELECT) for the operator-felt
+    "this feels live during market hours" win.
+    """
+    try:
+        signals_df = db.con.execute(
+            "SELECT snapshot_date, underlying, direction, composite_score, "
+            "decision FROM bot_signals_log "
+            "ORDER BY snapshot_date DESC, composite_score DESC LIMIT 50"
+        ).fetchdf()
+    except Exception:
+        signals_df = pd.DataFrame()
+    if signals_df.empty:
+        render_html(st, _empty_signals_message())
+    else:
+        st.dataframe(signals_df, hide_index=True, use_container_width=True)
+
+
+@st.fragment(run_every="30s")
+def _open_trades_fragment(db: Any) -> None:
+    """Open paper-trades panel — refreshes independently every 30s."""
+    try:
+        open_df = db.con.execute(
+            "SELECT trade_id, strategy, underlying, direction, status, "
+            "opened_at, capital_at_risk FROM bot_trades "
+            "WHERE status NOT IN ('CLOSED','EXPIRED','ABANDONED','ASSIGNED') "
+            "ORDER BY opened_at DESC"
+        ).fetchdf()
+    except Exception:
+        open_df = pd.DataFrame()
+    if open_df.empty:
+        render_html(st, _empty_signals_message())
+    else:
+        st.dataframe(open_df, hide_index=True, use_container_width=True)
+
+
+@st.fragment(run_every="30s")
+def _equity_curve_fragment(db: Any) -> None:
+    """NLV equity curve — refreshes independently every 30s."""
+    try:
+        pnl_df = db.con.execute(
+            "SELECT date, nlv FROM bot_pnl_daily ORDER BY date"
+        ).fetchdf()
+    except Exception:
+        pnl_df = pd.DataFrame()
+    if pnl_df.empty:
+        render_html(st, _empty_signals_message())
+    else:
+        st.line_chart(pnl_df.set_index("date")["nlv"], height=240)
+
+
 def render_bot_dashboard_page(db: Any, settings: dict) -> None:
     """Render the operator-facing Bot Dashboard."""
+    render_html(
+        st,
+        page_banner_html(
+            title="Bot Dashboard",
+            what="autonomous paper engine — operator read-only view",
+            when="twice/day max during market hours",
+        ),
+    )
     render_html(
         st,
         f"""
@@ -148,47 +212,15 @@ def render_bot_dashboard_page(db: Any, settings: dict) -> None:
 
     # ── Live signals table ───────────────────────────────────────────
     render_html(st, section_rule_html("LIVE SIGNALS"))
-    try:
-        signals_df = db.con.execute(
-            "SELECT snapshot_date, underlying, direction, composite_score, "
-            "decision FROM bot_signals_log "
-            "ORDER BY snapshot_date DESC, composite_score DESC LIMIT 50"
-        ).fetchdf()
-    except Exception:
-        signals_df = pd.DataFrame()
-    if signals_df.empty:
-        render_html(st, _empty_signals_message())
-    else:
-        st.dataframe(signals_df, hide_index=True, use_container_width=True)
+    _live_signals_fragment(db)
 
     # ── Open trades ──────────────────────────────────────────────────
     render_html(st, section_rule_html("OPEN TRADES"))
-    try:
-        open_df = db.con.execute(
-            "SELECT trade_id, strategy, underlying, direction, status, "
-            "opened_at, capital_at_risk FROM bot_trades "
-            "WHERE status NOT IN ('CLOSED','EXPIRED','ABANDONED','ASSIGNED') "
-            "ORDER BY opened_at DESC"
-        ).fetchdf()
-    except Exception:
-        open_df = pd.DataFrame()
-    if open_df.empty:
-        render_html(st, _empty_signals_message())
-    else:
-        st.dataframe(open_df, hide_index=True, use_container_width=True)
+    _open_trades_fragment(db)
 
     # ── P&L equity curve ─────────────────────────────────────────────
     render_html(st, section_rule_html("EQUITY CURVE"))
-    try:
-        pnl_df = db.con.execute(
-            "SELECT date, nlv FROM bot_pnl_daily ORDER BY date"
-        ).fetchdf()
-    except Exception:
-        pnl_df = pd.DataFrame()
-    if pnl_df.empty:
-        render_html(st, _empty_signals_message())
-    else:
-        st.line_chart(pnl_df.set_index("date")["nlv"], height=240)
+    _equity_curve_fragment(db)
 
     # ── Backtest / Closed-trade performance ──────────────────────────
     render_html(st, section_rule_html("BACKTEST · CLOSED-TRADE PERFORMANCE"))

@@ -55,3 +55,25 @@ def make_cache_key(db) -> str:
         return last.isoformat()
     except Exception:
         return "no-data"
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def compute_sector_aggregates_cached(cache_key: str, full_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Cached wrapper around ``compute_sector_aggregates``.
+
+    The underlying function runs a pandas groupby across 100k+ rows of
+    ``daily_vol`` and is called per-render on Rotation, Flow, and
+    Command Center. Without caching, each render pays the ~100-200 ms
+    pandas cost; the result is identical until a new scrape arrives.
+
+    Cache key uses ``make_cache_key(db)`` (the last-scrape-date), so a
+    fresh scrape correctly invalidates. The DataFrame argument is
+    hashed by Streamlit via its content fingerprint — passing the same
+    underlying data is a cache hit.
+
+    Reused at ~3 call sites across the UI; see ADR-0002 + v0.6.2
+    decisions log entry.
+    """
+    from volscope.analytics.sector_rotation import compute_sector_aggregates
+    return compute_sector_aggregates(full_df)

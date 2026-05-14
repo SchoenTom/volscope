@@ -49,7 +49,7 @@ from volscope.ui.components.chart_builders import (
     create_command_term_structure,
     create_vrp_bar,
 )
-from volscope.ui.components.html_utils import render_html
+from volscope.ui.components.html_utils import page_banner_html, render_html
 from volscope.ui.components.metric_components import (
     freshness_badge,
     render_percentile_pill,
@@ -911,6 +911,15 @@ def _render_alerts_expander(
 
 def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
     """Render the Command Center page."""
+
+    render_html(
+        st,
+        page_banner_html(
+            title="Command Center",
+            what="today's most important signals in one screen",
+            when="first thing each morning",
+        ),
+    )
 
     # ── Session state: command tickers ──────────────────────────────────
     if "command_tickers" not in st.session_state:

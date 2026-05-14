@@ -51,7 +51,7 @@ from volscope.analytics.strategy_recommender import (
     strategy_card_html,
 )
 from volscope.data.database import VolScopeDB
-from volscope.ui.components.html_utils import render_html
+from volscope.ui.components.html_utils import page_banner_html, render_html
 from volscope.ui.styles.theme import COLORS, rgba
 
 _MONO = "JetBrains Mono, SF Mono, Menlo, monospace"
@@ -60,6 +60,15 @@ _MONO = "JetBrains Mono, SF Mono, Menlo, monospace"
 def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
     """Render the Pre-Trade Card view."""
     ticker = st.session_state.get("selected_ticker", "QQQ")
+
+    render_html(
+        st,
+        page_banner_html(
+            title="Pre-Trade",
+            what="single-leg sizing tool with live greeks + RoR",
+            when="right before paper-buying",
+        ),
+    )
 
     render_html(
         st,

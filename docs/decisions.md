@@ -195,4 +195,38 @@ cooldown.
 
 ---
 
+## 2026-05-14 v0.6.2 — Performance + design polish wave
+
+**Choice:** A1 cache `compute_sector_aggregates`, A2 open DuckDB
+read-only in the UI with bootstrap fallback, A3 wrap the Bot
+Dashboard live panels in `@st.fragment(run_every="30s")`,
+B1 centralise glossary in `volscope/ui/glossary.py`, B2 add
+`page_banner_html` orientation banner to the 8 most-visited pages,
+B3 footer with `__version__` + short commit SHA.
+**Alternatives:** Polars hot paths, Cmd+K palette, DiskCache for HMM
+fits, Apple-design rewrite — banked to v0.7.0+ (lower leverage per
+hour, higher risk per session).
+**Why:** v0.6.1 hardened the math (FISV-class IV robustness). v0.6.2
+makes the surface feel like a paid product: the three hottest
+sector-rotation pages stop paying a ~100-200 ms pandas groupby on
+every render; the UI stops fighting the scheduler for the DuckDB
+write lock; the Bot Dashboard's three live panels poll
+independently so the rest of the page never re-renders; glossary
+terms now resolve from one place; every high-traffic page opens
+with two-line "what + when" orientation; the footer tells the
+operator which commit is running.
+**Evidence:** `volscope/ui/components/cached_data.py` (cached
+wrapper), `volscope/data/database.py` (`read_only=True` ctor),
+`volscope/ui/app.py::get_db` (read-only first with writable
+fallback), `volscope/ui/views/bot_dashboard_page.py` (three
+`@st.fragment` helpers), `volscope/ui/glossary.py` (~30-term dict
++ `tooltip()`), `volscope/ui/components/html_utils.py::page_banner_html`,
+`tests/test_glossary.py`.
+**Reversibility:** reversible — every change is a single-file edit
+that can be reverted without touching schemas, audit chain, or
+risk thresholds.
+**Confidence:** high.
+
+---
+
 (append new decisions here, newest at the top)

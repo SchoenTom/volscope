@@ -14,12 +14,21 @@ from volscope.config import DATA_DIR, DB_PATH
 class VolScopeDB:
     """Thin wrapper around a DuckDB connection for VolScope tables."""
 
-    def __init__(self, db_path: Optional[str] = None, auto_migrate: bool = True):
+    def __init__(
+        self,
+        db_path: Optional[str] = None,
+        auto_migrate: bool = True,
+        read_only: bool = False,
+    ):
         self.db_path = db_path or str(DB_PATH)
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        self.con = duckdb.connect(self.db_path)
-        self._create_tables()
-        if auto_migrate:
+        self.read_only = read_only
+        if read_only:
+            self.con = duckdb.connect(self.db_path, read_only=True)
+        else:
+            self.con = duckdb.connect(self.db_path)
+            self._create_tables()
+        if auto_migrate and not read_only:
             # Silent fix: legacy rows where iv_30d == hv_20d (the old buggy
             # seed) get their IV recomputed from YZ × VRP on first open. No
             # banner, no button, no user action needed.

@@ -26,7 +26,7 @@ from volscope.ui.components.chart_builders import (
     create_term_structure_chart,
 )
 from volscope.ui.components.error_boundary import error_boundary
-from volscope.ui.components.html_utils import render_html  # noqa: F401
+from volscope.ui.components.html_utils import page_banner_html, render_html
 from volscope.ui.components.metric_components import (
     freshness_badge,
     render_iv_range_bar,
@@ -200,6 +200,15 @@ def _render_intraday_section(st, ticker: str) -> None:
 
 def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
     import streamlit as st
+
+    render_html(
+        st,
+        page_banner_html(
+            title="Scope",
+            what="single-ticker deep dive: IV/HV + skew + 52w range",
+            when="after Discover surfaces a name",
+        ),
+    )
 
     history = db.get_ticker_history(ticker)
     if history.empty:

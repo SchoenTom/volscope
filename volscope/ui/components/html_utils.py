@@ -175,3 +175,47 @@ def score_bar_group_html(items: list[tuple[str, float | None]]) -> str:
 def est_underline_html(text: str = "est · BSM model price") -> str:
     """Single-line dotted-underline est marker — placed under whole sections."""
     return f'<div class="volscope-est-underline">{text}</div>'
+
+
+def page_banner_html(
+    *,
+    title: str,
+    what: str,
+    when: str,
+    learn_more: str | None = None,
+) -> str:
+    """Per-page orientation banner — title + what + when in two lines.
+
+    Mounted at the top of high-traffic pages so a fresh operator
+    understands purpose and timing without reading the docs. Kept under
+    64 px tall so it doesn't dominate small screens.
+
+    Use sparingly: only on pages where orientation pays for the vertical
+    cost (Command Center, Discover, Signals, Bot, Scope, Earnings,
+    LEAPS, Pre-Trade).
+    """
+    from volscope.ui.styles.theme import COLORS
+
+    learn_html = ""
+    if learn_more:
+        learn_html = (
+            f'<span style="color:{COLORS["muted"]};font-size:11px;'
+            f'margin-left:8px;">· {learn_more}</span>'
+        )
+    return (
+        f'<div style="background:{COLORS["card"]};'
+        f'border:1px solid {COLORS["border"]};'
+        f'border-left:3px solid {COLORS["accent"]};'
+        f'border-radius:6px;padding:10px 14px;margin-bottom:14px;'
+        f'font-family:\'DM Sans\',sans-serif;">'
+        f'<div style="color:{COLORS["text"]};font-size:13px;'
+        f'font-weight:600;letter-spacing:0.01em;">{title}</div>'
+        f'<div style="color:{COLORS["muted"]};font-size:12px;'
+        f'margin-top:3px;line-height:1.45;">'
+        f'<span>{what}</span>'
+        f'<span style="color:{COLORS["border"]};margin:0 6px;">·</span>'
+        f'<span>{when}</span>'
+        f'{learn_html}'
+        f'</div>'
+        f'</div>'
+    )

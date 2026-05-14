@@ -29,6 +29,7 @@ from volscope.analytics.leaps_convergence import (
 from volscope.ui.components.html_utils import (
     convergence_dial_html,
     empty_state_html,
+    page_banner_html,
     render_html,
     score_bar_group_html,
     section_rule_html,
@@ -258,6 +259,14 @@ def _render_convergence_card(row: pd.Series, suggestion: Optional[LeapsSuggestio
 
 def render_leaps_page(db, settings: Optional[dict] = None) -> None:
     """Top-level entry — wired into ``volscope.ui.app._PAGE_REGISTRY``."""
+    render_html(
+        st,
+        page_banner_html(
+            title="LEAPS Lab",
+            what="deep-OTM convergence scanner (MIS × NEG × REV)",
+            when="long-dated bullish thesis play",
+        ),
+    )
     render_html(
         st,
         f'<div style="font-family:DM Sans,sans-serif;color:{COLORS["text"]};'

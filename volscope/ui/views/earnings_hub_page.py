@@ -46,7 +46,7 @@ from volscope.ui.components.earnings_diagnostics import (
     render_calibration_bar,
     render_pre_er_drift,
 )
-from volscope.ui.components.html_utils import render_html
+from volscope.ui.components.html_utils import page_banner_html, render_html
 from volscope.ui.styles.theme import COLORS, heat_color, seq_color
 
 log = logging.getLogger(__name__)
@@ -82,6 +82,14 @@ _MACRO_EVENTS_2026: tuple[tuple[date, str, str], ...] = (
 def render_earnings_hub_page(db, settings: dict | None = None) -> None:
     """Sidebar entry from `_PAGE_REGISTRY`."""
     st.markdown("## ◈ Earnings Hub")
+    render_html(
+        st,
+        page_banner_html(
+            title="Earnings Hub",
+            what="weekly grid: implied moves, skew, crowded names",
+            when="Sunday review for the week",
+        ),
+    )
     st.caption(
         "Vol-trader earnings calendar — implied move, direction skew, "
         "crowdedness, expected post-print crush. The four numbers that "

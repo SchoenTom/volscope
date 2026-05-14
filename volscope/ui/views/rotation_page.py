@@ -16,7 +16,6 @@ from volscope.analytics.sector_rotation import (
     SectorRegime,
     classify_sector_regime,
     compute_rotation_matrix,
-    compute_sector_aggregates,
     compute_sector_momentum,
     get_current_rotation_snapshot,
 )
@@ -239,7 +238,12 @@ def _load_data(db: VolScopeDB) -> tuple[pd.DataFrame, pd.DataFrame]:
         except Exception:
             full_df = pd.DataFrame()
         if not full_df.empty:
-            sector_hist = compute_sector_aggregates(full_df)
+            from volscope.ui.components.cached_data import (
+                compute_sector_aggregates_cached, make_cache_key,
+            )
+            sector_hist = compute_sector_aggregates_cached(
+                make_cache_key(db), full_df,
+            )
 
     return sector_hist, pd.DataFrame()
 
@@ -278,7 +282,12 @@ def render_rotation_page(db: VolScopeDB, settings: dict) -> None:
         except Exception:
             full_df = pd.DataFrame()
         if not full_df.empty:
-            sector_hist = compute_sector_aggregates(full_df)
+            from volscope.ui.components.cached_data import (
+                compute_sector_aggregates_cached, make_cache_key,
+            )
+            sector_hist = compute_sector_aggregates_cached(
+                make_cache_key(db), full_df,
+            )
 
     if sector_hist.empty:
         render_html(

@@ -18,7 +18,6 @@ from volscope.analytics.capital_flow import (
     compute_flow_score,
     detect_flow_divergence,
 )
-from volscope.analytics.sector_rotation import compute_sector_aggregates
 from volscope.data.database import VolScopeDB
 from volscope.ui.components.html_utils import render_html
 from volscope.ui.styles.theme import COLORS
@@ -274,7 +273,12 @@ def render_flow_page(db: VolScopeDB, settings: dict) -> None:
         except Exception:
             full_df = pd.DataFrame()
         if not full_df.empty:
-            sector_hist = compute_sector_aggregates(full_df)
+            from volscope.ui.components.cached_data import (
+                compute_sector_aggregates_cached, make_cache_key,
+            )
+            sector_hist = compute_sector_aggregates_cached(
+                make_cache_key(db), full_df,
+            )
 
     if sector_hist.empty:
         render_html(

@@ -31,7 +31,7 @@ from volscope.analytics.signals import (
     summarize,
 )
 from volscope.ui.components.data_freshness_bar import render_data_freshness_bar
-from volscope.ui.components.html_utils import render_html
+from volscope.ui.components.html_utils import page_banner_html, render_html
 from volscope.ui.components.sparkline import sparkline_svg
 from volscope.ui.styles.theme import COLORS, seq_color
 
@@ -44,6 +44,14 @@ _FILTER_OPTIONS = ("All", "Long Vol", "Short Vol", "Earnings-Filtered")
 def render_signals_page(db, settings: Optional[dict] = None) -> None:
     """Mounted from `_PAGE_REGISTRY` as 'Signals'."""
     st.markdown("## ⚡ IV Trading Signals")
+    render_html(
+        st,
+        page_banner_html(
+            title="Signals",
+            what="bidirectional IV mean-reversion scanner",
+            when="daily, after EOD scrape",
+        ),
+    )
     st.caption(
         "Bidirectional scanner — cheap IV → buy premium, rich IV → sell "
         "premium. 65 % of US tickers show mean-reverting IV (MDPI 2024). "
