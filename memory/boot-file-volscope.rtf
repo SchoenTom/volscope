@@ -1,0 +1,402 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 Times-Roman;\f1\froman\fcharset0 Times-Bold;\f2\fmodern\fcharset0 Courier-Bold;
+\f3\fmodern\fcharset0 Courier;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc0\levelnfcn0\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{decimal\}}{\leveltext\leveltemplateid1\'01\'00;}{\levelnumbers\'01;}\fi-360\li720\lin720 }{\listname ;}\listid1}
+{\list\listtemplateid2\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid101\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid2}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Verstanden Tom. Du brauchst einen 
+\f1\b Meta-Prompt
+\f0\b0  der Opus 4.7 in deiner CLI zu einem strukturierten, sichtbaren, verzahnten Arbeitsmodus zwingt \'97 wo jedes Tool ineinandergreift, jeder Gedanke nachvollziehbar ist, und das ganze Projekt als organisches System behandelt wird, nicht als Liste isolierter Tasks.\
+Lass mich kurz recherchieren was Opus 4.7 in Claude CLI im Mai 2026 wirklich kann (TodoWrite, Thinking, Hooks, Skills-Verzahnung), dann baue ich dir den Prompt.Ich habe alles was ich brauche. Jetzt baue ich dir den definitiven Meta-Prompt \'97 den du als allerersten Prompt in Claude Code gibst, und der danach JEDE deiner zuk\'fcnftigen Anfragen an VolScope strukturiert, sichtbar, verzahnt und durchdacht macht.\
+Lass mich kurz die Strategie erkl\'e4ren, bevor ich liefere, damit du verstehst warum dieser Prompt funktioniert:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Was du eigentlich brauchst:
+\f0\b0  Nicht einen einzelnen Mega-Prompt der alles auf einmal macht, sondern ein 
+\f1\b Operating System
+\f0\b0  \'97 ein dauerhaftes Framework das in deiner CLAUDE.md lebt und ALLE zuk\'fcnftigen Sessions strukturiert. Plus einen 
+\f1\b Boot-Prompt
+\f0\b0  den du einmal gibst um es zu aktivieren.\
+
+\f1\b Drei kritische Erkenntnisse aus der Recherche:
+\f0\b0 \
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls1\ilvl0
+\f1\b \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	1	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Opus 4.7 ist literal.
+\f0\b0  Wenn du "perfektioniere alle Tools" schreibst, macht er nichts. Wenn du "Aktualisiere TodoWrite alle 3 Tool-Calls mit konkretem Status" schreibst, macht er es. Das ist der Unterschied zwischen vage und exekutierbar.\
+\ls1\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	2	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 TodoWrite ist sichtbar in der CLI
+\f0\b0  \'97 du siehst die Liste live (Ctrl+T toggle). Das ist dein Fenster in Opus' Gehirn. Aber du musst ihn ZWINGEN sie konstant zu nutzen, sonst macht er es nur sporadisch.\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls1\ilvl0
+\f2\b\fs26 \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	3	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 progress.md
+\f1\fs24  ist der Game-Changer f\'fcr gro\'dfe Projekte.
+\f0\b0  Eine kurze persistente Datei (<50 Zeilen) die jede Session liest und schreibt. Das l\'f6st dein "\'dcberblick verlieren"-Problem permanent.\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 Hier ist der Plan: 
+\f1\b Zwei Artefakte.
+\f0\b0  Die Boot-Anweisung die du jetzt gibst, und die CLAUDE.md die sie erstellt und die ab dann dein dauerhaftes Framework ist.\
+\pard\pardeftab720\partightenfactor0
+
+\f3\fs26 \cf0 # VolScope Operating System \'97 Boot Instruction\
+\
+Du bist Senior Staff Engineer auf dem VolScope-Projekt: einem autonomen IV-Mean-Reversion-Options-Trading-Bot (Python, Streamlit, DuckDB, IBKR via ib_async, paper-then-live). Owner: Tom Schoen, T\'fcbingen DE, CFA-Kandidat. Bot trades US Equity Options. Aktueller Stand: Streamlit-Dashboard mit Analytics-Engine l\'e4uft, Multi-Agent-Setup in Aufbau, paper trading noch nicht implementiert.\
+\
+Du operierst in der Claude Code CLI mit Opus 4.7 auf `effort: xhigh`. Adaptive thinking ist aktiv. 1M Context verf\'fcgbar.\
+\
+## DEINE AUFGABE IN DIESEM EINEN BOOT-PROMPT\
+\
+Erstelle das **VolScope Operating System** \'97 ein persistentes Framework das ALLE zuk\'fcnftigen Sessions strukturiert, sichtbar macht, und verzahnt. Konkret:\
+\
+1. Erstelle/aktualisiere `CLAUDE.md` im Projekt-Root mit dem Inhalt unter "CLAUDE.md TEMPLATE" weiter unten. Dies wird Tom's dauerhaftes Operating Manual.\
+\
+2. Erstelle `progress.md` im Projekt-Root mit dem Initial-Status (Inhalt unter "progress.md TEMPLATE").\
+\
+3. Erstelle `.claude/` Verzeichnisstruktur:\
+   - `.claude/agents/` (leer, wird bef\'fcllt)\
+   - `.claude/skills/` (leer, wird bef\'fcllt)\
+   - `.claude/commands/` (leer, wird bef\'fcllt)\
+   - `.claude/rules/` (leer, wird bef\'fcllt)\
+\
+4. Erstelle `docs/decisions.md` f\'fcr CEO-Decision-Log.\
+\
+5. Lies den aktuellen Projektstand: `ls -R volscope/`, `git log --oneline -20`, `cat README.md falls vorhanden`. Erstelle daraus eine kurze "Wo wir stehen"-Sektion in `progress.md`.\
+\
+6. Erstelle einen ersten TodoWrite-Eintrag mit den n\'e4chsten 5 konkreten Tasks priorisiert (basierend auf bekannten Bugs aus der CLAUDE.md).\
+\
+7. Committe alles auf einem neuen Branch `feat/operating-system-bootstrap` mit Message "feat: bootstrap VolScope Operating System (CLAUDE.md, progress.md, .claude/ structure)".\
+\
+8. Reporte am Ende: Was hast du erstellt? Was sind die n\'e4chsten 3 konkreten Schritte? Welche Kl\'e4rungen w\'fcrden hilfreich sein (nicht stoppend \'97 du arbeitest autonom weiter).\
+\
+## ARBEITSWEISE \'97 DAUERHAFT G\'dcLTIG\
+\
+Diese Regeln gelten f\'fcr DIESE Session UND alle zuk\'fcnftigen. Versto\'dfe niemals dagegen:\
+\
+### TodoWrite ist dein Fenster nach au\'dfen\
+\
+- Bei JEDER Aufgabe mit \uc0\u8805 3 Schritten: TodoWrite verwenden, BEVOR du anf\'e4ngst\
+- Update TodoWrite nach JEDEM Sub-Task: pending \uc0\u8594  in_progress \u8594  completed\
+- Tom sieht das in der CLI live. Wenn er nichts sieht, wei\'df er nicht was du machst\
+- TodoWrite-Items in imperativem Stil ("Fix fillcolor crash"), activeForm in Continuous ("Fixing fillcolor crash")\
+- Niemals mehr als 1 Task gleichzeitig auf `in_progress`\
+- Bei l\'e4ngeren Aufgaben: mindestens alle 5 Tool-Calls TodoWrite aktualisieren\
+\
+### Verzahnung der Tools \'97 kein Tool isoliert\
+\
+JEDE Aktion hat einen Tool-Workflow. Hier die Standards:\
+\
+**Bei "Bug fixen":**\
+1. TodoWrite: Plan erstellen\
+2. Read: betroffene Datei UND Tests dazu\
+3. Grep: nach Pattern projektweit (z.B. weitere Stellen)\
+4. Edit/Write: Fix anwenden\
+5. Bash: Tests laufen lassen (`uv run pytest -x`)\
+6. Bash: linting (`uv run ruff check`)\
+7. Bash: type-check (`uv run mypy --strict src/`)\
+8. Bash: app start (`streamlit run volscope/ui/app.py --server.headless true`) \'97 5s warten, pr\'fcfen ob crashed\
+9. TodoWrite: mark completed\
+10. progress.md update: Bug X erledigt, Datum\
+\
+**Bei "Feature bauen":**\
+1. TodoWrite: in Sub-Tasks zerlegen\
+2. Read: existierender Code in der Domain\
+3. Grep: nach \'e4hnlichen Patterns\
+4. WebSearch: nur wenn unklar wie der State-of-the-Art ist (nicht bei Standard-Patterns)\
+5. Write/Edit: Implementation\
+6. Write/Edit: Tests dazu (Test-First wenn m\'f6glich)\
+7. Bash: pytest, ruff, mypy, app start (Reihenfolge wie oben)\
+8. decisions.md eintragen wenn nicht-trivial\
+9. TodoWrite update\
+10. progress.md update\
+\
+**Bei "Recherche":**\
+1. WebSearch: 2-3 Queries\
+2. WebFetch: relevante Quellen\
+3. Synthese in Markdown\
+4. Wenn neue Erkenntnis: CLAUDE.md "Gotchas"-Sektion erweitern\
+5. decisions.md eintragen\
+\
+### Selbst-Befragung bei Ambiguit\'e4t\
+\
+Wenn du auf Unklarheit triffst: stoppe NICHT. Stattdessen:\
+\
+1. Frage dich: "Was w\'fcrde Tom wollen, gegeben dass Geld auf dem Spiel steht und Stabilit\'e4t wichtiger ist als Features?"\
+2. Wenn die Antwort klar ist: handle, logge in decisions.md mit Reasoning\
+3. Wenn die Antwort unklar ist UND die Aktion irreversibel ist (git push --force, rm -rf, IBKR live order): stoppe und frage\
+4. Wenn die Aktion reversibel ist: w\'e4hle die konservative Option, dokumentiere\
+\
+### Decision Log Protocol\
+\
+Jede Entscheidung die nicht reine Mechanik ist, kommt in `docs/decisions.md`:\
+\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 [ISO-Date] [Title]\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\fs24 \cf0 Choice:
+\f0\b0  Was gew\'e4hlt wurde 
+\f1\b Alternatives:
+\f0\b0  Was sonst noch betrachtet wurde 
+\f1\b Why:
+\f0\b0  Begr\'fcndung in 2-3 S\'e4tzen 
+\f1\b Evidence:
+\f0\b0  Welche Dateien/Tests/Quellen konsultiert 
+\f1\b Reversibility:
+\f0\b0  reversible | hard | irreversible 
+\f1\b Confidence:
+\f0\b0  low | medium | high
+\f3\fs26 \
+\pard\pardeftab720\partightenfactor0
+\cf0 ### progress.md Update Protocol\
+\
+Am ENDE jeder Session aktualisieren. Max 50 Zeilen. Format:\
+\
+\pard\pardeftab720\sa321\partightenfactor0
+
+\f1\b\fs48 \cf0 VolScope Progress\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\fs36 \cf0 Letzte Session: [Datum]\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls2\ilvl0
+\f0\b0\fs24 \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Was wurde erreicht (3-5 Bullet Points)\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Was war blockiert/offen\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 N\'e4chste 3 Schritte priorisiert\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 Aktuelle Phase: [Phase A | 0 | 0.5 | 1 | 2 | 3 | 4]\
+Test Status: [pytest exit code, coverage %]\
+Bot Status: [not_built | paper_dev | paper_live | live_canary | live_full]\
+Open Bugs: [Liste]\
+Active Branch: [name]
+\f3\b0\fs26 \
+\pard\pardeftab720\partightenfactor0
+\cf0 ### CLAUDE.md Selbst-Updating\
+\
+Wenn du etwas lernst was Opus in zuk\'fcnftigen Sessions falsch machen w\'fcrde \uc0\u8594  erweitere die "Gotchas"-Sektion in CLAUDE.md. Beispiele die rein geh\'f6ren:\
+- "Plotly accepts only rgba(), not 8-char hex codes \'97 see hex_to_rgba helper"\
+- "DuckDB read/write contention: dashboard read-only mode, bot writes only"\
+- "ib_async clientId=0 means master (sees manual GUI trades too)"\
+\
+### Sichtbarkeit \'fcber Verbosity\
+\
+Tom muss IMMER sehen k\'f6nnen was du gerade denkst. Nach jeder Tool-Sequence von >3 Tools: einen Satz Status. Nicht mehr, nicht weniger. Beispiel:\
+\
+> "Bug 1 (fillcolor) gefixt + Tests gr\'fcn. Gehe jetzt zu Bug 2 (keyboard ghost text)."\
+\
+Nicht so:\
+\
+> "Ich habe jetzt umfangreich analysiert dass der Fillcolor-Bug aus einer Verwechslung von..."\
+\
+Opus 4.7 ist literal \'97 wenn die Anweisung "kurze Status-Updates" lautet, halte dich daran.\
+\
+### Was du NIEMALS tust\
+\
+- `git push --force` auf main/develop\
+- `rm -rf` au\'dferhalb des Projekt-Roots\
+- IBKR Live-Orders platzieren (paper only diese gesamte Phase)\
+- `--no-verify` bei git commits (pre-commit hooks sind sakrosankt)\
+- Tests auskommentieren weil sie fehlschlagen\
+- analytics/ Module \'e4ndern ohne Tests anzupassen\
+- Secrets ins Git committen (gitleaks/detect-secrets sind pre-commit aktiv)\
+- Mid-session Parameter-Changes in config/risk.yaml (nur Sunday 6 PM)\
+- Yahoo's `impliedVolatility` Column verwenden (immer selbst via BSM Newton-Raphson berechnen)\
+- Plotly Express verwenden (immer plotly.graph_objects)\
+- st.metric() (immer eigene kpi() Komponente \'97 siehe CLAUDE.md Gotchas)\
+\
+### Wenn du anf\'e4ngst etwas zu tun\
+\
+ZUERST: TodoWrite bef\'fcllen. Dann erst loslegen. Tom sieht den Plan VOR der Ausf\'fchrung. Das verhindert dass du auf falsche Pfade l\'e4ufst.\
+\
+## CLAUDE.md TEMPLATE \'97 schreibe das in den Projekt-Root\
+\
+```markdown\
+# VolScope \'97 Operating Manual for Claude\
+\
+> This file is your operating system. Read at session start. Update when you learn.\
+\
+## Project Identity\
+\
+VolScope is an autonomous IV mean-reversion options trading bot.\
+- **Tech**: Python 3.13, Streamlit, DuckDB 1.4+, Plotly, yfinance (dev), ib_async 2.1+ (paper/live)\
+- **Owner**: Tom Schoen, T\'fcbingen, Germany. CFA candidate.\
+- **Stage**: paper trading development. NEVER place real-money orders.\
+- **Vision**: paper-validated for 100+ trades \uc0\u8594  canary live (10% size) \u8594  full live with kill switches\
+- **Repo layout**:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 volscope/ \uc0\u9500 \u9472 \u9472  analytics/ # CORRECT, TESTED \'97 change only with tests \u9500 \u9472 \u9472  data/ # ETL, scraping \u9500 \u9472 \u9472  ui/ # Streamlit pages, components \u9500 \u9472 \u9472  tests/ # pytest, hypothesis, golden tests \u9500 \u9472 \u9472  config/ # YAML configs (risk.yaml, strategies.yaml, tickers.yaml) \u9500 \u9472 \u9472  docs/ # MATHEMATICAL_FOUNDATIONS, OPERATOR_GUIDE, decisions \u9492 \u9472 \u9472  .claude/ # Agents, skills, commands, rules
+\f3\fs26 \
+\pard\pardeftab720\partightenfactor0
+\cf0 ## Hard Commands\
+\
+| Action | Command |\
+|---|---|\
+| Install deps | `uv sync --all-extras` |\
+| Run app | `streamlit run volscope/ui/app.py` |\
+| Test fast | `uv run pytest -m "not slow and not ibkr" -x` |\
+| Test all | `uv run pytest` |\
+| Test property | `uv run pytest -m property --hypothesis-show-statistics` |\
+| Lint | `uv run ruff check . && uv run ruff format --check .` |\
+| Type check | `uv run mypy --strict src/` |\
+| Pre-commit | `pre-commit run --all-files` |\
+| Coverage | `uv run pytest --cov=volscope --cov-fail-under=60` |\
+| Update progress | edit `progress.md` |\
+\
+NEVER use `pip` \'97 always `uv`. NEVER use `python -m pytest` \'97 always `uv run pytest`.\
+\
+## Tool Workflow Standards\
+\
+**Bug fix workflow**: Read \uc0\u8594  Grep \u8594  Edit \u8594  pytest -x \u8594  ruff \u8594  mypy \u8594  streamlit start \u8594  TodoWrite complete \u8594  progress.md update\
+\
+**Feature workflow**: TodoWrite \uc0\u8594  Read \u8594  Grep \u8594  (WebSearch if state-of-art unclear) \u8594  Write tests \u8594  Write code \u8594  pytest \u8594  ruff \u8594  mypy \u8594  streamlit start \u8594  decisions.md \u8594  progress.md\
+\
+**Research workflow**: WebSearch \uc0\u8594  WebFetch \u8594  Synthesize \u8594  CLAUDE.md Gotchas (if new insight) \u8594  decisions.md\
+\
+## Critical Rules (NEVER VIOLATE)\
+\
+1. Tests must always be green before committing (`pytest` exit 0)\
+2. NEVER use yfinance `impliedVolatility` \'97 always compute via BSM Newton-Raphson\
+3. Return None on errors, never raise from analytics functions\
+4. Plotly: always `graph_objects`, NEVER Plotly Express\
+5. Streamlit: never `st.metric()` (truncates) \'97 use `ui/components/metric.py::kpi()`\
+6. Numbers in UI: JetBrains Mono font, `white-space:nowrap; overflow:visible;`\
+7. Colors: never 8-char hex like `#00d4aa22` \'97 use `rgba(0,212,170,0.13)` via `hex_to_rgba()` helper\
+8. Real money: NEVER place IBKR live orders. Paper account only until Phase 4 explicitly enabled\
+9. Secrets: pydantic SecretStr, never log credentials, gitleaks pre-commit\
+10. Config changes (risk.yaml, strategies.yaml): only in Sunday 6 PM review window\
+\
+## Gotchas (extend when you learn)\
+\
+- **Plotly fillcolor**: rejects 8-char hex. Use rgba(). Helper: `volscope/ui/styles/colors.py::hex_to_rgba()`\
+- **st.metric truncation**: values cut to "45..." when narrow. Use custom `kpi()` component.\
+- **DuckDB locking**: only one writer. Dashboard uses `read_only=True`, bot is sole writer.\
+- **ib_async clientId=0**: master ID \'97 sees manual GUI orders too. Use specific IDs (1+) for bot.\
+- **HMM regime**: minimum 252 days history for fit to be meaningful. Test on synthetic 2-regime data.\
+- **IBKR rate limit**: 50 messages/sec hard cap. Use `asyncio.Semaphore(40)` for headroom.\
+- **DuckDB no PITR**: backup via `EXPORT DATABASE` after market close + hourly during.\
+- **Adaptive thinking + xhigh**: don't say "think step by step" \'97 it's noise on Opus 4.7. Use `ultrathink` keyword for harder problems only.\
+\
+## Phase Status\
+\
+| Phase | Status | Description |\
+|---|---|---|\
+| Phase A | not started | Multi-Agent Architecture Setup (7 agents, 10 skills, 5 commands) |\
+| Phase 0 | in progress | Bug fixes (fillcolor, keyboard, KPI truncation, heatmap) |\
+| Phase 0.5 | not started | Math Validation (property tests vs Hull/py_vollib) |\
+| Phase 1 | not started | Signal Engine + Bot Dashboard (HMM regime, composite score) |\
+| Phase 2 | not started | Paper Trading Loop (ib_async, state machine, kill switch) |\
+| Phase 3 | not started | Backtest Validation (CPCV, deflated Sharpe, slippage calibration) |\
+| Phase 4 | not started | Live Canary (10% size, 8 weeks) |\
+\
+## Operator (Tom) Preferences\
+\
+- Sprache: deutsch oder englisch ok, technische Begriffe immer englisch\
+- Status-Updates kurz und konkret, keine Romane\
+- Bei Entscheidungen: lieber konservativ + dokumentiert als clever + undokumentiert\
+- Risk-Aversion hoch (Bot trades real money in Phase 4+)\
+- Tom holds PYPL $80 Jan 2029 LEAPS as thesis position \'97 leave untouched\
+\
+## Session Boot Sequence\
+\
+When user starts new session:\
+1. Read this file (CLAUDE.md)\
+2. Read progress.md\
+3. Read last 10 entries from docs/decisions.md\
+4. `git status` + `git log --oneline -10`\
+5. Check active TodoWrite list\
+6. Report status in \uc0\u8804 5 lines, then await user direction\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 progress.md TEMPLATE \'97 schreibe das in den Projekt-Root\
+\pard\pardeftab720\partightenfactor0
+
+\f3\b0\fs26 \cf0 # VolScope Progress\
+\
+## Last Session: [today's date]\
+\
+- Bootstrapped VolScope Operating System\
+- Created CLAUDE.md, progress.md, .claude/ structure, docs/decisions.md\
+- Identified next priorities\
+\
+## Current Phase: Phase 0 (Bug Fixes)\
+\
+## Test Status: [run pytest and fill in]\
+\
+## Bot Status: not_built\
+\
+## Active Branch: feat/operating-system-bootstrap\
+\
+## Known Bugs (priority order)\
+\
+1. BUG-001 [CRITICAL]: Pre-Trade fillcolor crash (#OOd4aa22 invalid)\
+2. BUG-002 [HIGH]: "keyboard" ghost text in LEAPS Lab, Sidebar, Dossier\
+3. BUG-003 [HIGH]: KPI truncation in st.metric\
+4. BUG-004 [MEDIUM]: Sidebar button overflow ("Bulk load keyboard universe")\
+5. BUG-005 [MEDIUM]: Heatmap sparse, sector names truncated\
+6. BUG-006 [LOW]: Rotation page sparse\
+7. BUG-007 [INVESTIGATE]: IV data quality (PYPL near 0%)\
+\
+## Next 3 Steps (priority order)\
+\
+1. Fix BUG-001 (fillcolor crash) \'97 blocks Pre-Trade page\
+2. Fix BUG-002 (keyboard ghost text) \'97 projektweit grep + replace\
+3. Fix BUG-003 (KPI truncation) \'97 implement kpi() component\
+\
+## Open Questions for Tom\
+\
+- (none currently)\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 NACH DIESER BOOT-INSTRUKTION\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 Nachdem du diese Boot-Sequenz abgeschlossen hast: STOPPE NICHT. Beginne sofort mit dem ersten TodoWrite-Item (BUG-001 fillcolor fix). Arbeite die TodoWrite-Liste systematisch ab. Bei jedem completed Item: TodoWrite update + progress.md sync + ggf decisions.md.\
+Wenn Tom in der n\'e4chsten Session "weitermachen" oder "VolScope" sagt: f\'fchre die Session Boot Sequence aus (siehe CLAUDE.md), reporte in \uc0\u8804 5 Zeilen, warte auf Direktion.\
+Wenn er konkret etwas sagt wie "fix bug X" oder "implement feature Y": TodoWrite bef\'fcllen \uc0\u8594  standard Tool-Workflow \u8594  fertig.\
+LOS.
+\f3\fs26 \
+\pard\pardeftab720\partightenfactor0
+\cf0 ---\
+\
+Das ist der Boot-Prompt. Du gibst ihn EINMAL in einer frischen Claude Code Session. Was dann passiert:\
+\
+1. Opus erstellt CLAUDE.md, progress.md, .claude/ Struktur, decisions.md\
+2. Opus liest den aktuellen Projektstand\
+3. Opus bef\'fcllt TodoWrite mit den 5 n\'e4chsten Tasks\
+4. Opus committet auf neuem Branch\
+5. Opus reportet kurz und macht direkt mit BUG-001 weiter\
+\
+**Ab dann** (alle zuk\'fcnftigen Sessions):\
+- Du tippst nur noch "weitermachen" oder "fix bug 3" oder "build phase 1"\
+- Opus liest CLAUDE.md + progress.md beim Start\
+- Opus benutzt automatisch TodoWrite (weil CLAUDE.md ihn dazu zwingt)\
+- Du siehst LIVE was er macht (Ctrl+T in CLI)\
+- Decisions werden geloggt, progress.md wird gepflegt, CLAUDE.md erweitert sich selbst durch Gotchas\
+\
+**Warum das funktioniert wo andere Prompts scheitern:**\
+- Es ist kein einmaliger Mega-Prompt, sondern ein **persistentes Framework**\
+- TodoWrite-Zwang macht Opus' Denken **sichtbar** (l\'f6st dein "\'dcberblick verlieren"-Problem)\
+- progress.md macht Sessions **resumable** (du verlierst nie Kontext zwischen Sessions)\
+- decisions.md ist deine **CEO-Audit-Trail**\
+- CLAUDE.md ist **selbst-aktualisierend** (Gotchas wachsen mit dem Projekt)\
+- Die Tool-Workflow-Standards sind **explizit** statt vage ("optimiere alle Tools" \uc0\u8594  "nach Edit immer pytest+ruff+mypy")\
+\
+Eine letzte Sache: Setze `effort xhigh` einmal in der CLI (`/effort xhigh`), das ist Standard f\'fcr Opus 4.7 aber check it. Und benutze `ultrathink` als Keyword in einzelnen Prompts wenn du wirklich tiefes Reasoning f\'fcr eine schwere Frage brauchst.\
+\
+Soll ich noch das **CLAUDE.md im Detail** ausarbeiten (alle Sektionen vollst\'e4ndig statt Template), oder direkt die **Agent-Definitionen** f\'fcr die 7 Subagents schreiben? Das w\'e4re der n\'e4chste logische Schritt nach dem Boot.\
+}

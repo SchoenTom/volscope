@@ -1,0 +1,53 @@
+# Risk thresholds — OPERATOR-ONLY.
+#
+# This file is the safety governor for the entire bot. Changes here
+# affect: position sizing, kill-switch trip points, the go-live gate,
+# the slippage haircut.
+#
+# Per the "no agent writes its own safety limits" rule
+# (decisions.md 2026-05-14, ADR-0004), no Claude / agent should ever
+# modify this file. The CI step `scripts/audit/check_risk_thresholds_unchanged.py`
+# blocks any PR that mutates this file unless the commit message
+# trailer contains `OPERATOR_APPROVED=yes`.
+#
+# When the operator does change anything, the Sunday 18:00 ET review
+# window + 90-day cooldown rule applies.
+
+position_sizing:
+  kelly_fraction: 0.25                       # quarter-Kelly (production-safe start)
+  max_risk_per_trade_defined: 0.02
+  max_risk_per_trade_undefined: 0.01
+  max_bpr_regt: 0.35
+  max_bpr_pm: 0.50
+  cash_reserve_min: 0.40
+  max_concurrent_positions: 12
+  max_per_underlying_pct: 0.20
+  max_per_sector_pct: 0.30
+  max_index_vs_single_name_pct: 0.50
+
+correlation:
+  cor1m_freeze_single_name: 60
+  cor1m_favor_single_name: 20
+  use_correlation_haircut: true
+
+circuit_breakers:
+  daily_loss_halt_pct: 0.03
+  drawdown_no_new_entries_pct: 0.10
+  drawdown_liquidate_undefined_pct: 0.15
+  drawdown_full_halt_pct: 0.20
+  vix_no_new_entries: 30
+  vix_liquidate_undefined: 40
+  vix_intraday_spike_pct: 0.50
+  vix_term_invert_ratio: 1.0
+  consecutive_losses_pause: 5
+  ibkr_disconnect_seconds: 60
+
+go_live_gate:
+  paper_months_min: 3
+  paper_trades_min: 100
+  paper_sharpe_min: 0.5
+  paper_max_dd_max: 0.20
+  paper_win_rate_min: 0.65
+  paper_profit_factor_min: 1.2
+  paper_avg_slippage_max: 0.05
+  ramp_pct: [0.10, 0.25, 0.50, 1.00]

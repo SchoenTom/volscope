@@ -78,4 +78,41 @@ make unlock         # release stale DuckDB lock
 - Check `docs/process/` for archived planning artefacts (useful for
   long-running questions like "why does the Pre-Trade page do X").
 
+## Persistence — do not stop early
+
+> Your context window will be automatically compacted as it approaches
+> its limit, allowing you to continue working indefinitely from where
+> you left off. Therefore, **do not stop tasks early** due to token
+> budget concerns. As you approach your token budget limit, save your
+> current progress and state to `progress.md` and `docs/decisions.md`
+> before the context window refreshes. **Always be as persistent and
+> autonomous as possible and complete tasks fully**, even if the end
+> of your budget is approaching. **Never artificially stop any task
+> early** regardless of the context remaining.
+
+By default, implement changes rather than only suggesting them. If
+the operator's intent is unclear, infer the most useful likely action
+and proceed, using tools to discover any missing details instead of
+guessing. Partial completion is preferable to asking a clarifying
+question for trivial detail.
+
+## Decision protocol — reversibility-tagged
+
+For every non-trivial autonomous decision, append to `docs/decisions.md`
+with the canonical 6-line format and explicit `Reversibility` +
+`Confidence` tags. The hard rule:
+
+- `Reversibility=irreversible` AND `Confidence<high` → **STOP** and
+  surface to the operator.
+- Otherwise → execute and continue. Log the choice. Move on.
+
+Examples of `irreversible`: `git push --force`, `git reset --hard`
+on `main`, IBKR live orders (out of scope — never), `rm -rf` outside
+the project root, secrets pushed to a public branch. These ALWAYS
+require operator confirmation regardless of confidence.
+
+Examples of `hard-to-reverse`: schema migrations on a live DB,
+config-file changes that auto-rotate the reference SHA (e.g.
+`config/.risk-thresholds.sha256`), public release tags.
+
 Welcome aboard.
