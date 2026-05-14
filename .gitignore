@@ -38,8 +38,9 @@ secrets/
 *.pem
 *.key
 
-# Data — DBs live outside the repo
-data/
+# Data — DBs live outside the repo (anchored to root so we don't
+# accidentally ignore volscope/data/ or scripts/data/)
+/data/
 *.db
 *.duckdb
 
