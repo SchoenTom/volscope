@@ -134,21 +134,32 @@ def _build_treemap_figure(
     # falls through to ``b`` when ``a`` is exactly 0.0, which is a
     # legitimate (if rare) HV value. We use ``np.where(notna(a), a, b)``
     # so only true-NaN triggers the fallback.
-    hv_yz = pd.to_numeric(working.get("hv_yz_30d"), errors="coerce")
-    hv_cc = pd.to_numeric(working.get("hv_20d"),    errors="coerce")
+    # Helper: always return a numeric Series of len(working). When a
+    # column is missing from the DataFrame, ``DataFrame.get`` returns
+    # None, and ``pd.to_numeric(None)`` collapses to a scalar NaN —
+    # not a Series. The ``.map()`` calls below would then crash with
+    # ``'numpy.float64' object has no attribute 'map'``. Wrapping
+    # via ``_col_series`` guarantees a Series result regardless.
+    def _col_series(name: str) -> pd.Series:
+        if name in working.columns:
+            return pd.to_numeric(working[name], errors="coerce")
+        return pd.Series(np.nan, index=working.index, dtype=float)
+
+    hv_yz = _col_series("hv_yz_30d")
+    hv_cc = _col_series("hv_20d")
     hv = pd.Series(np.where(hv_yz.notna(), hv_yz, hv_cc), index=working.index)
 
-    spread_m = pd.to_numeric(working.get("iv_hv_spread_matched"), errors="coerce")
-    spread_l = pd.to_numeric(working.get("iv_hv_spread"),         errors="coerce")
+    spread_m = _col_series("iv_hv_spread_matched")
+    spread_l = _col_series("iv_hv_spread")
     spread = pd.Series(
         np.where(spread_m.notna(), spread_m, spread_l), index=working.index,
     )
 
-    iv      = pd.to_numeric(working.get("iv_30d"),           errors="coerce")
-    perc    = pd.to_numeric(working.get("iv_percentile"),    errors="coerce")
-    oi      = pd.to_numeric(working.get("total_open_interest"), errors="coerce")
-    chg1d   = pd.to_numeric(working.get("iv_change_1d"),     errors="coerce")
-    chg30d  = pd.to_numeric(working.get("iv_change_30d"),    errors="coerce")
+    iv      = _col_series("iv_30d")
+    perc    = _col_series("iv_percentile")
+    oi      = _col_series("total_open_interest")
+    chg1d   = _col_series("iv_change_1d")
+    chg30d  = _col_series("iv_change_30d")
 
     def _vec_fmt(s: pd.Series, suffix: str = "%", digits: int = 1) -> pd.Series:
         out = s.map(lambda v: f"{v:.{digits}f}{suffix}" if pd.notna(v) else "—")

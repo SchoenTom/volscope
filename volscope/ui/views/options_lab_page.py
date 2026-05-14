@@ -161,7 +161,7 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
     # 140% is too tight for catastrophic-move analysis (e.g. SMCI
     # +400%, GME +1500%). Slider goes up to 5× current spot.
     with st.expander("Plot range — spot / move %", expanded=False):
-        sc1, sc2 = st.columns(2)
+        sc1, sc2, sc3 = st.columns([3, 3, 1])
         with sc1:
             spot_low_mult = st.slider(
                 "Lower bound (× current spot)",
@@ -178,6 +178,20 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
                 step=0.05, key="ol_spot_high",
                 help="Upper edge of the x-axis. 2.0 = +100 %, 5.0 = +400 %.",
             )
+        with sc3:
+            # v0.9.1 — one-click reset back to the default 60-140 %
+            # window. Operator-requested after stretching the axis
+            # for catastrophic-move analysis and wanting to snap
+            # back without dragging both sliders by hand.
+            if st.button(
+                "↺ Reset",
+                key="ol_spot_range_reset",
+                use_container_width=True,
+                help="Restore the default 0.60×–1.40× spot range.",
+            ):
+                st.session_state["ol_spot_low"]  = 0.60
+                st.session_state["ol_spot_high"] = 1.40
+                st.rerun()
 
     # ── Payoff diagram ──────────────────────────────────────────────
     _render_payoff_diagram(
@@ -214,6 +228,116 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
         _render_probability_cone(mat, spot, iv, r, q, dte)
     with tab_u:
         _render_underlying_context(history, ticker)
+
+    # ── Paper-buy CTA (v0.9.1) ─────────────────────────────────────
+    # Materialised strategy → paper_buy_strategy → positions /
+    # paper_trades. Same engine path Pre-Trade has used since v0.3.x,
+    # now reachable from Options Lab so the operator can act on a
+    # candidate trade without switching pages.
+    _render_paper_buy_cta(
+        db,
+        mat=mat,
+        spot=spot,
+        iv=iv,
+        iv_perc=cfg.get("iv_perc"),
+    )
+
+
+def _render_paper_buy_cta(
+    db,
+    *,
+    mat,
+    spot: float,
+    iv: float,
+    iv_perc: Optional[float] = None,
+) -> None:
+    """Render the Paper Buy row at the bottom of Options Lab.
+
+    Mirrors ``pretrade_page.py`` line ~480-540 BUY logic but lives
+    here so the operator can buy a multi-leg structure straight from
+    the Options-Lab builder without bouncing through Pre-Trade.
+
+    Single source of truth for the *actual* engine call: the same
+    ``volscope.data.paper_trader.paper_buy_strategy`` function both
+    pages use. This keeps cash-debit, ledger journaling, and
+    strategy-group bookkeeping identical across entry points.
+    """
+    from datetime import date as _date
+
+    render_html(
+        st,
+        f'<div style="margin-top:22px;padding-top:14px;'
+        f'border-top:1px solid {COLORS["border"]};'
+        f'font-family:\'DM Sans\',sans-serif;font-size:13px;'
+        f'font-weight:600;color:{COLORS["muted"]};letter-spacing:0.02em;">'
+        f'PAPER TRADE — execute this candidate</div>',
+    )
+    render_html(
+        st,
+        f'<div style="background:{COLORS["surface"]};border-left:3px solid '
+        f'{COLORS["accent"]};padding:10px 14px;border-radius:5px;margin:6px 0;'
+        f'font-family:\'DM Sans\',sans-serif;font-size:12px;'
+        f'color:{COLORS["text"]};">'
+        f'Click <strong>▶ paper-buy</strong> to write '
+        f'<strong>{mat.template_name}</strong> · '
+        f'<strong>{len(mat.legs)} legs</strong> on '
+        f'<strong>{mat.ticker}</strong> into the Portfolio paper engine. '
+        f'No IBKR call, no real order; cash is debited from the paper '
+        f'balance and the position appears in <em>Portfolio</em> on next '
+        f'render.'
+        f'</div>',
+    )
+
+    pb_col1, pb_col2, pb_col3 = st.columns([2, 2, 3])
+    with pb_col1:
+        do_buy = st.button(
+            "▶ paper-buy this structure",
+            key="ol_paper_buy",
+            type="primary",
+            use_container_width=True,
+            help="Materialise all legs and insert as a Portfolio position.",
+        )
+    with pb_col2:
+        do_open_portfolio = st.button(
+            "▷ portfolio →",
+            key="ol_open_portfolio",
+            use_container_width=True,
+            help="Jump to the Portfolio page (no insert).",
+        )
+    with pb_col3:
+        render_html(
+            st,
+            f'<div style="font-family:JetBrains Mono,monospace;font-size:9px;'
+            f'color:{COLORS["muted"]};padding:8px 4px;line-height:1.3;">'
+            f'BSM-priced entry · close anytime in Portfolio'
+            f'</div>',
+        )
+
+    if do_buy:
+        try:
+            from volscope.data.paper_trader import paper_buy_strategy
+            group_id, cash_after = paper_buy_strategy(
+                db,
+                mat,
+                entry_iv_pct=float(iv),
+                entry_iv_percentile=(
+                    float(iv_perc) if iv_perc is not None else None
+                ),
+                spot=float(spot),
+                scenario_hint="Options Lab",
+            )
+            st.success(
+                f"Paper-bought · {mat.template_name} · {len(mat.legs)} legs · "
+                f"group {group_id[-6:]} · cash ${cash_after:,.0f}",
+            )
+        except Exception as exc:                                # noqa: BLE001
+            st.error(f"Paper-buy failed: {exc}")
+
+    if do_open_portfolio:
+        from volscope.ui.components.navigation import NavIntent, nav_to
+        nav_to(NavIntent(page="Portfolio", ticker=mat.ticker,
+                          source="Options Lab"))
+        st.rerun()
 
 
 # ── Preset loader ───────────────────────────────────────────────────
@@ -578,6 +702,20 @@ def _render_builder_strip(db) -> Optional[dict]:
             "DTE", min_value=7, max_value=900, value=60, step=7, key="ol_dte",
             help=tooltip("DTE") or "Days to Expiration.",
         )
+
+    # v0.9.1 — Ticker-change staleness fix.
+    # When the operator switches ticker (SPY → EWZ) Streamlit keeps
+    # the *previous* ``ol_spot`` / ``ol_iv`` values cached in
+    # session_state, so the number_input below would re-initialise
+    # to the OLD ticker's spot, not the new one. Detect the ticker
+    # change here, BEFORE the spot/iv widgets render, and pop the
+    # stale keys so they re-default cleanly from the new ticker's
+    # latest scrape.
+    _last_seen = st.session_state.get("ol_last_ticker_seen")
+    if _last_seen is not None and _last_seen != ticker:
+        for _k in ("ol_spot", "ol_iv", "ol_override_strike", "ol_override_expiry"):
+            st.session_state.pop(_k, None)
+    st.session_state["ol_last_ticker_seen"] = ticker
 
     # Pull live state
     history = db.get_ticker_history(ticker)
