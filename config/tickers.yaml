@@ -1,0 +1,53 @@
+# Universe — Phase 1 scaffold.
+#
+# Tier 1 = always tradable (cash-settled indices preferred for no assignment risk).
+# Tier 2 = Castillo & Mira-McWilliams (2026) final 26-ticker subset, large-cap tech
+#          subset with confirmed statistical IV mean-reversion. Earnings pause REQUIRED.
+# Blocked = pre-earnings IV does NOT mean-revert cleanly (binary FDA, post-IPO, crypto-linked).
+# Monitor-only = thesis positions held outside the bot's execution scope.
+
+universe:
+  tier1_indices:
+    - {symbol: SPY,   use: always}
+    - {symbol: QQQ,   use: always}
+    - {symbol: IWM,   use: always}
+    - {symbol: SPX,   use: always, cash_settled: true, trading_class: SPXW}
+    - {symbol: XSP,   use: always, cash_settled: true}
+
+  tier2_megacap_tech:
+    - {symbol: AAPL,  use: pause_earnings, blackout_days: 14}
+    - {symbol: MSFT,  use: pause_earnings, blackout_days: 14}
+    - {symbol: AMZN,  use: pause_earnings, blackout_days: 14}
+    - {symbol: NVDA,  use: pause_earnings, blackout_days: 14}
+    - {symbol: GOOGL, use: pause_earnings, blackout_days: 14}
+    - {symbol: META,  use: pause_earnings, blackout_days: 14}
+    - {symbol: AMD,   use: pause_earnings, blackout_days: 14}
+    - {symbol: QCOM,  use: pause_earnings, blackout_days: 14}
+    - {symbol: MU,    use: pause_earnings, blackout_days: 14}
+
+  tier3_sector_etfs:
+    - {symbol: XLE,   use: always}
+    - {symbol: XLF,   use: always}
+    - {symbol: XLK,   use: always}
+    - {symbol: XLV,   use: always}
+    - {symbol: EWZ,   use: always}
+
+  monitor_only:
+    # Tom's PYPL Jan 2029 LEAPS — thesis position, NEVER touched by the bot.
+    - {symbol: PYPL,  reason: "thesis_leaps_jan_2029_strike_80"}
+
+  blocked:
+    - TSLA      # pre-earnings IV doesn't mean-revert cleanly (8-12% implied moves)
+    - BNTX      # binary FDA risk
+    - MRNA      # binary FDA risk
+    - MSTR      # crypto-linked, BTC vol contamination
+    - GME       # meme-stock IV non-stationarity
+
+liquidity_minima:
+  option_daily_volume: 1000                  # preferred 5000+
+  open_interest_per_strike: 500              # preferred 1000+
+  bid_ask_spread_pct_of_mid: 0.10            # reject if > 10%; warn if > 5%
+  bid_ask_spread_pct_preferred: 0.05
+  underlying_adv_shares: 1000000             # preferred 10M+
+  underlying_price_min: 20.0
+  underlying_market_cap_usd: 10000000000     # $10B; preferred $50B+

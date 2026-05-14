@@ -1,0 +1,154 @@
+[project]
+name = "volscope"
+version = "0.2.0"
+description = "Volatility Intelligence Platform — autonomous IV mean-reversion options bot"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "NOTICE"}
+authors = [{name = "Operator"}]
+keywords = ["options", "volatility", "ibkr", "trading", "duckdb", "streamlit"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Private :: Do Not Upload",
+]
+
+dependencies = [
+    "numpy>=1.24.0,<2.0.0",
+    "pandas>=2.0.0,<3.0.0",
+    "scipy>=1.10.0,<2.0.0",
+    "yfinance>=0.2.31",
+    "duckdb>=0.9.0,<2.0.0",
+    "streamlit>=1.35.0,<2.0.0",
+    "plotly>=5.17.0,<6.0.0",
+    "rich>=13.0.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "pyyaml>=6.0",
+    "structlog>=25.0",
+    "xgboost>=2.0.0",
+    "scikit-learn>=1.3.0",
+    "statsmodels>=0.14.0",
+    "reportlab>=4.0.0,<5.0.0",
+    "typer>=0.13.0",
+]
+
+[project.optional-dependencies]
+bot = [
+    "ib_async>=2.0,<3.0",
+    "apscheduler>=3.10,<4.0",
+    "sqlalchemy>=2.0",
+    "arch>=7.0",
+    "hmmlearn>=0.3",
+    "transitions>=0.9",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "pytest-asyncio>=0.24",
+    "pytest-freezegun>=0.4",
+    "hypothesis>=6.0",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "pre-commit>=4.0",
+    "types-PyYAML",
+    "types-requests",
+]
+
+[project.urls]
+"Roadmap" = "../../ROADMAP.md"
+"Memory canon" = "../../memory/INDEX.md"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["volscope*"]
+exclude = ["tests*", "scripts*", "_one_off*"]
+
+# ── Ruff (replaces black + isort + flake8) ─────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = [
+    "E501",   # line length handled by formatter
+    "B008",   # function call in default arg — Streamlit pattern
+    "SIM108", # ternary if-else is often less readable
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ── Mypy ──────────────────────────────────────────────────────────
+# Base config: friendly for legacy code, strict for new packages.
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+# Strict for the NEW Phase 1/2 packages only — legacy ramp-up later.
+[[tool.mypy.overrides]]
+module = [
+    "volscope.signals.factors",
+    "volscope.signals.composite",
+    "volscope.signals.filters",
+    "volscope.signals.ranking",
+    "volscope.risk.kill_switch",
+    "volscope.lifecycle.machine",
+    "volscope.scheduler.jobs",
+    "volscope.execution.ibkr_stub",
+    "volscope.analytics.regime",
+    "volscope.analytics.garch",
+    "volscope.persistence.db",
+]
+strict = true
+
+# Deferred-import deps that aren't always installed.
+[[tool.mypy.overrides]]
+module = ["ib_async.*", "apscheduler.*", "hmmlearn.*", "arch.*",
+          "transitions.*", "sqlalchemy.*"]
+ignore_missing_imports = true
+
+# ── Pytest ────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+markers = [
+    "slow: long-running tests (> 5s)",
+    "integration: tests that need external services",
+    "ibkr: tests that need an IBKR paper connection",
+    "perf: performance smoke benchmarks",
+]
+asyncio_mode = "auto"
+
+# ── Coverage ──────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["volscope"]
+omit = [
+    "volscope/ui/views/*",     # Streamlit pages are tested via AppTest, not coverage
+    "volscope/ui/components/*",
+    "volscope/ui/styles/*",
+    "tests/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

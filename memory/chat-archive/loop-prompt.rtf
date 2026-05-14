@@ -1,0 +1,1120 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;\f1\fnil\fcharset0 Menlo-BoldItalic;\f2\fnil\fcharset0 Menlo-Bold;
+\f3\fnil\fcharset0 Menlo-Italic;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red175\green221\blue255;\red116\green116\blue116;
+\red202\green51\blue35;\red106\green106\blue106;\red163\green163\blue163;}
+{\*\expandedcolortbl;;\csgray\c0;\cssrgb\c73675\c89410\c100000;\csgenericrgb\c45371\c45371\c45371;
+\cssrgb\c83899\c28663\c18026;\cssrgb\c49174\c49174\c49174;\cssrgb\c69768\c69768\c69768;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs22 \cf2 \CocoaLigature0  
+\f1\i\b \ul VolScope Maturity Loop \'97 Self-Perpetuating Audit & Improve Cycle
+\f0\i0\b0 \ulnone                                                                                                                                                                                                              \
+                                                        \
+ 
+\f2\b Context
+\f0\b0 \
+\
+ 
+\f2\b Status
+\f0\b0  
+\f2\b (2026-05-01):
+\f0\b0  VolScope hat 17 [DONE] Roadmap-Items, 867 Tests, ein neues Edge-Score-Composite-Engine \'97 aber ist trotzdem 
+\f2\b alpha
+\f0\b0 . Die heutige 3-Agenten-Audit hat ergeben:\
+\
+ - 
+\f2\b 30
+\f0\b0  
+\f2\b konkrete
+\f0\b0  
+\f2\b UI/UX/Layout-Bugs
+\f0\b0  (Spalten-Overflow, Heatmap-Font-Kollisionen, Filter resetten, etc.)\
+ - 
+\f2\b 10
+\f0\b0  
+\f2\b Mathe-Bugs
+\f0\b0  (IV-Einheits-Inkonsistenz Prozent vs. Dezimal, Tie-Handling im Percentile, Lookahead-Risiko im ML, \uc0\u963 \u8594 0 Vega-Kollaps in BSM, fehlende Yang-Zhang-Robustheit, etc.)\
+ - 
+\f2\b 10
+\f0\b0  
+\f2\b Universe-L\'fccken
+\f0\b0  (95% US, kein DAX-Single-Name, kein HK-Listing, fehlende Vol-Indices VXN/RVX/VSTOXX/V2X/GVZ)\
+ - 
+\f2\b 10
+\f0\b0  
+\f2\b Recommendation-Gaps
+\f0\b0  (kein Strategy-Recommender, kein Absolute-IV-Floor-Filter, kein Pre-Trade-Workflow, kein Kelly-Sizing)\
+\
+ 
+\f2\b Owner-Aussage:
+\f0\b0  "Es ist alpha, Monate von Reife entfernt. Maximiere die Funktionalit\'e4t aller Sparten. Ich m\'f6chte dass du dich loopst \'97 eigentlich nicht mehr aufh\'f6rst dir selbst Prompts zu geben um VolScope zu maximieren. Nutze mein Limit."\
+\
+ 
+\f2\b Ziel:
+\f0\b0  Ein 
+\f2\b selbst-perpetuierender
+\f0\b0  
+\f2\b Verbesserungs-Zyklus
+\f0\b0  der nach jeder \'c4nderung 4 parallele Audit-Agenten aktiviert, die Ergebnisse synthetisiert, die n\'e4chste Verbesserung ausw\'e4hlt, implementiert, gegen einen externen Oracle verifiziert (\cf3 make\cf2  \cf3 verify\cf2 ) und dann\
+ automatisch die n\'e4chste Iteration startet \'97 bis ein quantitativer 
+\f2\b Maturity-Score
+\f0\b0  
+\f2\b \uc0\u8805 
+\f0\b0  
+\f2\b 95
+\f0\b0  erreicht ist.\
+\
+ ---\
+ 
+\f2\b Architektur
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b 5-Phasen-Loop
+\f0\b0 \
+\
+ \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+ \uc0\u9474   ITERATION N                                                   \u9474 \
+ \uc0\u9474                                                                 \u9474 \
+ \uc0\u9474   \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488   \u9474 \
+ \uc0\u9474   \u9474  Phase 1: AUDIT (4 parallele Explore-Agenten)             \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 UI/UX Auditor                                         \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Math Auditor                                          \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Universe + Recommendations Auditor                    \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Innovation / Ideation Agent (NEU)                     \u9474   \u9474 \
+ \uc0\u9474   \u9474    \u8594  schreiben strukturierte JSON nach data/audit/         \u9474   \u9474 \
+ \uc0\u9474   \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496   \u9474 \
+ \uc0\u9474            \u8595                                                     \u9474 \
+ \uc0\u9474   \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488   \u9474 \
+ \uc0\u9474   \u9474  Phase 2: SYNTHESIZE                                       \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Lade alle 4 JSON-Reports                              \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Dedupe & rank by (severity, impact, effort)           \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Schreibe data/audit/queue.json (ranked issues)        \u9474   \u9474 \
+ \uc0\u9474   \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496   \u9474 \
+ \uc0\u9474            \u8595                                                     \u9474 \
+ \uc0\u9474   \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488   \u9474 \
+ \uc0\u9474   \u9474  Phase 3: IMPLEMENT                                        \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Pick top-1 issue from queue                           \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Plan-Agent designt approach                           \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Hauptloop schreibt Code + Tests                       \u9474   \u9474 \
+ \uc0\u9474   \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496   \u9474 \
+ \uc0\u9474            \u8595                                                     \u9474 \
+ \uc0\u9474   \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488   \u9474 \
+ \uc0\u9474   \u9474  Phase 4: VERIFY (external oracle)                         \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 make verify \u8594  muss "OVERALL: PASS" zeigen             \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Bei Fail: rollback NICHT, sondern fix-and-retry       \u9474   \u9474 \
+ \uc0\u9474   \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496   \u9474 \
+ \uc0\u9474            \u8595                                                     \u9474 \
+ \uc0\u9474   \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488   \u9474 \
+ \uc0\u9474   \u9474  Phase 5: RECORD + RESTART                                 \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Update plans/volscope-roadmap.md                      \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Run scripts/maturity_check.py \u8594  append history        \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Print MATURITY: <score>/100                           \u9474   \u9474 \
+ \uc0\u9474   \u9474    \'95 Wenn score < 95 \u8594  Re-trigger ITERATION N+1            \u9474   \u9474 \
+ \uc0\u9474   \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496   \u9474 \
+ \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+ ---\
+ 
+\f2\b Die
+\f0\b0  
+\f2\b 4
+\f0\b0  
+\f2\b Audit-Agenten
+\f0\b0 \
+\
+ Jeder Agent ist als 
+\f2\b Explore-Subagent
+\f0\b0  spezifiziert (read-only, JSON-output, kein Code-Write). Output landet in \cf3 data/audit/<agent>_<YYYYMMDD_HHMM>.json\cf2 .\
+\
+ 
+\f2\b Agent
+\f0\b0  
+\f2\b A
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b UI/UX
+\f0\b0  
+\f2\b Auditor
+\f0\b0 \
+\
+ 
+\f2\b Fokus:
+\f0\b0  Layout, Komponenten, Workflows, mobile Responsivit\'e4t, Empty-States, A11y.\
+ 
+\f2\b Prompt-Schablone:
+\f0\b0 \
+\
+ \cf4 \uc0\u9614 \cf2  
+\f3\i Lese
+\f0\i0  
+\f3\i alle
+\f0\i0  
+\f3\i Dateien
+\f0\i0  
+\f3\i unter
+\f0\i0  
+\f3\i \cf3 volscope/ui/\cf2 .
+\f0\i0  
+\f3\i Simuliere
+\f0\i0  
+\f3\i einen
+\f0\i0  
+\f3\i Hedgefund-Trader
+\f0\i0  
+\f3\i der
+\f0\i0  
+\f3\i die
+\f0\i0  
+\f3\i App
+\f0\i0  
+\f3\i zum
+\f0\i0  
+\f3\i ersten
+\f0\i0  
+\f3\i Mal
+\f0\i0  
+\f3\i \'f6ffnet.
+\f0\i0  
+\f3\i Liefere
+\f0\i0  
+\f3\i strukturiertes
+\f0\i0  
+\f3\i JSON
+\f0\i0  
+\f3\i mit
+\f0\i0  
+\f3\i Schl\'fcsseln:
+\f0\i0  
+\f3\i \cf3 bugs[]\cf2 ,
+\f0\i0  
+\f3\i \cf3 feature_gaps[]\cf2 ,
+\f0\i0  
+\f3\i \cf3 ux_friction[]\cf2 ,
+\f0\i0  
+\f3\i \cf3 quick_wins[]\cf2 ,
+\f0\i0  
+\f3\i jedes
+\f0\i0  
+\f3\i Element
+\f0\i0  
+\f3\i mit
+\f0\i0  
+\f3\i \cf3 \{file,
+\f0\i0 \cf2  
+\f3\i \cf3 line,
+\f0\i0 \cf2  
+\f3\i \cf3 severity
+\f0\i0 \cf2 \
+ \cf4 \uc0\u9614 \cf2  
+\f3\i \cf3 (critical|high|medium|low),
+\f0\i0 \cf2  
+\f3\i \cf3 description,
+\f0\i0 \cf2  
+\f3\i \cf3 fix_sketch\}\cf2 .
+\f0\i0 \
+\
+ 
+\f2\b Pre-loaded
+\f0\b0  
+\f2\b Findings
+\f0\b0  
+\f2\b (heute):
+\f0\b0  Scanner column-overflow (\cf3 scan_page.py:264\cf2 ), Heatmap font collision (\cf3 heatmap_page.py:146\cf2 ), Filter-reset across reruns, Vol Surface fehlt komplett, keine Greeks-Page, keine Pre-Trade-Card, keine Cmd+K-Suche, kein CSV-Export, hard-coded Dark\
+ Theme, KPI-Wrap auf Mobile.\
+\
+ 
+\f2\b Agent
+\f0\b0  
+\f2\b B
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b Math
+\f0\b0  
+\f2\b Auditor
+\f0\b0 \
+\
+ 
+\f2\b Fokus:
+\f0\b0  Korrektheit gegen Lehrbuch, Edge Cases, Lookahead, Survivorship, Annualisierung, Einheiten-Konsistenz.\
+ 
+\f2\b Prompt-Schablone:
+\f0\b0 \
+\
+ \cf4 \uc0\u9614 \cf2  
+\f3\i Lese
+\f0\i0  
+\f3\i alle
+\f0\i0  
+\f3\i Dateien
+\f0\i0  
+\f3\i unter
+\f0\i0  
+\f3\i \cf3 volscope/analytics/\cf2  und
+\f0\i0  
+\f3\i \cf3 volscope/data/options_scraper.py\cf2 .
+\f0\i0  
+\f3\i Pr\'fcfe
+\f0\i0  
+\f3\i gegen
+\f0\i0  
+\f3\i Hull
+\f0\i0  
+\f3\i "Options,
+\f0\i0  
+\f3\i Futures,
+\f0\i0  
+\f3\i and
+\f0\i0  
+\f3\i Other
+\f0\i0  
+\f3\i Derivatives"
+\f0\i0  
+\f3\i und
+\f0\i0  
+\f3\i Yang-Zhang
+\f0\i0  
+\f3\i (2000),
+\f0\i0  
+\f3\i Tastytrade
+\f0\i0  
+\f3\i IV-Rank-Definition,
+\f0\i0  
+\f3\i Sinclair
+\f0\i0  
+\f3\i "Volatility
+\f0\i0  
+\f3\i Trading".
+\f0\i0  
+\f3\i JSON
+\f0\i0  
+\f3\i mit
+\f0\i0  
+\f3\i \cf3 math_bugs[]\cf2 ,
+\f0\i0  
+\f3\i \cf3 edge_case_gaps[]\cf2 ,
+\f0\i0 \
+ \cf4 \uc0\u9614 \cf2  
+\f3\i \cf3 conceptual_problems[]\cf2 ,
+\f0\i0  
+\f3\i jedes
+\f0\i0  
+\f3\i mit
+\f0\i0  
+\f3\i \cf3 \{file,
+\f0\i0 \cf2  
+\f3\i \cf3 line,
+\f0\i0 \cf2  
+\f3\i \cf3 formula_check,
+\f0\i0 \cf2  
+\f3\i \cf3 expected,
+\f0\i0 \cf2  
+\f3\i \cf3 actual,
+\f0\i0 \cf2  
+\f3\i \cf3 fix_sketch\}\cf2 .
+\f0\i0 \
+\
+ 
+\f2\b Pre-loaded
+\f0\b0  
+\f2\b Findings:
+\f0\b0  IV % vs. Dezimal-Inkonsistenz, Percentile-Tie-Handling (\cf3 vol_metrics.py:43\cf2 ), BSM \uc0\u963 \u8594 0 Vega-Bug (\cf3 black_scholes.py:64\cf2 ), ML Lookahead-Risiko (\cf3 ml_signal.py:133\cf2 ), VRP-Mapping nicht universell (f\'fcr DAX/Crypto), Yang-Zhang k-Parameter nur f\'fcr 252-Window\
+ kalibriert, Capital-Flow-Z-Score instabil bei < 10 Tickern.\
+\
+ 
+\f2\b Agent
+\f0\b0  
+\f2\b C
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b Universe
+\f0\b0  
+\f2\b +
+\f0\b0  
+\f2\b Recommendations
+\f0\b0  
+\f2\b Auditor
+\f0\b0 \
+\
+ 
+\f2\b Fokus:
+\f0\b0  Asset-Coverage, Recommendation-Qualit\'e4t, Strategy-Engine, Cross-Asset.\
+ 
+\f2\b Prompt-Schablone:
+\f0\b0 \
+\
+ \cf4 \uc0\u9614 \cf2  
+\f3\i Lese
+\f0\i0  
+\f3\i \cf3 volscope/data/ticker_universe.py\cf2 ,
+\f0\i0  
+\f3\i \cf3 volscope/analytics/opportunity.py\cf2 ,
+\f0\i0  
+\f3\i \cf3 volscope/analytics/edge_score.py\cf2 ,
+\f0\i0  
+\f3\i \cf3 volscope/ui/views/discover_page.py\cf2 .
+\f0\i0  
+\f3\i Audit
+\f0\i0  
+\f3\i ob
+\f0\i0  
+\f3\i die
+\f0\i0  
+\f3\i Empfehlungen
+\f0\i0  
+\f3\i f\'fcr
+\f0\i0  
+\f3\i einen
+\f0\i0  
+\f3\i Hedgefund-Trader
+\f0\i0  
+\f3\i (Operator:
+\f0\i0  
+\f3\i DAX/Nasdaq
+\f0\i0  
+\f3\i Puts,
+\f0\i0  
+\f3\i HK-Knockouts)
+\f0\i0  
+\f3\i tradeable
+\f0\i0  
+\f3\i sind.
+\f0\i0  
+\f3\i JSON
+\f0\i0  
+\f3\i mit
+\f0\i0 \
+ \cf4 \uc0\u9614 \cf2  
+\f3\i \cf3 universe_gaps[]\cf2 ,
+\f0\i0  
+\f3\i \cf3 recommendation_flaws[]\cf2 ,
+\f0\i0  
+\f3\i \cf3 missing_modes[]\cf2 ,
+\f0\i0  
+\f3\i jedes
+\f0\i0  
+\f3\i mit
+\f0\i0  
+\f3\i \cf3 \{file,
+\f0\i0 \cf2  
+\f3\i \cf3 line,
+\f0\i0 \cf2  
+\f3\i \cf3 problem,
+\f0\i0 \cf2  
+\f3\i \cf3 business_impact,
+\f0\i0 \cf2  
+\f3\i \cf3 fix_sketch\}\cf2 .
+\f0\i0 \
+\
+ 
+\f2\b Pre-loaded
+\f0\b0  
+\f2\b Findings:
+\f0\b0  95% US-Universe, 0 DAX-Single-Names, 0 HK-Listings, fehlende Vol-Indices (VXN/RVX/VSTOXX/V2X/GVZ/OVX), kein Absolute-IV-Floor-Filter (TSLA bei 12% wird "cheap" obwohl Floor ist), kein Strategy-Recommender (kein Strike/Maturity-Vorschlag), kein\
+ Pre-Trade-Card mit P&L-Curve.\
+\
+ 
+\f2\b Agent
+\f0\b0  
+\f2\b D
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b Innovation
+\f0\b0  
+\f2\b /
+\f0\b0  
+\f2\b Ideation
+\f0\b0  
+\f2\b Agent
+\f0\b0  
+\f2\b (NEU)
+\f0\b0 \
+\
+ 
+\f2\b Fokus:
+\f0\b0  Was w\'fcrde VolScope von "gutes Tool" zu "best-in-class hedgefund Tool" machen? Konzeptionelle Spr\'fcnge, neue Modi, neue Visualisierungen.\
+ 
+\f2\b Prompt-Schablone:
+\f0\b0 \
+\
+ \cf4 \uc0\u9614 \cf2  
+\f3\i Du
+\f0\i0  
+\f3\i kennst
+\f0\i0  
+\f3\i VolScope
+\f0\i0  
+\f3\i (Beschreibung
+\f0\i0  
+\f3\i im
+\f0\i0  
+\f3\i Prompt-Header).
+\f0\i0  
+\f3\i Brainstorm:
+\f0\i0  
+\f3\i was
+\f0\i0  
+\f3\i hat
+\f0\i0  
+\f3\i VolScope
+\f0\i0  
+\f1\i\b nicht
+\f3\b0  und
+\f0\i0  
+\f3\i sollte?
+\f0\i0  
+\f3\i Recherchiere
+\f0\i0  
+\f3\i best-in-class
+\f0\i0  
+\f3\i Tools
+\f0\i0  
+\f3\i (Bloomberg
+\f0\i0  
+\f3\i Vol
+\f0\i0  
+\f3\i Suite,
+\f0\i0  
+\f3\i Volcube,
+\f0\i0  
+\f3\i OptionMetrics,
+\f0\i0  
+\f3\i ORATS,
+\f0\i0  
+\f3\i predictive).
+\f0\i0  
+\f3\i Liefere
+\f0\i0  
+\f3\i JSON
+\f0\i0  
+\f3\i mit
+\f0\i0  
+\f3\i \cf3 bold_ideas[]\cf2 ,
+\f0\i0  
+\f3\i \cf3 concept_redesigns[]\cf2 ,
+\f0\i0 \
+ \cf4 \uc0\u9614 \cf2  
+\f3\i \cf3 experimental_features[]\cf2 ,
+\f0\i0  
+\f3\i jedes
+\f0\i0  
+\f3\i mit
+\f0\i0  
+\f3\i \cf3 \{name,
+\f0\i0 \cf2  
+\f3\i \cf3 description,
+\f0\i0 \cf2  
+\f3\i \cf3 hedgefund_impact,
+\f0\i0 \cf2  
+\f3\i \cf3 implementation_sketch,
+\f0\i0 \cf2  
+\f3\i \cf3 novelty_score
+\f0\i0 \cf2  
+\f3\i \cf3 (1-10),
+\f0\i0 \cf2  
+\f3\i \cf3 feasibility_score
+\f0\i0 \cf2  
+\f3\i \cf3 (1-10)\}\cf2 .
+\f0\i0  
+\f3\i Mindestens
+\f0\i0  
+\f3\i 10
+\f0\i0  
+\f3\i echte
+\f0\i0  
+\f3\i Ideen,
+\f0\i0  
+\f3\i keine
+\f0\i0  
+\f3\i Geschwafel-Wiederholungen.
+\f0\i0 \
+\
+ 
+\f2\b Initial
+\f0\b0  
+\f2\b Idea
+\f0\b0  
+\f2\b Seeds
+\f0\b0  
+\f2\b (zur
+\f0\b0  
+\f2\b Inspiration):
+\f0\b0 \
+ - Vol Surface SVI-Fit + Dupire Local Vol\
+ - PCA-basierte Sektor-Regime-Klassifikation\
+ - Realized Skew aus Intraday Spot-Path\
+ - Auto-Generated "Trade-Cards" mit P&L Backtest\
+ - Cross-Asset Convergence Scanner (VIX vs. VXFXI vs. VSTOXX)\
+ - Pair-Trade-Engine (correlated underlyings, vol divergence)\
+ - Calendar-Spread Edge Detector\
+ - Risk-Reversal Anomaly Scanner\
+ - Earnings-IV-Vol-Term-Structure Visualizer\
+ - Kelly-Criterion Position-Sizer auf Backtest-Hit-Rate\
+ - Monte-Carlo VaR mit Vol-of-Vol\
+ - "Vol Regime Today" Plain-English-Summary (LLM-generated)\
+\
+ ---\
+ 
+\f2\b Definition
+\f0\b0  
+\f2\b of
+\f0\b0  
+\f2\b Mature
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b \cf3 scripts/maturity_check.py
+\f0\b0 \cf2 \
+\
+ Quantitatives Gate, das bei jedem Iterations-Ende einen Score 0-100 ausgibt. 
+\f2\b Ohne
+\f0\b0  
+\f2\b dieses
+\f0\b0  
+\f2\b Skript
+\f0\b0  
+\f2\b driftet
+\f0\b0  
+\f2\b die
+\f0\b0  
+\f2\b Loop
+\f0\b0  
+\f2\b in
+\f0\b0  
+\f2\b Plausibilit\'e4t
+\f0\b0  
+\f2\b (siehe
+\f0\b0  
+\f2\b \cf3 auto-dreaming-blueprint\cf2 ).
+\f0\b0 \
+\
+ Maturity Score = weighted sum of 6 dimensions:\
+\
+   D1. Test Coverage         (15%)  \'97 pytest-cov \uc0\u8805  85%\
+   D2. Audit Findings        (25%)  \'97 \uc0\u931  \'fcber 4 Agenten:\
+                                        0 critical = 100%\
+                                        0 high     = 100%\
+                                        \uc0\u8804  3 medium = 50% (else 0)\
+   D3. Universe Coverage     (10%)  \'97 \uc0\u8805  350 tickers \'b7 \u8805  3 asset classes\
+                                      \'b7 \uc0\u8805  6 vol indices\
+   D4. Math Correctness      (20%)  \'97 golden-values pass + 0 unit bugs\
+                                      + Edge-Case-Tests f\'fcr jede public Fn\
+   D5. Recommendation Quality (15%) \'97 backtest hit rate \uc0\u8805  60% on BUY signals\
+                                      + precision@5 \uc0\u8805  0.8 on Edge-Score top\
+   D6. UX Polish             (15%)  \'97 checklist:\
+                                      \'95 CSV/PNG export buttons\
+                                      \'95 Empty-state UX on every page\
+                                      \'95 Mobile layout < 800px verified\
+                                      \'95 Onboarding tour\
+                                      \'95 Keyboard shortcuts\
+                                      \'95 Theme toggle\
+\
+ Output: data/maturity_history.jsonl (append-only)\
+         \{ts, score, components: \{D1..D6\}, gaps: [...]\}\
+\
+ Mature gate: score \uc0\u8805  95 \u8594  loop terminates\
+              score < 60 \uc0\u8594  loop runs aggressively\
+              60 \uc0\u8804  score < 95 \u8594  loop runs cautiously\
+\
+ Auch ein menschen-lesbarer Report \cf3 data/maturity_latest.md\cf2  mit Trend-Chart \'fcber die letzten 14 Tage.\
+\
+ ---\
+ 
+\f2\b Loop
+\f0\b0  
+\f2\b Implementation
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b drei
+\f0\b0  
+\f2\b Layer
+\f0\b0 \
+\
+ 
+\f2\b Layer
+\f0\b0  
+\f2\b 1
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b Single
+\f0\b0  
+\f2\b Iteration
+\f0\b0  
+\f2\b (\cf3 scripts/loop_iteration.py\cf2 )
+\f0\b0 \
+\
+ Pure Python orchestrator. Was macht es:\
+ 1. L\'e4dt \cf3 data/audit/queue.json\cf2  (von letzter Iteration) ODER triggert neue Audits via 4 ExploreAgent-Prompts (\'fcber Claude Agent SDK falls vorhanden, sonst stub-files).\
+ 2. W\'e4hlt top-1 issue.\
+ 3. Schreibt das Issue als \cf3 data/audit/current_task.json\cf2  (f\'fcr Hauptloop lesbar).\
+ 4. Hauptloop (Claude Code) liest Datei, implementiert Fix.\
+ 5. Ruft \cf3 make\cf2  \cf3 verify\cf2 . Wenn PASS \uc0\u8594  ruft \cf3 scripts/maturity_check.py\cf2 .\
+ 6. Append Roadmap-Eintrag.\
+ 7. Exit code 0 = n\'e4chste Iteration; 1 = stop, manueller Eingriff.\
+\
+ 
+\f2\b Layer
+\f0\b0  
+\f2\b 2
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b Loop
+\f0\b0  
+\f2\b Runner
+\f0\b0  
+\f2\b (\cf3 Makefile\cf2  Target
+\f0\b0  
+\f2\b \cf3 make
+\f0\b0 \cf2  
+\f2\b \cf3 loop\cf2 )
+\f0\b0 \
+\
+ Bash/Make-Schleife:\
+ loop:\
+ \\twhile true; do \\\
+ \\t  python scripts/loop_iteration.py || break; \\\
+ \\t  if [ \cf5 "$$(jq\cf2  \cf5 .score\cf2  \cf5 data/maturity_latest.json)"\cf2  -ge 95 ]; then \\\
+ \\t    echo \cf5 "MATURE\cf2  \cf5 \'97\cf2  \cf5 stopping\cf2  \cf5 loop"\cf2 ; break; \\\
+ \\t  fi; \\\
+ \\tdone\
+\
+ 
+\f2\b Layer
+\f0\b0  
+\f2\b 3
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b Claude-driven
+\f0\b0  
+\f2\b Cycle
+\f0\b0  
+\f2\b (Ralph
+\f0\b0  
+\f2\b Loop
+\f0\b0  
+\f2\b pattern)
+\f0\b0 \
+\
+ Das ist der 
+\f2\b eigentliche
+\f0\b0  
+\f2\b autonome
+\f0\b0  
+\f2\b Loop
+\f0\b0  den der Owner m\'f6chte. Drei kompatible Modi:\
+\
+ 
+\f2\b Modus
+\f0\b0  
+\f2\b A
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b \cf3 ralph-loop\cf2  Plugin
+\f0\b0  
+\f2\b (etabliert
+\f0\b0  
+\f2\b in
+\f0\b0  
+\f2\b dieser
+\f0\b0  
+\f2\b Codebase):
+\f0\b0 \
+ - \cf3 ralph-loop:ralph-loop\cf2  als Skill aktivieren\
+ - Jede Iteration = eine Claude-Session\
+ - Claude liest \cf3 progress.json\cf2  + \cf3 data/audit/queue.json\cf2 , baut, terminiert\
+ - Outer ralph-loop Daemon startet neue Session mit gleichem Kontext\
+\
+ 
+\f2\b Modus
+\f0\b0  
+\f2\b B
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b \cf3 /loop\cf2  Dynamic
+\f0\b0  
+\f2\b Mode
+\f0\b0  
+\f2\b mit
+\f0\b0  
+\f2\b \cf3 ScheduleWakeup\cf2 :
+\f0\b0 \
+ - Slash-Command \cf3 /loop\cf2  ohne Intervall \uc0\u8594  self-paced\
+ - Nach jeder Iteration \cf3 ScheduleWakeup\cf2  mit ~270s Delay (cache-warm)\
+ - Sentinel \cf3 <<autonomous-loop-dynamic>>\cf2  als Re-Prompt\
+\
+ 
+\f2\b Modus
+\f0\b0  
+\f2\b C
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b 5
+\f0\b0  
+\f2\b daily
+\f0\b0  
+\f2\b Crons
+\f0\b0  
+\f2\b (existierend,
+\f0\b0  
+\f2\b persistent):
+\f0\b0 \
+ - 5 Cron-Slots \'e0 festem Zeitpunkt (06:47, 10:17, 13:43, 17:51, 21:23 CEST)\
+ - Jeder Cron = eine fresh Iteration\
+ - Robust gegen Context-Verlust (jede Session frisch)\
+ - Bereits aufgesetzt in alter Roadmap, muss reaktiviert werden\
+\
+ 
+\f2\b Empfehlung:
+\f0\b0  
+\f2\b Hybrid
+\f0\b0  
+\f2\b B
+\f0\b0  
+\f2\b +
+\f0\b0  
+\f2\b C.
+\f0\b0  B nutzt das Token-Limit aktiv solange Owner die Session offen hat; C l\'e4uft nachts/abwesend weiter. A als manueller Modus f\'fcr gezielte Einzel-Iterationen.\
+\
+ ---\
+ 
+\f2\b Files
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b was
+\f0\b0  
+\f2\b wird
+\f0\b0  
+\f2\b gebaut
+\f0\b0 \
+\
+ 
+\f2\b Neue
+\f0\b0  
+\f2\b Files
+\f0\b0 \
+\
+ \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+ \uc0\u9474                   Pfad                   \u9474                               Zweck                              \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 scripts/loop_iteration.py\cf2                \uc0\u9474  Orchestrator f\'fcr eine einzelne Iteration                        \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 scripts/maturity_check.py\cf2                \uc0\u9474  Definition-of-Done quantitative Gate                            \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 scripts/run_audits.py\cf2                    \uc0\u9474  Spawnt die 4 Audit-Agenten (oder druckt Prompts zum Copy/Paste) \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 data/audit/\cf2                              \uc0\u9474  Verzeichnis f\'fcr JSON-Audit-Reports                              \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 data/audit/queue.json\cf2                    \uc0\u9474  Ranked Issue-Queue (Output von Phase 2)                         \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 data/audit/current_task.json\cf2             \uc0\u9474  Aktueller Implementation-Task (Input zu Phase 3)                \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 data/maturity_history.jsonl\cf2              \uc0\u9474  Append-only Maturity-Score-History                              \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 data/maturity_latest.md\cf2                  \uc0\u9474  Human-readable Latest Report                                    \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 .claude/plans/volscope-loop-protocol.md\cf2  \uc0\u9474  Loop-Protokoll-Doku (single source of truth)                    \u9474 \
+ \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+ 
+\f2\b Modifizierte
+\f0\b0  
+\f2\b Files
+\f0\b0 \
+\
+ \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+ \uc0\u9474         Pfad         \u9474                         \'c4nderung                        \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 Makefile\cf2             \uc0\u9474  + \cf3 make\cf2  \cf3 loop\cf2 , \cf3 make\cf2  \cf3 audit\cf2 , \cf3 make\cf2  \cf3 maturity\cf2  Targets         \uc0\u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 volscope-roadmap.md\cf2  \uc0\u9474  Erweitert um Auto-Update-Section "Loop Findings"       \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  \cf3 progress.json\cf2        \uc0\u9474  Erweitert um \cf3 phases.P6_loop\cf2  mit Loop-Iteration-Counter \uc0\u9474 \
+ \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+ 
+\f2\b Bereits
+\f0\b0  
+\f2\b existierende
+\f0\b0  
+\f2\b Files
+\f0\b0  
+\f2\b (genutzt,
+\f0\b0  
+\f2\b nicht
+\f0\b0  
+\f2\b ge\'e4ndert)
+\f0\b0 \
+\
+ - \cf3 scripts/verify.py\cf2  \'97 externes Oracle, MUSS PASS bleiben (siehe \cf3 auto-dreaming-blueprint.md\cf2 )\
+ - \cf3 volscope/analytics/edge_score.py\cf2  \'97 frisch gebaut heute, Test-Bett f\'fcr Loop\
+ - \cf3 tests/golden.py\cf2  \'97 golden-values als Math-Oracle\
+\
+ ---\
+ 
+\f2\b Cost
+\f0\b0  
+\f2\b /
+\f0\b0  
+\f2\b Token-Limit-Strategie
+\f0\b0 \
+\
+ Der Owner sagt explizit: 
+\f2\b "nutze
+\f0\b0  
+\f2\b mein
+\f0\b0  
+\f2\b limit"
+\f0\b0 . Die Loop muss kontinuierlich Tokens fressen, aber produktiv.\
+\
+ \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+ \uc0\u9474        Phase       \u9474  Tokens / Iteration \u9474                          Anmerkung                         \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Audit (4 Agenten) \u9474  ~80k               \u9474  parallel, isoliert, kein Context-Bleed                    \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Synthesize        \u9474  ~10k               \u9474  nur JSON-Reading, deterministisch                         \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Implement         \u9474  ~50-150k           \u9474  abh\'e4ngig vom Issue (UI-Bug = klein, Math-Refactor = gro\'df) \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Verify            \u9474  ~5k                \u9474  nur stdout                                                \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Record            \u9474  ~5k                \u9474  Roadmap-Edit                                              \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  
+\f2\b \uc0\u931 
+\f0\b0  
+\f2\b pro
+\f0\b0  
+\f2\b Iteration
+\f0\b0    \uc0\u9474  
+\f2\b ~150-250k
+\f0\b0           \uc0\u9474                                                            \u9474 \
+ \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+ 
+\f2\b Operator
+\f0\b0  
+\f2\b hat
+\f0\b0  
+\f2\b 1M-Context
+\f0\b0  
+\f2\b Opus.
+\f0\b0  Pro Session ~6 Iterationen vor Compaction. Mit 5 Crons + aktiver Session: ~10 Iterationen/Tag = 50 Issues/Woche bew\'e4ltigt = Maturity-Score-Anstieg ~5-8 Punkte/Woche. 
+\f2\b Erwartete
+\f0\b0  
+\f2\b Maturity-Erreichung:
+\f0\b0  
+\f2\b 6-10
+\f0\b0  
+\f2\b Wochen
+\f0\b0  (von heute 2026-05-01 \uc0\u8594  ~Juli\
+ 2026).\
+\
+ 
+\f2\b Hard
+\f0\b0  
+\f2\b Stops:
+\f0\b0 \
+ - 3 consecutive \cf3 make\cf2  \cf3 verify\cf2  fails \uc0\u8594  Loop pausiert, ruft Owner per \cf3 PushNotification\cf2 \
+ - Maturity-Score sinkt 2 Iterationen in Folge \uc0\u8594  Pause\
+ - Roadmap-Queue leer und Audit-Findings = 0 \uc0\u8594  Maturity > 95 \u8594  Loop terminiert\
+\
+ ---\
+ 
+\f2\b Phase-by-Phase
+\f0\b0  
+\f2\b Implementation
+\f0\b0  
+\f2\b Steps
+\f0\b0 \
+\
+ Wenn der Plan vom Owner approved ist, in dieser Reihenfolge:\
+\
+ 1. 
+\f2\b Bootstrap-Iteration
+\f0\b0  (manuell, ~30 min):\
+   - \cf3 scripts/maturity_check.py\cf2  schreiben + 47 erste Tests\
+   - \cf3 scripts/loop_iteration.py\cf2  schreiben (mit Stub-Audit-Phase)\
+   - \cf3 data/audit/queue.json\cf2  von Hand seeden mit den 30 heutigen Findings (Top-10 jeweils aus jedem Agent)\
+   - \cf3 make\cf2  \cf3 loop\cf2  Makefile-Target\
+   - Erster Iteration manuell starten und beobachten\
+ 2. 
+\f2\b Audit-Agent-Spec-Files
+\f0\b0  (\cf3 data/audit/agents/\{ui,math,universe,ideas\}.md\cf2 ):\
+   - Pre-baked prompts mit Output-Schema\
+   - Werden von \cf3 scripts/run_audits.py\cf2  an Claude Agent SDK gesendet (oder manuell durch Hauptloop ausgef\'fchrt)\
+ 3. 
+\f2\b First
+\f0\b0  
+\f2\b Real
+\f0\b0  
+\f2\b Iteration:
+\f0\b0 \
+   - Pick Top-1 quick-win aus heutigem Audit (Vorschlag: Scanner column-width fix \uc0\u8594  30 min)\
+   - Run, Verify, Maturity-Update\
+   - Best\'e4tigt End-to-End-Funktionalit\'e4t\
+ 4. 
+\f2\b Loop
+\f0\b0  
+\f2\b Activation:
+\f0\b0 \
+   - 5 Crons reaktivieren (per \cf3 update-config\cf2  Skill oder manuell)\
+   - Foreground-\cf3 /loop\cf2  starten via \cf3 ralph-loop:ralph-loop\cf2  Skill\
+   - Maturity-Trend nach 24h reviewen\
+ 5. 
+\f2\b Self-Adjust
+\f0\b0  
+\f2\b Mechanism
+\f0\b0  (Iteration 5+):\
+   - Loop-Iteration soll auch sich selbst verbessern: jede\'a05. Iteration triggert ein Meta-Audit auf \cf3 scripts/loop_iteration.py\cf2  und \cf3 scripts/maturity_check.py\cf2 \
+   - "Verbessere den Verbesserer"\
+\
+ ---\
+ 
+\f2\b Verification
+\f0\b0  
+\f2\b \'97
+\f0\b0  
+\f2\b wie
+\f0\b0  
+\f2\b wir
+\f0\b0  
+\f2\b wissen,
+\f0\b0  
+\f2\b dass
+\f0\b0  
+\f2\b die
+\f0\b0  
+\f2\b Loop
+\f0\b0  
+\f2\b funktioniert
+\f0\b0 \
+\
+ End-to-End Tests (manuell, nach Bootstrap):\
+\
+ 1. 
+\f2\b Smoke:
+\f0\b0  \cf3 make\cf2  \cf3 audit\cf2  produziert 4 valide JSON-Files in \cf3 data/audit/\cf2 \
+ 2. 
+\f2\b Synthesize:
+\f0\b0  \cf3 python\cf2  \cf3 scripts/loop_iteration.py\cf2  \cf3 --synthesize-only\cf2  produziert \cf3 queue.json\cf2  mit \uc0\u8805  10 ranked Issues\
+ 3. 
+\f2\b Maturity:
+\f0\b0  \cf3 python\cf2  \cf3 scripts/maturity_check.py\cf2  produziert Score zwischen 0-100 + JSONL-Append\
+ 4. 
+\f2\b Full
+\f0\b0  
+\f2\b iteration:
+\f0\b0  \cf3 make\cf2  \cf3 loop\cf2  \cf3 ITERATIONS=1\cf2  l\'e4sst eine echte Iteration laufen, \cf3 make\cf2  \cf3 verify\cf2  PASS am Ende\
+ 5. 
+\f2\b Roadmap-Update:
+\f0\b0  Neue Sektion \cf3 [DONE\cf2  \cf3 2026-05-XX]\cf2  \cf3 Loop-Iteration\cf2  \cf3 #N\cf2  taucht auf\
+ 6. 
+\f2\b Trend:
+\f0\b0  Nach 5 Iterationen sollte \cf3 data/maturity_latest.md\cf2  einen sichtbaren positiven Trend zeigen\
+\
+ Wenn 1-6 alle \uc0\u10003  \u8594  Loop ist live und kann unbeaufsichtigt laufen.\
+\
+ ---\
+ 
+\f2\b Risks
+\f0\b0  
+\f2\b &
+\f0\b0  
+\f2\b Mitigations
+\f0\b0 \
+\
+ \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+ \uc0\u9474                             Risiko                             \u9474  Wahrscheinlichkeit \u9474                                                   Mitigation                                                   \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Loop driftet in Plausibilit\'e4t (siehe Auto-Dreaming-Blueprint) \u9474  Mittel             \u9474  \cf3 make\cf2  \cf3 verify\cf2  ist hart gegated, Maturity ist quantitativ, Audit ist external                                    \uc0\u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Token-Verbrauch \'fcbersteigt Budget                             \u9474  Hoch               \u9474  Hard-Stop bei 3 Verify-Fails, Cron-Limit auf 5/Tag, manueller Pause-Knopf via \cf3 volscope-loop\cf2  \cf3 pause\cf2  Marker-File \uc0\u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Implementation-Phase produziert subtle Bugs                   \u9474  Mittel             \u9474  Jede Iteration Tests + golden values, Trend-Maturity catches regressions                                      \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Audit-Agenten produzieren Noise statt Signal                  \u9474  Mittel             \u9474  JSON-Schema strict, jede Iteration Top-1 nur (kein Bulk), Meta-Audit alle 5 Iterationen                       \u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Owner verliert \'dcbersicht \'fcber \'c4nderungen                      \u9474  Niedrig            \u9474  \cf3 data/maturity_latest.md\cf2  + \cf3 roadmap.md\cf2  + Daily-Digest via \cf3 PushNotification\cf2  einmal/Tag                           \uc0\u9474 \
+ \uc0\u9500 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9532 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9508 \
+ \uc0\u9474  Race-Condition auf DB / Files                                 \u9474  Niedrig            \u9474  DB-Lock + Verify-Smoke nutzt isolated tempdir (siehe CLAUDE.md)                                               \u9474 \
+ \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+ ---\
+ 
+\f2\b Success
+\f0\b0  
+\f2\b Criteria
+\f0\b0 \
+\
+ - \cf3 data/maturity_history.jsonl\cf2  w\'e4chst t\'e4glich\
+ - \cf3 data/maturity_latest.md\cf2  zeigt Score \uc0\u8805  80 nach 4 Wochen\
+ - \cf3 make\cf2  \cf3 verify\cf2  bleibt PASS in jeder committed Iteration\
+ - Test-Suite w\'e4chst um \uc0\u8805  30 Tests pro Woche\
+ - Universe w\'e4chst auf \uc0\u8805  350 Tickers\
+ - Min. 5 neue hedgefund-grade Features pro Monat (Greeks-Page, Strategy-Recommender, etc.)\
+ - Owner Manual Override funktioniert: \cf3 touch\cf2  \cf3 ~/.volscope_loop_pause\cf2  stoppt Loop binnen 1 Iteration\
+ - Bei Maturity \uc0\u8805  95 terminiert Loop sauber und postet "VolScope MATURE" Notification\
+\
+ ---\
+ 
+\f2\b Open
+\f0\b0  
+\f2\b Questions
+\f0\b0  
+\f2\b for
+\f0\b0  
+\f2\b Owner
+\f0\b0  
+\f2\b (vor
+\f0\b0  
+\f2\b Loop-Aktivierung)
+\f0\b0 \
+\
+ 1. 
+\f2\b Cron-Reaktivierung:
+\f0\b0  Soll ich die 5 daily CEST-Slots automatisch via \cf3 update-config\cf2  Skill schreiben, oder bevorzugt Owner manuelles \cf3 crontab\cf2  \cf3 -e\cf2 ?\
+ 2. 
+\f2\b Hard-Pause
+\f0\b0  
+\f2\b Mechanism:
+\f0\b0  OK mit \cf3 touch\cf2  \cf3 ~/.volscope_loop_pause\cf2  als Stop-Knopf, oder lieber \cf3 volscope-loop\cf2  \cf3 stop\cf2  Bash-Alias?\
+ 3. 
+\f2\b Notification-Kanal:
+\f0\b0  Daily-Digest via macOS-Notification (osascript), Slack, Email, oder Markdown-File?\
+ 4. 
+\f2\b Branching-Policy:
+\f0\b0  Loop committed direkt auf master, oder feature-branches per Iteration und PR-Review?\
+ 5. 
+\f2\b Token-Budget
+\f0\b0  
+\f2\b pro
+\f0\b0  
+\f2\b Tag:
+\f0\b0  Hard-Cap (z.B. "max 1.5M tokens/Tag")? Oder volle Freiheit?\
+\
+ Diese Fragen werden via \cf3 AskUserQuestion\cf2  nach \cf3 ExitPlanMode\cf2  gestellt, sobald der Plan approved ist.\
+\cf6 \uc0\u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \u9548 \cf2 \
+\
+ \cf7 Claude\cf2  \cf7 has\cf2  \cf7 written\cf2  \cf7 up\cf2  \cf7 a\cf2  \cf7 plan\cf2  \cf7 and\cf2  \cf7 is\cf2  \cf7 ready\cf2  \cf7 to\cf2  \cf7 execute.\cf2  \cf7 Would\cf2  \cf7 you\cf2  \cf7 like\cf2  \cf7 to\cf2  \cf7 proceed?\cf2 \
+\
+ \cf3 \uc0\u10095 \cf2  \cf7 1.\cf2  \cf3 Yes,\cf2  \cf3 and\cf2  \cf3 bypass\cf2  \cf3 permissions\cf2 \
+   \cf7 2.\cf2  Yes, manually approve edits\
+   \cf7 3.\cf2  No, refine with Ultraplan on Claude Code on the web\
+   \cf7 4.\cf2  \cf7 Tell\cf2  \cf7 Claude\cf2  \cf7 what\cf2  \cf7 to\cf2  \cf7 change\cf2 \
+      \cf7 shift+tab\cf2  \cf7 to\cf2  \cf7 approve\cf2  \cf7 with\cf2  \cf7 this\cf2  \cf7 feedback\cf2 \
+\
+}

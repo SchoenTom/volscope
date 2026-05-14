@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+  # Python dependencies (uv-managed via pyproject.toml)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    groups:
+      # Group patch-only updates of dev tooling — never separate PRs.
+      dev-tooling:
+        patterns:
+          - "ruff*"
+          - "mypy*"
+          - "pytest*"
+          - "pre-commit*"
+        update-types: ["patch", "minor"]
+    labels:
+      - "deps"
+      - "dependabot"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "ci"
+      - "dependabot"
+    commit-message:
+      prefix: "chore(ci)"

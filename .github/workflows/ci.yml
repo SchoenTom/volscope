@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Ruff lint + format check
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Mypy (strict on new modules)
+        run: uv run mypy volscope/signals volscope/risk volscope/lifecycle volscope/execution volscope/scheduler volscope/persistence volscope/analytics/regime.py volscope/analytics/garch.py
+
+      - name: Pytest
+        run: uv run pytest -m "not slow and not integration and not perf" --cov=volscope --cov-report=xml --cov-fail-under=65
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  security:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: pip-audit (CVE check on locked deps)
+        run: |
+          uv sync --all-extras
+          uv run pip install pip-audit
+          uv run pip-audit --strict || true   # warn-only initially; tighten in v0.3.0

@@ -1,0 +1,53 @@
+# Risk parameters — Phase 1 scaffold.
+#
+# CHANGES TO THIS FILE ARE BINDING. Per the bot masterplan:
+#   - No intraday changes ever. Only in Sunday 18:00 review window.
+#   - 90-day cooldown between parameter changes.
+#   - Code reads this file at startup; runtime reload is intentionally
+#     not implemented — restart the bot to apply changes.
+
+position_sizing:
+  kelly_fraction: 0.25                       # quarter-Kelly (production-safe start)
+  max_risk_per_trade_defined: 0.02           # 2% NLV per defined-risk trade
+  max_risk_per_trade_undefined: 0.01         # 1% NLV per undefined-risk trade
+  max_bpr_regt: 0.35                         # max buying-power utilisation Reg-T
+  max_bpr_pm: 0.50                           # max under portfolio margin
+  cash_reserve_min: 0.40                     # never deploy >60% NLV
+  max_concurrent_positions: 12
+  max_per_underlying_pct: 0.20               # max 20% NLV in any one ticker
+  max_per_sector_pct: 0.30
+  max_index_vs_single_name_pct: 0.50         # index ≤ 50% of total premium sold
+
+correlation:
+  cor1m_freeze_single_name: 60               # CBOE COR1M >60 → no new single-name
+  cor1m_favor_single_name: 20                # COR1M <20 → favour dispersion
+  use_correlation_haircut: true              # apply 1/sqrt(1+(n-1)ρ) sizing
+
+circuit_breakers:
+  daily_loss_halt_pct: 0.03                  # halt new orders at -3% NLV today
+  drawdown_no_new_entries_pct: 0.10          # -10% from 30d peak
+  drawdown_liquidate_undefined_pct: 0.15
+  drawdown_full_halt_pct: 0.20
+  vix_no_new_entries: 30
+  vix_liquidate_undefined: 40
+  vix_intraday_spike_pct: 0.50               # VIX +50% intraday → kill
+  vix_term_invert_ratio: 1.0                 # VIX9D/VIX > 1.0 = backwardation
+  consecutive_losses_pause: 5
+  ibkr_disconnect_seconds: 60
+
+go_live_gate:
+  paper_months_min: 3
+  paper_trades_min: 100
+  paper_sharpe_min: 0.5
+  paper_max_dd_max: 0.20
+  paper_win_rate_min: 0.65
+  paper_profit_factor_min: 1.2
+  paper_avg_slippage_max: 0.05               # $/leg vs mid
+  ramp_pct: [0.10, 0.25, 0.50, 1.00]         # 4-week steps over 12 weeks
+
+slippage_model:
+  base_haircut_tight_index: 0.30             # spread ≤ 0.10 on SPY/QQQ/IWM
+  base_haircut_medium: 0.50                  # spread ≤ 0.25
+  base_haircut_wide: 0.70                    # spread > 0.25
+  extra_short_dte_le1: 0.10                  # 0DTE/1DTE premium
+  extra_long_dte_gt60: 0.05                  # 60+ DTE thin-strike premium

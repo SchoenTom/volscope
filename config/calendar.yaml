@@ -1,0 +1,50 @@
+# Event calendar — Phase 1 scaffold.
+#
+# All ±3-day blackout windows for new short-vol entries. Dates in
+# America/New_York timezone. Refresh quarterly from FOMC + BLS schedules.
+# Earnings calendars come from the finnhub_adapter on a per-ticker basis,
+# NOT from this file.
+#
+# A signal that fails the calendar gate is logged with the reason but the
+# trade is blocked; nothing else changes.
+
+fomc_meetings:
+  # Source: federalreserve.gov FOMC calendar. Two-day meetings — block both days.
+  - {date: 2026-06-17, type: fomc_decision, note: "June meeting"}
+  - {date: 2026-07-29, type: fomc_decision}
+  - {date: 2026-09-16, type: fomc_decision}
+  - {date: 2026-10-28, type: fomc_decision}
+  - {date: 2026-12-09, type: fomc_decision}
+
+cpi_releases:
+  # Source: BLS economic-release schedule. CPI typically 08:30 ET on T+10 of prior month.
+  - {date: 2026-06-12, type: cpi}
+  - {date: 2026-07-15, type: cpi}
+  - {date: 2026-08-12, type: cpi}
+  - {date: 2026-09-10, type: cpi}
+  - {date: 2026-10-15, type: cpi}
+  - {date: 2026-11-13, type: cpi}
+  - {date: 2026-12-10, type: cpi}
+
+nfp_releases:
+  # Source: BLS. First Friday of each month, 08:30 ET.
+  - {date: 2026-06-05, type: nfp}
+  - {date: 2026-07-02, type: nfp}
+  - {date: 2026-08-07, type: nfp}
+  - {date: 2026-09-04, type: nfp}
+  - {date: 2026-10-02, type: nfp}
+  - {date: 2026-11-06, type: nfp}
+  - {date: 2026-12-04, type: nfp}
+
+opex:
+  # Monthly OPEX = 3rd Friday. Cash-settled SPX expires Friday open.
+  # No hard block, but gamma flip risk is highest in the OPEX week.
+  - {date: 2026-06-19, type: monthly_opex}
+  - {date: 2026-07-17, type: monthly_opex}
+  - {date: 2026-08-21, type: monthly_opex}
+  - {date: 2026-09-18, type: monthly_opex}
+  - {date: 2026-10-16, type: monthly_opex}
+  - {date: 2026-11-20, type: monthly_opex}
+  - {date: 2026-12-18, type: monthly_opex}
+
+blackout_window_days: 3                      # ±3 days around each FOMC/CPI/NFP

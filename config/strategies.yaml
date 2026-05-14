@@ -1,0 +1,57 @@
+# Strategy definitions — Phase 1 scaffold.
+#
+# Each block names a strategy + a parameter set the executor consumes.
+# Values trace to research consensus (see ~/.claude/plans/volscope-bot-masterplan.md):
+#   - 16Δ short / 5Δ long / 45 DTE / 50% PT / 21 DTE close: tastytrade 4,872
+#     SPY trades (2005-2019) + Project Finance 71,417 trades + DTR Trading 96,624
+#   - LEAPS 0.75Δ stock-replacement, roll <270 DTE: standard practitioner rule
+#   - Buy-vol IVR<30 filter: vega expansion + lower cost (MenthorQ study)
+
+ic_45dte_v1:
+  type: iron_condor
+  dte_target: 45
+  dte_min: 35
+  dte_max: 55
+  short_delta: 0.16
+  long_delta: 0.05
+  wing_width_pct_of_spot: 0.05
+  profit_target_pct: 50.0
+  stop_loss_mult: 2.0            # 2x credit hard stop
+  dte_exit: 21                   # mechanical close
+  min_ivr: 30.0
+  min_ivp: 70.0
+  earnings_blackout_days: 14
+  use_cash_settled: true         # prefer SPX/XSP
+
+short_strangle_45dte_v1:
+  type: short_strangle
+  dte_target: 45
+  dte_min: 35
+  dte_max: 55
+  short_delta: 0.16
+  profit_target_pct: 50.0
+  stop_loss_mult: 2.0
+  dte_exit: 21
+  min_ivr: 30.0
+  earnings_blackout_days: 14
+  pm_account_only: true          # NEVER use without portfolio margin
+
+put_credit_spread_v1:
+  type: put_credit_spread
+  dte_target: 45
+  short_delta: 0.20              # slightly tighter than IC short
+  long_delta: 0.05
+  wing_width_pct_of_spot: 0.04
+  profit_target_pct: 50.0
+  stop_loss_mult: 2.0
+  dte_exit: 21
+  min_ivr: 30.0
+  earnings_blackout_days: 14
+
+leaps_call_v1:
+  type: leaps_call
+  dte_min: 365
+  dte_max: 730
+  delta_target: 0.75             # stock-replacement
+  max_iv_rank: 30                # only buy when vol is cheap
+  hold_to_dte: 270               # roll before theta-acceleration zone

@@ -1,0 +1,687 @@
+"""
+Sidebar — brand, ticker picker, nav, page-aware context, live screener, data status.
+
+Design principles:
+  - No unicode gear emoji in widget labels (some fonts render it as '⚙' which
+    can get garbled next to Streamlit's native expander chevron).
+  - Vertical radio nav — horizontal in a narrow sidebar wraps and overlaps.
+  - Page-aware context block: different quick stats for Discover / Scope / Scanner.
+  - Live screener: "Load universe" button bulk-adds every ticker from
+    `TICKER_UNIVERSE` in one batch — the user gets 280+ tickers in one click.
+"""
+from __future__ import annotations
+
+import pandas as pd
+
+from volscope.data.ticker_resolver import resolve_and_ingest
+from volscope.data.ticker_universe import TICKER_UNIVERSE, all_tickers
+from volscope.ui.components.html_utils import render_html
+from volscope.ui.components.metric_components import freshness_badge
+
+
+def _freshness(last_scrape):
+    """Thin wrapper producing the sidebar-cased version of the badge."""
+    label, color = freshness_badge(last_scrape)
+    return label.lower(), color
+
+
+def _regime_label(latest: pd.DataFrame) -> tuple[str, str]:
+    """Single-line market regime summary for the sidebar pulse block."""
+    if latest is None or latest.empty or "iv_percentile" not in latest.columns:
+        return ("—", "#8a8f9e")
+    series = latest["iv_percentile"].dropna()
+    if len(series) < 5:
+        return ("warming up", "#8a8f9e")
+    median = float(series.median())
+    if median < 25:
+        return (f"risk on — {median:.0f}", "#00d4aa")
+    if median > 75:
+        return (f"risk off — {median:.0f}", "#ff4466")
+    if median > 55:
+        return (f"elevated — {median:.0f}", "#ff9f43")
+    return (f"normal — {median:.0f}", "#5b8cff")
+
+
+def _top_movers_snippet(db, latest: pd.DataFrame, n: int = 3) -> list[tuple[str, float]]:
+    """Return up to `n` (ticker, abs_iv_change) tuples for the biggest movers."""
+    if latest is None or latest.empty or "ticker" not in latest.columns:
+        return []
+    out: list[tuple[str, float]] = []
+    for _, row in latest.iterrows():
+        t = row.get("ticker")
+        if t is None:
+            continue
+        try:
+            hist = db.get_ticker_history(t).tail(2)
+        except Exception:
+            continue
+        if hist.shape[0] < 2 or "iv_30d" not in hist.columns:
+            continue
+        iv_now = hist["iv_30d"].iloc[-1]
+        iv_prev = hist["iv_30d"].iloc[-2]
+        if pd.isna(iv_now) or pd.isna(iv_prev):
+            continue
+        change = float(iv_now) - float(iv_prev)
+        out.append((str(t), change))
+    out.sort(key=lambda p: abs(p[1]), reverse=True)
+    return out[:n]
+
+
+def _render_ticker_picker(st, db) -> str:
+    """Search-style ticker picker + 'add any symbol' inline action.
+
+    Visual structure:
+      ┌── label ──────────────────────────┐
+      │ ⌕  selected ticker dropdown       │
+      └───────────────────────────────────┘
+      ┌── inline add row ─────────────────┐
+      │ [PLTR, BRK.B, …]            [+]   │
+      └───────────────────────────────────┘
+    """
+    available = db.get_available_tickers() or all_tickers()
+    current = st.session_state.get("selected_ticker", "SPY")
+    if current not in available:
+        current = available[0] if available else "SPY"
+
+    render_html(
+        st,
+        '<div style="font-family:JetBrains Mono,monospace;font-size:9px;'
+        'letter-spacing:1.6px;text-transform:uppercase;color:#424666;'
+        'margin:4px 0 4px 0;font-weight:600;">⌕ ticker</div>',
+    )
+    ticker = st.selectbox(
+        "Ticker",
+        available,
+        index=available.index(current),
+        help="Type to filter your loaded tickers.",
+        label_visibility="collapsed",
+    )
+
+    # Inline add — no expander, no form-frame chrome. The text_input is
+    # rendered without a label and the button sits beside it.
+    render_html(
+        st,
+        '<div style="font-family:JetBrains Mono,monospace;font-size:9px;'
+        'letter-spacing:1.6px;text-transform:uppercase;color:#424666;'
+        'margin:10px 0 4px 0;font-weight:600;">+ add symbol</div>',
+    )
+    with st.form("add_ticker_form", clear_on_submit=True):
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            raw = st.text_input(
+                "Symbol",
+                placeholder="PLTR  ^VIX  1810  BRK.B",
+                label_visibility="collapsed",
+                help=(
+                    "Digit-only codes auto-resolve to HK / TW / Shanghai. "
+                    "Alpha codes that fail bare also try London / XETRA / Paris."
+                ),
+            )
+        with c2:
+            submitted = st.form_submit_button("+ ADD", use_container_width=True)
+        if submitted and raw:
+            with st.spinner(f"Resolving {raw.strip().upper()}..."):
+                result = resolve_and_ingest(db, raw)
+            if result.ok:
+                st.success(result.message)
+                st.session_state["selected_ticker"] = result.ticker
+                st.rerun()
+            else:
+                st.error(result.message)
+
+    return ticker
+
+
+def _render_live_screener(st, db) -> None:
+    """
+    Inline bulk-load entry point — replaces the previous expander pattern.
+
+    Why no expander: the expander chevron leaked Material-Symbol literal
+    text on slow font loads, plus its chrome was disproportionate to the
+    payload (1 link + 1 button). New pattern: a single status pill that
+    expands into a load button via session-state toggle on click.
+    """
+    universe_size = len(all_tickers())
+    already = len(db.get_available_tickers() or [])
+    missing = universe_size - already
+    coverage_pct = int(round(already / max(1, universe_size) * 100))
+
+    # All-loaded state — quiet success pill, no action.
+    if missing == 0:
+        render_html(
+            st,
+            """
+<div style="font-family:'JetBrains Mono',monospace;font-size:10px;
+            color:#00d4aa;padding:5px 9px;margin-top:6px;
+            background:rgba(0,212,170,0.06);border-radius:5px;
+            border:1px solid rgba(0,212,170,0.18);">
+  ● universe complete
+</div>""",
+        )
+        return
+
+    # Compact status row + "load" toggle. Click flips a session flag that
+    # reveals the actual load button. Two clicks to start a 7-min job —
+    # protects against stray clicks.
+    eta_min = max(1, round(missing * 1.5 / 60))
+    show_loader = st.session_state.get("vs_show_bulk_loader", False)
+
+    render_html(
+        st,
+        f"""
+<div style="display:flex;justify-content:space-between;align-items:center;
+            font-family:'JetBrains Mono',monospace;font-size:10px;
+            color:#8a8f9e;margin-top:6px;padding:4px 0;">
+  <span>universe</span>
+  <span><span style="color:#e0e4ef;font-weight:600;">{already}</span>
+        <span style="color:#424666;">/{universe_size}</span>
+        <span style="color:#424666;">·{coverage_pct}%</span></span>
+</div>""",
+    )
+
+    if not show_loader:
+        if st.button(
+            f"+ load {missing} missing",
+            key="sb_bulk_show",
+            help=f"Reveal the bulk-load button. Estimated duration ~{eta_min} min.",
+            use_container_width=True,
+        ):
+            st.session_state["vs_show_bulk_loader"] = True
+            st.rerun()
+        return
+
+    # Confirmation revealed
+    render_html(
+        st,
+        f"""
+<div style="font-family:'JetBrains Mono',monospace;font-size:10px;
+            color:#8a8f9e;padding:6px 8px;margin-top:4px;
+            background:rgba(255,159,67,0.06);border-radius:5px;
+            border-left:2px solid #ff9f43;">
+  <div style="color:#ff9f43;font-weight:600;letter-spacing:0.5px;">long-running job</div>
+  <div style="margin-top:2px;">{missing} tickers · ~{eta_min} min · idempotent · safe to interrupt</div>
+</div>""",
+    )
+
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        run_now = st.button(
+            "▶ run loader",
+            key="sb_bulk_run",
+            type="primary",
+            use_container_width=True,
+        )
+    with c2:
+        if st.button("✕", key="sb_bulk_cancel", help="Cancel"):
+            st.session_state["vs_show_bulk_loader"] = False
+            st.rerun()
+
+    if run_now:
+        from volscope.data.universe_loader import load_universe, persist_report
+        progress = st.progress(0.0, text="Starting bulk load...")
+        counters = {"loaded": 0, "skipped": 0, "failed": 0}
+
+        def _on_progress(outcome, idx, total):
+            if outcome.status in ("loaded", "retried"):
+                counters["loaded"] += 1
+            elif outcome.status == "skipped":
+                counters["skipped"] += 1
+            else:
+                counters["failed"] += 1
+            progress.progress(
+                idx / max(1, total),
+                text=(f"{outcome.status:<8} {outcome.ticker:<12} "
+                      f"({idx}/{total}) — ✓{counters['loaded']} ✗{counters['failed']}"),
+            )
+
+        report = load_universe(db, progress_callback=_on_progress)
+        persist_report(report)
+        progress.empty()
+        st.session_state["vs_show_bulk_loader"] = False
+        if report.n_failed == 0:
+            st.success(
+                f"Loaded {report.n_loaded} · skipped {report.n_skipped} "
+                f"· coverage {report.coverage_pct():.1f}%"
+            )
+        else:
+            st.warning(
+                f"Loaded {report.n_loaded} · failed {report.n_failed}. "
+                f"Run `make load-universe-resume` to retry."
+            )
+        st.rerun()
+
+
+def _render_page_context(
+    st, page: str, current_ticker: str, db, latest: pd.DataFrame
+) -> None:
+    """Different quick-stats panel depending on the active page."""
+    if page == "Command":
+        # No extra panel needed — the Command Center page is self-contained.
+        return
+    if page == "Discover":
+        regime, color = _regime_label(latest)
+        movers = _top_movers_snippet(db, latest, n=3)
+        movers_html = ""
+        if movers:
+            rows = "".join(
+                f'<div style="display:flex;justify-content:space-between;padding:3px 0;">'
+                f'<span style="color:#e0e4ef;font-weight:500;">{t}</span>'
+                f'<span style="color:{"#ff4466" if c > 0 else "#00d4aa"};">'
+                f'{"▲" if c > 0 else "▼"} {abs(c):.1f}</span>'
+                f'</div>'
+                for t, c in movers
+            )
+            movers_html = (
+                f'<div style="margin-top:10px;font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:10px;color:#8a8f9e;">'
+                f'<div style="color:#424666;text-transform:uppercase;letter-spacing:1px;'
+                f'margin-bottom:4px;">top movers</div>'
+                f'{rows}</div>'
+            )
+
+        render_html(
+            st,
+            f"""
+            <div style="background:#12131a;border:1px solid #1e2038;border-radius:6px;padding:10px 12px;margin-top:8px;">
+              <div style="color:#424666;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">market pulse</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:{color};font-weight:600;">● {regime}</div>
+              {movers_html}
+            </div>
+            """,
+        )
+    elif page == "Scope":
+        # Show KPI snapshot for the current ticker.
+        try:
+            history = db.get_ticker_history(current_ticker)
+        except Exception:
+            history = pd.DataFrame()
+        if history.empty:
+            return
+        row = history.iloc[-1]
+        iv = row.get("iv_30d")
+        hv = row.get("hv_20d")
+        perc = row.get("iv_percentile")
+        spread = (float(iv) - float(hv)) if pd.notna(iv) and pd.notna(hv) else None
+        iv_str = f"{float(iv):.1f}%" if pd.notna(iv) else "—"
+        hv_str = f"{float(hv):.1f}%" if pd.notna(hv) else "—"
+        perc_str = f"{float(perc):.0f}" if pd.notna(perc) else "—"
+        spread_str = f"{spread:+.1f}" if spread is not None else "—"
+        spread_color = "#ff4466" if (spread or 0) > 0 else "#00d4aa"
+        iv_color = "#00d4aa"
+        hv_color = "#5b8cff"
+
+        render_html(
+            st,
+            f"""
+            <div class="volscope-snap">
+              <div class="volscope-snap-head">{current_ticker} snapshot</div>
+              <div class="volscope-snap-row"><span class="k">IV</span><span class="v" style="color:{iv_color};">{iv_str}</span></div>
+              <div class="volscope-snap-row"><span class="k">HV 20d</span><span class="v" style="color:{hv_color};">{hv_str}</span></div>
+              <div class="volscope-snap-row"><span class="k">Percentile</span><span class="v">{perc_str}</span></div>
+              <div class="volscope-snap-row"><span class="k">Spread</span><span class="v" style="color:{spread_color};">{spread_str}</span></div>
+            </div>
+            """,
+        )
+    elif page == "Scanner":
+        # Show universe breakdown by sector.
+        if latest is None or latest.empty or "sector" not in latest.columns:
+            return
+        counts = latest["sector"].dropna().value_counts().head(6)
+        rows = "".join(
+            f'<div style="display:flex;justify-content:space-between;font-size:11px;color:#8a8f9e;padding:2px 0;">'
+            f'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;">{sec}</span>'
+            f'<span style="color:#e0e4ef;">{n}</span></div>'
+            for sec, n in counts.items()
+        )
+        render_html(
+            st,
+            f"""
+            <div style="background:#12131a;border:1px solid #1e2038;border-radius:6px;padding:10px 12px;margin-top:8px;font-family:'JetBrains Mono',monospace;">
+              <div style="color:#424666;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">universe by sector</div>
+              {rows}
+            </div>
+            """,
+        )
+
+
+def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str, dict]:
+    import streamlit as st
+
+    # ── Brand strip ────────────────────────────────────────────────
+    # Functional row: logo on the left, live ticker count + freshness dot
+    # on the right. Replaces the previous stand-alone wordmark which was
+    # decorative-only.
+    try:
+        _n_loaded_brand = len(db.get_available_tickers() or [])
+    except Exception:
+        _n_loaded_brand = 0
+    try:
+        _last_brand = db.get_last_scrape_date()
+    except Exception:
+        _last_brand = None
+    if _last_brand is None:
+        _brand_dot_color = "#424666"
+    else:
+        from datetime import date as _date
+        _age = (_date.today() - _last_brand).days
+        _brand_dot_color = "#00d4aa" if _age <= 1 else "#ff9f43" if _age <= 7 else "#ff4466"
+
+    render_html(
+        st,
+        f"""
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:4px 0 8px 0;border-bottom:1px solid rgba(255,255,255,0.04);
+                    margin-bottom:8px;">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:16px;
+                         font-weight:700;letter-spacing:0.04em;line-height:1;
+                         background:linear-gradient(135deg,#00d4aa 0%,#5b8cff 100%);
+                         -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+              ◈ VolScope
+            </div>
+            <div style="color:#3a3d52;font-size:8px;letter-spacing:1.4px;
+                         text-transform:uppercase;margin-top:2px;font-weight:500;">
+              vol intelligence
+            </div>
+          </div>
+          <div style="text-align:right;font-family:'JetBrains Mono',monospace;
+                       font-size:9px;line-height:1.2;">
+            <div style="color:#e0e4ef;font-weight:600;font-size:11px;">
+              <span style="color:{_brand_dot_color};font-size:8px;">●</span> {_n_loaded_brand}
+            </div>
+            <div style="color:#424666;font-size:8px;letter-spacing:1px;
+                         text-transform:uppercase;">tickers</div>
+          </div>
+        </div>
+        """,
+    )
+
+    # ── Ticker picker + add form ────────────────────────────────────
+    ticker = _render_ticker_picker(st, db)
+
+    # ── Live screener: bulk load ────────────────────────────────────
+    _render_live_screener(st, db)
+
+    st.divider()
+
+    # ── Navigation (grouped) ────────────────────────────────────────
+    # Three semantic groups — trader scans by purpose, not alphabet.
+    # Each page renders as a sidebar button so groups can have their own
+    # markdown headers between rows. Active page = green, others = muted.
+    NAV_GROUPS: list[tuple[str, list[str]]] = [
+        ("◆ DECISIONS",  ["Command", "Discover", "Signals", "Bot", "Alerts", "Earnings Hub", "Portfolio", "Mega-Scan"]),
+        ("◇ RESEARCH",   ["Scope", "Scanner", "Heatmap", "Rotation", "Flow"]),
+        ("▷ EXECUTION",  ["Pre-Trade", "Builder", "Options Lab", "LEAPS Lab", "Dossier", "Earnings Trades", "Backtest"]),
+        ("? REFERENCE",  ["Help"]),
+    ]
+    pages = [p for _, group in NAV_GROUPS for p in group]
+    if current_page not in pages:
+        current_page = "Command"
+
+    # Live alert counter — cached for 60 s so each rerun is cheap.
+    @st.cache_data(ttl=60, show_spinner=False)
+    def _cached_alert_count(_db_marker: str) -> int:
+        try:
+            from volscope.analytics.alerts_scanner import scan_alerts
+            return len(scan_alerts(db))
+        except Exception:
+            return 0
+
+    try:
+        _alert_n = _cached_alert_count(str(getattr(db, "path", "default")))
+    except Exception:
+        _alert_n = 0
+
+    page = current_page
+    for group_label, group_pages in NAV_GROUPS:
+        render_html(
+            st,
+            f'<div style="font-family:JetBrains Mono,monospace;font-size:9px;'
+            f'color:#5b8cff;letter-spacing:1.6px;margin-top:10px;margin-bottom:4px;'
+            f'font-weight:600;">{group_label}</div>',
+        )
+        for p in group_pages:
+            is_active = (p == current_page)
+            badge = ""
+            if p == "Alerts" and _alert_n > 0:
+                badge = f"  ({_alert_n})"
+            label = (f"▸ {p}{badge}" if is_active else f"  {p}{badge}")
+            if st.button(
+                label,
+                key=f"nav_btn_{p}",
+                use_container_width=True,
+                type="primary" if is_active else "secondary",
+            ):
+                page = p
+
+    # ── Page-aware context block ────────────────────────────────────
+    try:
+        latest = db.get_all_latest()
+    except Exception:
+        latest = pd.DataFrame()
+    _render_page_context(st, page, ticker, db, latest)
+
+    st.divider()
+
+    # ── Settings ────────────────────────────────────────────────────
+    with st.expander("HV window settings", expanded=False):
+        hv_short = st.number_input(
+            "Short-window HV (days)",
+            min_value=5,
+            max_value=120,
+            value=20,
+            step=1,
+            help="Rolling window for short-term historical volatility.",
+        )
+        hv_long = st.number_input(
+            "Long-window HV (days)",
+            min_value=10,
+            max_value=240,
+            value=60,
+            step=1,
+            help="Rolling window for long-term historical volatility.",
+        )
+
+    # ── Theme toggle (Dark / High-Contrast) ─────────────────────────
+    with st.expander("Appearance", expanded=False):
+        theme_toggle = st.radio(
+            "Theme",
+            ["Dark", "High-Contrast"],
+            horizontal=True,
+            index=0 if st.session_state.get("vs_theme", "Dark") == "Dark" else 1,
+            help=(
+                "Dark = default Bloomberg-cockpit palette. "
+                "High-Contrast lifts text and grids for bright-screen readability."
+            ),
+            key="theme_toggle_radio",
+        )
+        st.session_state["vs_theme"] = theme_toggle
+
+    settings = {
+        "hv_short": hv_short,
+        "hv_long":  hv_long,
+        "theme":    st.session_state.get("vs_theme", "Dark"),
+    }
+
+    # ── Data status (bottom, subtle) ────────────────────────────────
+    try:
+        n_loaded = len(db.get_available_tickers() or [])
+    except Exception:
+        n_loaded = 0
+    try:
+        from volscope.data.ticker_universe import all_tickers as _all_t
+        n_curated = len(_all_t())
+    except Exception:
+        n_curated = 0
+    try:
+        last = db.get_last_scrape_date()
+    except Exception:
+        last = None
+    label, color = _freshness(last)
+    last_str = last.isoformat() if last else "—"
+    coverage_pct = int(round(n_loaded / max(1, n_curated) * 100)) if n_curated else 0
+    render_html(
+        st,
+        f"""
+        <div style="margin-top:18px;padding-top:12px;border-top:1px solid #1e2038;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9e;line-height:1.7;">
+          <div><span style="color:#e0e4ef;font-weight:600;">{n_loaded}</span> loaded · <span style="color:#8a8f9e;">{n_curated}</span> curated <span style="color:#8a8f9e;">({coverage_pct}%)</span></div>
+          <div>last scrape — <span style="color:#e0e4ef;">{last_str}</span></div>
+          <div style="margin-top:6px;"><span style="background:{color}22;color:{color};padding:2px 8px;border-radius:4px;">● {label}</span></div>
+        </div>
+        """,
+    )
+
+    # ── Data-health badge (Pillar 2) ─────────────────────────────────
+    # GREEN: 0 FAIL & ≤ 5 FLAG today
+    # AMBER: 1-3 FAIL or 6-20 FLAG
+    # RED:   > 3 FAIL → click to drill into validation_log
+    try:
+        v_summary = db.get_validation_summary()
+        if v_summary.empty:
+            health_color, health_label, health_detail = (
+                "#8a8f9e", "DATA NOT VALIDATED",
+                "run scripts/backtest/run_validation.py",
+            )
+        else:
+            n_ok   = int(v_summary[v_summary["overall_level"] == "OK"]["n"].sum())
+            n_flag = int(v_summary[v_summary["overall_level"] == "FLAG"]["n"].sum())
+            n_fail = int(v_summary[v_summary["overall_level"] == "FAIL"]["n"].sum())
+            if n_fail > 3:
+                health_color, health_label = "#ff4466", "DATA RED"
+            elif n_fail > 0 or n_flag > 20:
+                health_color, health_label = "#ff9f43", "DATA AMBER"
+            elif n_flag > 5:
+                health_color, health_label = "#ff9f43", "DATA AMBER"
+            else:
+                health_color, health_label = "#00d4aa", "DATA GREEN"
+            health_detail = f"{n_ok} OK · {n_flag} FLAG · {n_fail} FAIL"
+        render_html(
+            st,
+            f"""
+            <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9e;">
+              <span style="background:{health_color}22;color:{health_color};padding:2px 8px;border-radius:4px;font-weight:600;">● {health_label}</span>
+              <span style="margin-left:6px;">{health_detail}</span>
+            </div>
+            """,
+        )
+    except Exception:
+        # Validation is non-critical UI; never break the sidebar
+        pass
+
+    # ── Watchlist — active alerts at a glance ───────────────────────
+    # Shows up to 5 enabled alert rules with live "would fire now?" status.
+    # Click → jumps to Command Center where the trader can manage rules.
+    try:
+        rules_df = db.get_alert_rules()
+        enabled = rules_df[rules_df["enabled"] == True] if not rules_df.empty else rules_df
+        if not enabled.empty:
+            with st.expander(f"⚑ Watchlist · {len(enabled)} rules", expanded=False):
+                # Compact status: ticker · metric · operator threshold · current
+                from volscope.alerts.alert_engine import AlertRule, evaluate_rule
+                latest_for_eval = db.get_all_latest()
+                rows_html: list[str] = []
+                for _, r in enabled.head(5).iterrows():
+                    try:
+                        rule = AlertRule(
+                            id=int(r["id"]),
+                            ticker=str(r["ticker"]),
+                            metric=str(r["metric"]),
+                            operator=str(r["operator"]),
+                            threshold=float(r["threshold"]),
+                            channel=str(r["channel"]),
+                            label=str(r["label"]),
+                            enabled=True,
+                        )
+                        target_rows = (
+                            latest_for_eval[latest_for_eval["ticker"] == rule.ticker]
+                            if rule.ticker != "*"
+                            else latest_for_eval
+                        )
+                        fired = False
+                        if not target_rows.empty:
+                            fired_obj = evaluate_rule(rule, target_rows.iloc[0])
+                            fired = fired_obj is not None
+                        glyph = "●" if fired else "○"
+                        glyph_color = "#ff4466" if fired else "#8a8f9e"
+                        rows_html.append(
+                            f'<div style="font-family:JetBrains Mono,monospace;'
+                            f'font-size:10px;color:#8a8f9e;padding:3px 0;">'
+                            f'<span style="color:{glyph_color};">{glyph}</span> '
+                            f'<span style="color:#e0e4ef;">{rule.label}</span>'
+                            f'</div>'
+                        )
+                    except Exception:
+                        continue
+                if rows_html:
+                    render_html(st, "".join(rows_html))
+                if st.button(
+                    "Manage rules →",
+                    key="sidebar_watchlist_manage",
+                    use_container_width=True,
+                    help="Open Command Center alerts panel",
+                ):
+                    from volscope.ui.components.navigation import NavIntent, nav_to
+                    nav_to(NavIntent(page="Command", source="Sidebar"))
+                    st.rerun()
+    except Exception:
+        pass
+
+    # ── Dev panel (only when ?dev=1 in URL) ───────────────────────────
+    try:
+        if st.query_params.get("dev") == "1":
+            with st.expander("⚙ Dev panel — perf", expanded=False):
+                from volscope.utils.timing import (
+                    list_instrumented_names,
+                    n_records_for,
+                    percentiles_for,
+                )
+                names = list_instrumented_names()
+                if not names:
+                    st.caption("No instrumented calls yet — navigate around to populate.")
+                else:
+                    rows = []
+                    for name in names:
+                        pcts = percentiles_for(name)
+                        rows.append({
+                            "name":  name,
+                            "p50":   pcts.get(50),
+                            "p95":   pcts.get(95),
+                            "n":     n_records_for(name),
+                        })
+                    df_perf = pd.DataFrame(rows).sort_values("p95", ascending=False, na_position="last")
+                    st.dataframe(df_perf, use_container_width=True, hide_index=True)
+    except Exception as exc:
+        # Dev panel must never break the sidebar
+        pass
+
+    # Refresh-data button: triggers `make scrape` in a detached background
+    # process so the UI stays responsive. The scrape itself is long
+    # (several minutes) — we just kick it off and let the user keep
+    # working. Status surfaces via the next page-reload of "last scrape".
+    if st.button(
+        "↻ Refresh market data",
+        key="sidebar_scrape_btn",
+        help="Run `make scrape` in the background (several minutes).",
+        use_container_width=True,
+    ):
+        import subprocess, os, datetime as _dt
+        log_dir = os.path.expanduser("~/.claude/volscope-cron-logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(
+            log_dir,
+            f"manual-scrape-{_dt.datetime.now().strftime('%Y%m%d-%H%M%S')}.log",
+        )
+        try:
+            with open(log_file, "w") as lf:
+                subprocess.Popen(
+                    ["make", "scrape"],
+                    cwd="/Users/tomschoen/Desktop/VolScope",
+                    stdout=lf,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+            st.toast(f"Scrape started — log: {os.path.basename(log_file)}", icon="↻")
+        except Exception as exc:
+            st.error(f"Could not start scrape: {exc}")
+
+    return ticker, page, settings

@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Distribution
+build/
+dist/
+*.egg-info/
+
+# Test + coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
+
+# Secrets — NEVER commit
+.env
+.env.local
+secrets/
+*.pem
+*.key
+
+# Data — DBs live outside the repo
+data/
+*.db
+*.duckdb
+
+# Logs
+logs/
+*.log
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Bot runtime state
+/var/run/volscope/
+state/
+
+# Dev-only ad-hoc scripts
+scripts/_dev/
+
+# One-off scripts (e.g. sanitize.py) — keep local
+_one_off/
+
+# (memory/* IS committed — that's the agent canon)
