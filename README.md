@@ -1,14 +1,40 @@
 # ◈ VolScope
 
-> Volatility Intelligence Platform for retail options traders — a research
-> dashboard evolving into a production-grade autonomous IV mean-reversion
-> options bot.
+> **Volatility-research workbench for options traders**, with a
+> simulation bot + paper-trading capability layered on top.
+>
+> The dashboard is the primary product. The bot is one of many users of
+> the same analytics engine — it executes the platform's own signals
+> against real chain data in simulation, producing measurable rentability.
 
 [![CI](https://github.com/SchoenTom/volscope/actions/workflows/ci.yml/badge.svg)](https://github.com/SchoenTom/volscope/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 ![License](https://img.shields.io/badge/license-proprietary-red)
 ![Made with uv](https://img.shields.io/badge/made%20with-uv-orange)
 ![Status](https://img.shields.io/badge/status-Phase%202%20scaffold-yellow)
+
+## Three modes, one engine
+
+**1. Research workbench (default).** 17 pages — Scope, Scanner,
+Discover, Heatmap, Rotation, Flow, Options Lab, LEAPS Lab, Backtest,
+Earnings Hub, etc. — built on a validated Black-Scholes-Merton + IV
+analytics layer. Use it like a Bloomberg-for-retail.
+
+**2. Simulation bot.** The same analytics produce ranked trade
+signals. The paper engine executes them against real Yahoo
+option-chain data (full strike × expiry grid), applies a realistic
+slippage model, and tracks lifecycle with a 50% PT / 2× stop /
+21-DTE-mechanical-close discipline. Result: a measurable Sharpe / win
+rate / max-DD per strategy, not gut-feel.
+
+**3. Paper trader (manual).** Multi-leg buy/close with a virtual
+cash account. Use it to validate your own thesis with a
+1:1 broker simulation — no bot involved.
+
+> **Live IBKR orders are NOT in scope.** The platform is designed for
+> research and simulation. Going live requires explicit operator
+> opt-in + paper-validation of 100+ closed trades — see
+> `docs/roadmap/phase-overview.md`.
 
 ## What VolScope does today
 
@@ -24,8 +50,19 @@
 - **Options Lab** — payoff diagrams, Greeks surface, scenario matrix,
   time decay, 11 strategy templates.
 - **LEAPS Lab v3** — convergence scanner with deep-OTM dossier renderer.
-- **Bot scaffolds** (Phase 2) — state machine, scheduler, kill switch.
-  Paper-only; live IBKR wiring is Phase 2.5.
+- **Paper engine** (Phase 2 — v0.3.0): real Yahoo chain data ingested into
+  `bot_chain_snapshots`; `paper_engine.py` executes ranked signals
+  against the latest snapshot; `daily_mtm.py` enforces 50%-PT /
+  2×-stop / 21-DTE-close exits; closed trades feed a Sharpe / win-rate /
+  max-DD report on the Bot Dashboard.
+- **Bot infrastructure scaffolds** (Phase 2 core): 11-state lifecycle
+  machine, APScheduler with America/New_York timezone, kill switch
+  with 3 manual + 5 auto trip paths, preflight check, reconciliation
+  stub.
+
+**For a complete tool catalog** — every page, every analytics module,
+every script + how they chain together — see
+[`docs/TOOLS.md`](docs/TOOLS.md).
 
 ## Quick start
 
