@@ -189,6 +189,39 @@ def _render_cards(
             quality_level=quality_level,
             quality_one_liner=quality_oneliner,
         )
+        # Compact action row beneath every card. "Scope" is the
+        # primary CTA (direct navigation, the most common follow-up
+        # action). "Alert" routes to Command Center's alerts panel
+        # with the ticker pre-filled, so the operator can express
+        # *what* should fire — a v0.7.2 stopgap until the v0.8.0
+        # writable-on-demand connection enables a one-click
+        # "add to watchlist" persistence.
+        a1, a2, _ = st.columns([1, 1, 2])
+        with a1:
+            if st.button(
+                "▶ Scope",
+                key=f"disc_scope_{variant}_{ticker}",
+                use_container_width=True,
+                help=f"Open Scope page for {ticker} — full IV/HV deep dive.",
+            ):
+                from volscope.ui.components.navigation import NavIntent, nav_to
+                nav_to(NavIntent(page="Scope", ticker=ticker, source="Discover"))
+                st.rerun()
+        with a2:
+            if st.button(
+                "★ Alert",
+                key=f"disc_alert_{variant}_{ticker}",
+                use_container_width=True,
+                help=(
+                    f"Pre-fill an alert rule for {ticker} on the Command "
+                    "Center alerts panel."
+                ),
+            ):
+                from volscope.ui.components.navigation import NavIntent, nav_to
+                st.session_state["cc_prefill_alert_ticker"] = ticker
+                nav_to(NavIntent(page="Command Center", ticker=ticker,
+                                  source="Discover"))
+                st.rerun()
 
 
 def _render_movers(
