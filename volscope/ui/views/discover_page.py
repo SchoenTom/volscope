@@ -219,7 +219,12 @@ def _render_cards(
             ):
                 from volscope.ui.components.navigation import NavIntent, nav_to
                 st.session_state["cc_prefill_alert_ticker"] = ticker
-                nav_to(NavIntent(page="Command Center", ticker=ticker,
+                # Page-registry key is "Command" not the human-
+                # readable "Command Center" — using the wrong name
+                # was silently hitting the sidebar's unknown-page
+                # fallback. Fixed here so the Alert CTA actually
+                # lands the operator on the Command page.
+                nav_to(NavIntent(page="Command", ticker=ticker,
                                   source="Discover"))
                 st.rerun()
 

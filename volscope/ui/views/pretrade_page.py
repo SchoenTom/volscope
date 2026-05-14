@@ -109,7 +109,12 @@ def _render_paper_mode_banner() -> None:
             help="Jump to the Bot Dashboard where every paper trade lives.",
             use_container_width=True,
         ):
-            nav_to(NavIntent(page="Bot Dashboard", source="Pre-Trade"))
+            # Page-registry key is "Bot" (not the human-readable
+            # "Bot Dashboard"). Mismatch silently fell through the
+            # sidebar's unknown-page fallback (→ "Command"), which
+            # is why dismissing this CTA from Pre-Trade was landing
+            # the operator on Command Center instead.
+            nav_to(NavIntent(page="Bot", source="Pre-Trade"))
             st.rerun()
 
 

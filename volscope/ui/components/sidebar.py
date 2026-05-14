@@ -423,7 +423,31 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     ]
     pages = [p for _, group in NAV_GROUPS for p in group]
     if current_page not in pages:
-        current_page = "Command"
+        # Defensive: an unknown ``current_page`` typically means a
+        # caller used the wrong registry key (e.g. "Bot Dashboard"
+        # instead of "Bot", or "Command Center" instead of "Command").
+        # Previously this silently reset to "Command", which hid the
+        # underlying bug AND surprised operators by jumping them to
+        # Command Center after dismissing any page-banner / modal.
+        #
+        # Heuristic recovery: if the unknown name has a close-prefix
+        # match in the registry, snap to that (so "Bot Dashboard"
+        # snaps to "Bot", "Command Center" snaps to "Command"). The
+        # last-resort fallback is the previously-active page captured
+        # in session_state, then "Command" only as a final default.
+        snap = next(
+            (p for p in pages if current_page.lower().startswith(p.lower())),
+            None,
+        )
+        if snap is not None:
+            current_page = snap
+        else:
+            current_page = st.session_state.get(
+                "vs_last_valid_page", "Command",
+            )
+    # Remember the page on every successful render so the recovery
+    # path above has something better than "Command" to fall back to.
+    st.session_state["vs_last_valid_page"] = current_page
 
     # Live alert counter — cached for 60 s so each rerun is cheap.
     @st.cache_data(ttl=60, show_spinner=False)
