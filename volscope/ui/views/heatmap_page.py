@@ -1,9 +1,25 @@
 """
-Heatmap — universe-wide IV percentile at a glance.
+Heatmap — universe-wide IV view as a TradingView-style treemap.
 
-One colored cell per ticker, grouped by sector. Green = cheap vol,
-red = rich vol. Click a cell to navigate to Scope for that ticker.
-Collapse to sector averages when more than 100 tickers are present.
+v0.8.0 redesign — replaced the naive 20-col grid heatmap with a
+proper sector-rectangle treemap (``plotly.graph_objects.Treemap``).
+
+  • Rectangles are tickers.
+  • Parent rectangles are sectors (collapse / drill-in supported by
+    Plotly's native treemap path-navigation).
+  • Rectangle SIZE is total option open-interest — the same
+    universe-relevance signal TradingView uses for market-cap.
+    Tickers with deeper option markets get more visual real-estate,
+    which is the correct prioritisation for a vol research tool.
+  • Rectangle COLOR is IV percentile on a continuous green→red
+    gradient (cheap → rich).
+  • Time-range selector switches the colour metric: latest IV pct
+    (default), 1-week change, 1-month change. Operators see "what
+    moved this week" at a glance — the original snapshot-only chart
+    couldn't.
+
+Click a rectangle to drill in (Plotly path) or select it and the
+ticker-jump selectbox in the controls strip will route to Scope.
 """
 from __future__ import annotations
 
@@ -21,7 +37,7 @@ from volscope.ui.styles.theme import COLORS
 _MONO = "JetBrains Mono, SF Mono, Menlo, monospace"
 _SANS = "DM Sans, Inter, system-ui, sans-serif"
 
-_COLLAPSE_THRESHOLD = 100  # collapse to sector averages above this count
+_COLLAPSE_THRESHOLD = 100  # legacy threshold — kept for the "sector medians" toggle
 
 
 def _percentile_color(pct: Optional[float]) -> str:
@@ -40,145 +56,170 @@ def _percentile_color(pct: Optional[float]) -> str:
     return "#ff4466"       # rich — red
 
 
-def _build_heatmap_figure(df: pd.DataFrame, group_by_sector: bool) -> go.Figure:
-    """
-    Build a Plotly heatmap from the universe latest snapshot.
+def _build_treemap_figure(
+    df: pd.DataFrame,
+    *,
+    color_metric: str = "iv_percentile",
+    color_range: tuple[float, float] = (0.0, 100.0),
+) -> go.Figure:
+    """TradingView-style sector treemap.
 
-    Each cell is coloured by iv_percentile.  When group_by_sector is True,
-    we aggregate to sector medians (used for large universes).
+    Parameters
+    ----------
+    df
+        ``daily_vol`` latest-snapshot frame with columns
+        ``ticker``, ``sector``, ``iv_30d``, ``iv_percentile``,
+        ``hv_20d`` (or ``hv_yz_30d``), ``total_open_interest``.
+    color_metric
+        Column to drive the rectangle colour. Default is
+        ``iv_percentile`` (0-100); also accepts ``iv_change_1d`` or
+        ``iv_change_30d`` for change-mode heatmaps where the
+        gradient is symmetric around zero.
+    color_range
+        ``(cmin, cmax)`` for the colour scale.
     """
     if df.empty:
-        fig = go.Figure()
-        fig.update_layout(
+        return go.Figure().update_layout(
             paper_bgcolor=COLORS["bg"],
             plot_bgcolor=COLORS["bg"],
             height=200,
         )
-        return fig
 
     working = df.copy()
     if "sector" not in working.columns or working["sector"].isna().all():
         working["sector"] = "Unknown"
     working["sector"] = working["sector"].fillna("Unknown")
 
-    if group_by_sector:
-        # Collapse to sector medians
-        agg = (
-            working.groupby("sector")["iv_percentile"]
-            .median()
-            .reset_index()
-            .rename(columns={"iv_percentile": "pct_median"})
-        )
-        agg["label"] = agg["sector"].str[:12]
-        agg["pct_display"] = agg["pct_median"]
-        # Sort by percentile so cheapest sectors appear first
-        agg = agg.sort_values("pct_median")
-        tickers_list = agg["label"].tolist()
-        pcts = agg["pct_median"].tolist()
-        hover_texts = [
-            f"<b>{row['sector']}</b><br>Median IV Pct: {row['pct_median']:.0f}%"
-            for _, row in agg.iterrows()
-        ]
-        title_suffix = " (sector medians)"
+    # Rectangle size — prefer total OI (the relevance signal for a
+    # vol-research tool: deeper option markets = more important).
+    # Fall back to constant=1 if OI missing.
+    if "total_open_interest" in working.columns:
+        size_raw = working["total_open_interest"].fillna(0.0).clip(lower=0.0)
+        # Add 1 so zero-OI rows still get *some* area (otherwise treemap
+        # collapses them out entirely).
+        working["_size"] = size_raw + 1.0
     else:
-        working = working.sort_values(["sector", "iv_percentile"])
-        tickers_list = working["ticker"].tolist()
-        pcts = working["iv_percentile"].tolist()
-        hover_texts = []
-        for _, row in working.iterrows():
-            iv = row.get("iv_30d")
-            pct = row.get("iv_percentile")
-            iv_str = f"{iv:.1f}%" if iv is not None and not math.isnan(float(iv)) else "—"
-            pct_str = f"{pct:.0f}%" if pct is not None and not math.isnan(float(pct)) else "—"
-            sector = row.get("sector") or "—"
-            hover_texts.append(
-                f"<b>{row['ticker']}</b><br>IV 30d: {iv_str}<br>IV Pct: {pct_str}<br>Sector: {sector}"
-            )
-        title_suffix = ""
+        working["_size"] = 1.0
 
-    colors_list = [_percentile_color(p) for p in pcts]
+    # Colour metric — clip + fill NaN to a neutral midpoint so missing
+    # data doesn't get a bright red / green by accident.
+    if color_metric in working.columns:
+        cmin, cmax = color_range
+        working["_color"] = (
+            pd.to_numeric(working[color_metric], errors="coerce")
+            .fillna((cmin + cmax) / 2.0)
+            .clip(lower=cmin, upper=cmax)
+        )
+    else:
+        working["_color"] = 50.0
 
-    # Layout: pack into rows of ~20 cells
-    n = len(tickers_list)
-    n_cols = min(n, 20)
-    n_rows = math.ceil(n / n_cols)
+    # Hover text — pack the headline numbers a vol trader cares about.
+    def _fmt(v, suffix: str = "%", digits: int = 1) -> str:
+        try:
+            f = float(v)
+            if pd.isna(f):
+                return "—"
+            return f"{f:.{digits}f}{suffix}"
+        except (TypeError, ValueError):
+            return "—"
 
-    # Pad to fill the grid
-    pad = n_rows * n_cols - n
-    tickers_padded = tickers_list + [""] * pad
-    pcts_padded = pcts + [None] * pad
-    colors_padded = colors_list + [COLORS["bg"]] * pad
-    hover_padded = hover_texts + [""] * pad
+    hover = []
+    for _, row in working.iterrows():
+        iv      = _fmt(row.get("iv_30d"))
+        # Prefer matched-horizon Yang-Zhang HV30 (v0.7.1); fall back to CC HV20.
+        hv      = _fmt(row.get("hv_yz_30d") or row.get("hv_20d"))
+        perc    = _fmt(row.get("iv_percentile"), suffix="", digits=0)
+        spread  = _fmt(row.get("iv_hv_spread_matched") or row.get("iv_hv_spread"),
+                        suffix="", digits=1)
+        oi      = row.get("total_open_interest")
+        oi_str  = f"{int(oi):,}" if oi is not None and not pd.isna(oi) else "—"
+        chg1d   = _fmt(row.get("iv_change_1d"), suffix="", digits=1)
+        chg30d  = _fmt(row.get("iv_change_30d"), suffix="", digits=1)
+        hover.append(
+            f"<b>{row['ticker']}</b><br>"
+            f"Sector: {row['sector']}<br>"
+            f"IV 30d: {iv}<br>"
+            f"HV: {hv}<br>"
+            f"IV − HV: {spread}<br>"
+            f"IV Percentile: {perc}<br>"
+            f"OI: {oi_str}<br>"
+            f"Δ1d: {chg1d} · Δ30d: {chg30d}"
+        )
+    working["_hover"] = hover
 
-    # Reshape to (n_rows × n_cols) grids
-    z_colors = [colors_padded[i * n_cols:(i + 1) * n_cols] for i in range(n_rows)]
-    text_grid = [tickers_padded[i * n_cols:(i + 1) * n_cols] for i in range(n_rows)]
-    hover_grid = [hover_padded[i * n_cols:(i + 1) * n_cols] for i in range(n_rows)]
-
-    # Use numeric z values for Plotly colorscale, but we override colors manually
-    # via a custom colorscale mapping each unique color to a z value 0..1.
-    unique_colors = list(dict.fromkeys(c for c in colors_padded if c != COLORS["bg"]))
-    color_to_z: dict[str, float] = {}
-    for i, c in enumerate(unique_colors):
-        color_to_z[c] = i / max(len(unique_colors) - 1, 1)
-
-    z_vals = [
-        [color_to_z.get(c, -1.0) if c != COLORS["bg"] else -1.0
-         for c in row]
-        for row in z_colors
-    ]
-
-    colorscale = [[color_to_z[c], c] for c in unique_colors]
-    if len(colorscale) == 1:
-        colorscale = [[0.0, colorscale[0][1]], [1.0, colorscale[0][1]]]
+    # Use the existing per-percentile palette for the diverging IV-percentile
+    # case; for symmetric change-mode use a red→neutral→green scale.
+    is_change_mode = color_metric in ("iv_change_1d", "iv_change_30d")
+    if is_change_mode:
+        # Symmetric around zero: red = IV up (rich getting richer or
+        # cheap getting expensive), green = IV down.
+        colorscale = [
+            [0.0, "#00d4aa"], [0.25, "#5bc8b0"], [0.5, "#8a8f9e"],
+            [0.75, "#ff9f43"], [1.0, "#ff4466"],
+        ]
+        cmid = 0.0
+        # Determine bounds dynamically — change-mode bounds are not 0..100.
+        chg = working["_color"].abs()
+        bound = max(5.0, float(chg.quantile(0.95)))
+        color_range = (-bound, bound)
+        working["_color"] = working["_color"].clip(-bound, bound)
+        colorbar_title = (
+            "Δ IV (1d)" if color_metric == "iv_change_1d" else "Δ IV (30d)"
+        )
+    else:
+        colorscale = [
+            [0.00, "#00d4aa"], [0.20, "#5bc8b0"], [0.50, "#8a8f9e"],
+            [0.80, "#ff9f43"], [1.00, "#ff4466"],
+        ]
+        cmid = None
+        colorbar_title = "IV Percentile"
 
     fig = go.Figure(
-        go.Heatmap(
-            z=z_vals,
-            text=text_grid,
-            customdata=hover_grid,
-            texttemplate="%{text}",
+        go.Treemap(
+            labels=working["ticker"].tolist(),
+            parents=working["sector"].tolist(),
+            values=working["_size"].tolist(),
+            branchvalues="total",
+            marker=dict(
+                colors=working["_color"].tolist(),
+                colorscale=colorscale,
+                cmin=color_range[0],
+                cmax=color_range[1],
+                cmid=cmid,
+                line=dict(width=1, color=COLORS["bg"]),
+                colorbar=dict(
+                    title=dict(
+                        text=colorbar_title,
+                        font=dict(family=_SANS, size=11, color=COLORS["muted"]),
+                    ),
+                    thickness=8,
+                    len=0.55,
+                    x=1.0,
+                    xanchor="right",
+                    tickfont=dict(family=_MONO, size=9, color=COLORS["muted"]),
+                ),
+            ),
+            text=working["ticker"].tolist(),
+            customdata=working["_hover"].tolist(),
             hovertemplate="%{customdata}<extra></extra>",
-            colorscale=colorscale,
-            showscale=False,
-            xgap=3,
-            ygap=3,
-            # Dynamic font scaling — at >100 tickers cell labels collide.
-            # Empirically, total cells / chart width ≈ width / size, so
-            # size shrinks as ticker count grows but never below 7px.
-            textfont=dict(
-                family=_MONO,
-                size=max(7, min(11, int(800 / max(n, 1)))),
-                color=COLORS["bg"],
+            textfont=dict(family=_MONO, size=11, color="#0a0b14"),
+            tiling=dict(packing="squarify", pad=2),
+            pathbar=dict(
+                visible=True,
+                side="top",
+                thickness=22,
+                textfont=dict(family=_SANS, size=12, color=COLORS["text"]),
             ),
         )
     )
-
     fig.update_layout(
         paper_bgcolor=COLORS["bg"],
         plot_bgcolor=COLORS["bg"],
-        height=max(140, n_rows * 42 + 80),
-        margin=dict(l=0, r=0, t=52, b=0),
-        title=dict(
-            text=f"IV PERCENTILE HEATMAP{title_suffix}",
-            font=dict(color=COLORS["text"], size=14, family=_SANS),
-            x=0.01,
-            xanchor="left",
-        ),
-        xaxis=dict(
-            showticklabels=False,
-            showgrid=False,
-            zeroline=False,
-            fixedrange=True,
-        ),
-        yaxis=dict(
-            showticklabels=False,
-            showgrid=False,
-            zeroline=False,
-            fixedrange=True,
-        ),
+        height=720,
+        margin=dict(l=0, r=0, t=8, b=0),
     )
     return fig
+
 
 
 def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
@@ -206,22 +247,32 @@ def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
         return
 
     n_tickers = len(latest)
-    group_by_sector = n_tickers > _COLLAPSE_THRESHOLD
 
-    # Controls
-    col_ctrl, col_jump = st.columns([3, 1])
-    with col_ctrl:
-        if n_tickers > _COLLAPSE_THRESHOLD:
-            view_mode = st.radio(
-                "View",
-                ["Per ticker", "Sector averages"],
-                index=1,
-                horizontal=True,
-                key="heatmap_view_mode",
-            )
-            group_by_sector = view_mode == "Sector averages"
-        else:
-            group_by_sector = False
+    # Controls — v0.8.0 redesign: color-metric selector + ticker jump.
+    col_metric, col_jump = st.columns([3, 1])
+    with col_metric:
+        metric_label = st.radio(
+            "Color metric",
+            [
+                "IV Percentile (snapshot)",
+                "Δ IV — 1 day",
+                "Δ IV — 30 days",
+            ],
+            index=0,
+            horizontal=True,
+            key="heatmap_metric",
+            help=(
+                "Snapshot mode: current IV percentile (0=cheap, 100=rich). "
+                "Δ-mode: 1-day or 30-day IV change — red = IV rising, "
+                "green = IV falling."
+            ),
+        )
+        metric_to_col = {
+            "IV Percentile (snapshot)": ("iv_percentile",  (0.0, 100.0)),
+            "Δ IV — 1 day":             ("iv_change_1d",   (-5.0, 5.0)),
+            "Δ IV — 30 days":           ("iv_change_30d",  (-10.0, 10.0)),
+        }
+        color_metric, color_range = metric_to_col[metric_label]
 
     with col_jump:
         # Search-as-you-type — filter the available tickers by substring
@@ -269,27 +320,31 @@ def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
         f'</div>',
     )
 
-    fig = _build_heatmap_figure(latest, group_by_sector)
+    fig = _build_treemap_figure(
+        latest,
+        color_metric=color_metric,
+        color_range=color_range,
+    )
     clicked = st.plotly_chart(
         fig,
         use_container_width=True,
         on_select="rerun",
-        key="heatmap_chart",
+        key="heatmap_treemap",
     )
 
-    # Handle cell click — navigate to Scope for clicked ticker
+    # Handle treemap click — navigate to Scope for clicked ticker.
+    # Plotly Treemap selection returns points with the ``label`` field
+    # holding the ticker symbol directly (much simpler than the prior
+    # regex-extraction from the hover HTML).
     if clicked and hasattr(clicked, "selection"):
         sel = clicked.selection
         if hasattr(sel, "points") and sel.points:
             pt = sel.points[0]
-            # customdata holds the hover text; extract ticker from first token
-            cd = pt.get("customdata", "")
-            if cd and isinstance(cd, str) and "<b>" in cd:
-                raw = cd.split("<b>")[1].split("</b>")[0].strip()
-                if raw and raw in latest["ticker"].values:
-                    st.session_state["selected_ticker"] = raw
-                    st.session_state["active_page"] = "Scope"
-                    st.rerun()
+            label = pt.get("label", "")
+            if label and label in latest["ticker"].values:
+                from volscope.ui.components.navigation import NavIntent, nav_to
+                nav_to(NavIntent(page="Scope", ticker=str(label), source="Heatmap"))
+                st.rerun()
 
     # Stats summary
     if "iv_percentile" in latest.columns:

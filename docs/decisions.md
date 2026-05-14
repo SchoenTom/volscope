@@ -326,4 +326,95 @@ the migration leaves the columns NULL on rollback, no data loss.
 
 ---
 
+## 2026-05-14 v0.8.0 — Page redesigns (Heatmap → Treemap, Rotation → RRG, Portfolio hero, Flow bars, Options-Lab expiry picker, universe expansion)
+
+**Choice:** Five coordinated page redesigns + universe expansion +
+an absolute-date expiry picker for Options Lab. Specifically:
+
+1. **Heatmap** — replaced the naive 20-column grid heatmap with a
+   proper TradingView-style sector treemap (``plotly.graph_objects.
+   Treemap``). Rectangle size = total OI (deeper option markets get
+   more visual real-estate, the correct prioritisation for a vol
+   tool). Color = IV percentile on a green→red gradient OR
+   symmetric Δ-IV mode (1d / 30d). Click-to-Scope path simplified
+   to the treemap's native ``label`` field.
+2. **Rotation** — replaced the dense sector × date heatmap with a
+   Relative Rotation Graph (RRG, Julius de Kempenaer 2005) adapted
+   to vol semantics. X = sector IV percentile minus cross-sector
+   median, Y = 21-day momentum of that ratio. Four quadrants labelled
+   in vol language: Vol Heating / Cooling / Cold / Warming. 8-week
+   trails per sector with head markers. Heatmap kept as secondary tab.
+3. **Portfolio Performance section** — IBKR / TradeRepublic-style
+   hero: big NLV at the top with today's $ + % delta pill, then a
+   1D / 1W / 1M / 3M / YTD / All time-range pill, then the equity
+   curve rendered via streamlit-lightweight-charts (TradingView feel)
+   with a Plotly fallback. The 6-cell KPI strip (Sharpe, Max DD,
+   etc.) moves below the curve.
+4. **Flow** — replaced the heatmap-first layout with a sortable
+   horizontal Plotly bar chart of current flow scores per sector
+   as the default tab. Heatmap retained as second tab for time-
+   series analysis. Divergence alert cards kept (they're the
+   actionable signal).
+5. **Options Lab — absolute expiry picker** — added an "EXPIRY"
+   row above the builder strip with four preset tiles (Weekly,
+   Monthly, Quarterly, LEAPS) showing both the absolute date AND
+   the DTE, plus a custom ``st.date_input``. Selecting any preset
+   or date writes ``ol_dte`` in session_state so the existing DTE
+   slider picks it up. Relative DTE slider stays for fast iteration.
+6. **Ticker universe expansion** — 630 → 842 unique tickers
+   (~34% increase). Added leveraged & inverse ETFs (TQQQ family,
+   SOXL family, NUGT/DUST, BOIL/KOLD, TMF/TMV, etc.), spot-crypto
+   ETFs (IBIT, FBTC, ETHA), S&P 500 mid-cap completers, more ADRs
+   (LatAm: MELI/NU/PAGS, Europe: SE/GRAB/GLOB), recent listings with
+   liquid options (RDDT, ARM, CART, ALAB), additional biotech and
+   high-vol meme names.
+
+**Alternatives considered:**
+- TradingView widget embed for the heatmap — rejected (ADR-0006):
+  it would not render our IV-percentile / IV-change overlays.
+- Equity-rotation style RRG semantics ("Leading / Weakening / etc.")
+  — rejected; remapped to vol semantics so the chart reads correctly
+  for a vol-focused tool.
+- Single-page-redesign approach (do all 5 in one massive rewrite) —
+  rejected as over-risk. Each page redesign is additive (old code
+  retained as secondary tab where useful), so any single regression
+  is locally fixable.
+
+**Why:** v0.7.x made the surface readable and the math correct.
+v0.8.0 is the visual-credibility wave: the operator described the
+Heatmap and Rotation specifically as "Schandflecke" compared to
+TradingView / IBKR / TradeRepublic. The new charts mirror the
+industry-standard patterns those tools use (treemap, RRG, hero-NLV
+with time-range pills, sortable bar chart) so the operator no
+longer pays a credibility tax on the visual layer.
+
+**Evidence:**
+- ``volscope/ui/views/heatmap_page.py::_build_treemap_figure``
+- ``volscope/ui/views/rotation_page.py::_compute_rrg_panel``,
+  ``::_build_rrg_figure``
+- ``volscope/ui/views/portfolio_page.py::_render_performance_section``
+- ``volscope/ui/views/flow_page.py::render_flow_page`` (bar-first
+  tab layout)
+- ``volscope/ui/views/options_lab_page.py::_render_expiry_picker``
+  + ``_next_friday`` / ``_next_third_friday`` / ``_next_quarterly_friday``
+  / ``_next_january_leaps`` helpers
+- ``volscope/data/ticker_universe.py`` (842 unique tickers after
+  dedupe, verified by smoke test)
+
+**Reversibility:** fully reversible. The Heatmap, Rotation and Flow
+redesigns retain the previous chart as a secondary tab — operators
+can compare side-by-side. The Portfolio hero is a layout change on
+top of the existing analytics (compute_portfolio_performance is
+unchanged). Options Lab expiry picker is additive — the DTE slider
+behaviour is unchanged. The universe expansion only ADDS tickers;
+existing scraper / scanner code is untouched.
+
+**Confidence:** high for the visual redesigns; medium for the RRG
+quadrant labelling (vol semantics may need a second pass once an
+operator uses it in anger — e.g. "Cooling" might be more usefully
+named "Mean-Reverting" in vol context). Universe expansion is
+mechanical, no behavioural risk.
+
+---
+
 (append new decisions here, newest at the top)

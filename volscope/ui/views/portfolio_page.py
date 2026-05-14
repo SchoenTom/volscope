@@ -720,7 +720,179 @@ def _render_performance_section(st_module, db: VolScopeDB, positions_df: pd.Data
         f'</span></div>',
     )
 
-    # ── Headline KPIs (custom IBKR row, never truncates) ────────────
+    # ── HERO (IBKR / TradeRepublic-style) ────────────────────────────
+    # Top-of-page big-number value with today's change pill. Single
+    # biggest visual element on the portfolio page — operator wants
+    # the headline NLV + the day-change in one glance, the same way
+    # IBKR and Trade Republic surface them.
+    eq = perf.equity_curve.copy()
+    eq["date"] = pd.to_datetime(eq["date"])
+    eq = eq.sort_values("date").reset_index(drop=True)
+
+    # Today's $ + % delta — last vs prior valid row.
+    today_val   = float(eq["total_value"].iloc[-1]) if not eq.empty else 0.0
+    prev_val    = float(eq["total_value"].iloc[-2]) if len(eq) > 1 else today_val
+    today_pl_d  = today_val - prev_val
+    today_pl_p  = ((today_val / prev_val - 1.0) * 100.0) if prev_val else 0.0
+    pl_color_hex = COLORS["accent"] if today_pl_d >= 0 else COLORS["warn"]
+    pl_sign      = "▲" if today_pl_d >= 0 else "▼"
+    render_html(
+        st_module,
+        f'<div style="display:flex;align-items:baseline;gap:16px;'
+        f'margin:6px 0 14px 0;font-family:\'DM Sans\',sans-serif;">'
+        f'<div style="font-size:36px;font-weight:700;color:{COLORS["text"]};'
+        f'letter-spacing:-0.02em;line-height:1.0;'
+        f'font-variant-numeric:tabular-nums;">${today_val:,.0f}</div>'
+        f'<div style="background:{pl_color_hex}1a;color:{pl_color_hex};'
+        f'border:1px solid {pl_color_hex}55;padding:4px 10px;'
+        f'border-radius:5px;font-size:13px;font-weight:600;'
+        f'font-variant-numeric:tabular-nums;">'
+        f'{pl_sign} ${abs(today_pl_d):,.0f} · {today_pl_p:+.2f}%'
+        f'</div>'
+        f'<div style="color:{COLORS["muted"]};font-size:11px;'
+        f'letter-spacing:0.04em;text-transform:uppercase;margin-left:auto;">'
+        f'TODAY · LIVE MTM</div>'
+        f'</div>',
+    )
+
+    # ── Time-range pills (IBKR / TR pattern) ─────────────────────────
+    # Operator picks the chart window — equity curve filters in place.
+    # Inception-anchored "All" is always available; 1D / 1W / 1M / 3M /
+    # YTD are the standard broker pills.
+    range_labels = ["1D", "1W", "1M", "3M", "YTD", "All"]
+    selected_range = st_module.radio(
+        "Equity curve range",
+        range_labels,
+        index=range_labels.index(
+            st_module.session_state.get("pf_eq_range", "1M")
+            if st_module.session_state.get("pf_eq_range") in range_labels else "1M"
+        ),
+        horizontal=True,
+        key="pf_eq_range",
+        label_visibility="collapsed",
+    )
+
+    # Filter equity curve by selected range. ``today`` is the most
+    # recent observation, not ``datetime.now()``, so weekends and
+    # gaps don't push the start before the actual data.
+    from datetime import date as _date
+    last_dt = eq["date"].max() if not eq.empty else pd.Timestamp(_date.today())
+    if selected_range == "1D":
+        start_dt = last_dt - pd.Timedelta(days=2)
+    elif selected_range == "1W":
+        start_dt = last_dt - pd.Timedelta(days=7)
+    elif selected_range == "1M":
+        start_dt = last_dt - pd.Timedelta(days=31)
+    elif selected_range == "3M":
+        start_dt = last_dt - pd.Timedelta(days=92)
+    elif selected_range == "YTD":
+        start_dt = pd.Timestamp(_date(last_dt.year, 1, 1))
+    else:
+        start_dt = eq["date"].min() if not eq.empty else last_dt
+
+    eq_filtered = eq[eq["date"] >= start_dt].copy()
+
+    # ── Equity curve via TradingView Lightweight Charts ─────────────
+    # The streamlit-lightweight-charts wrapper consumes a list of
+    # {time, value} dicts. We always-call render_lwc_safe so a missing
+    # dep falls back to a Plotly area chart with identical semantics.
+    line_color = COLORS["accent"] if perf.total_pl >= 0 else COLORS["warn"]
+    lwc_rendered = False
+    if not eq_filtered.empty:
+        try:
+            from volscope.ui.components.lwc_chart import render_lwc_safe
+
+            area_data = [
+                {
+                    "time":  ts.strftime("%Y-%m-%d"),
+                    "value": float(val),
+                }
+                for ts, val in zip(
+                    eq_filtered["date"], eq_filtered["total_value"]
+                )
+                if pd.notna(val)
+            ]
+            spec = [{
+                "chart": {
+                    "height": 280,
+                    "layout": {
+                        "background": {"type": "solid", "color": COLORS["bg"]},
+                        "textColor":  COLORS["text"],
+                    },
+                    "grid": {
+                        "vertLines": {"color": COLORS["border"], "style": 1},
+                        "horzLines": {"color": COLORS["border"], "style": 1},
+                    },
+                    "rightPriceScale": {"borderColor": COLORS["border"]},
+                    "leftPriceScale":  {"visible": False},
+                    "timeScale": {
+                        "borderColor":    COLORS["border"],
+                        "timeVisible":    True,
+                        "secondsVisible": False,
+                    },
+                    "crosshair": {"mode": 1},
+                    "handleScroll": True,
+                    "handleScale":  True,
+                },
+                "series": [{
+                    "type":  "Area",
+                    "data":  area_data,
+                    "options": {
+                        "topColor":    f"rgba(0, 212, 170, 0.30)"
+                                        if perf.total_pl >= 0
+                                        else "rgba(255, 68, 102, 0.30)",
+                        "bottomColor": f"rgba(0, 212, 170, 0.0)"
+                                        if perf.total_pl >= 0
+                                        else "rgba(255, 68, 102, 0.0)",
+                        "lineColor":   line_color,
+                        "lineWidth":   2,
+                        "priceFormat": {"type": "price", "precision": 0, "minMove": 1},
+                    },
+                }],
+            }]
+            lwc_rendered = render_lwc_safe(
+                spec, key=f"pf_eq_curve_{selected_range}",
+            )
+        except Exception:                                       # noqa: BLE001
+            lwc_rendered = False
+
+    if not lwc_rendered:
+        # Plotly fallback — same data, smaller visual surface but
+        # always renders even when streamlit-lightweight-charts is
+        # missing or the LWC payload has a transient error.
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=eq_filtered["date"], y=eq_filtered["total_value"],
+            mode="lines",
+            name="Portfolio value",
+            line=dict(color=line_color, width=2.0, shape="spline"),
+            fill="tozeroy",
+            fillcolor=rgba(line_color, 0.10),
+            hovertemplate="$%{y:,.0f}<extra></extra>",
+        ))
+        fig.add_hline(
+            y=perf.total_invested,
+            line=dict(color=COLORS["muted"], width=1, dash="dot"),
+            annotation_text=f"invested ${perf.total_invested:,.0f}",
+            annotation_position="top right",
+            annotation_font=dict(family=_MONO, color=COLORS["muted"], size=9),
+        )
+        fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family=_MONO, color=COLORS["text"], size=10),
+            height=260,
+            margin=dict(l=12, r=44, t=8, b=28),
+            hovermode="x unified",
+            xaxis=dict(gridcolor="rgba(255,255,255,0.03)"),
+            yaxis=dict(side="right", tickformat="$,.0f",
+                        gridcolor="rgba(255,255,255,0.03)"),
+            showlegend=False,
+        )
+        st_module.plotly_chart(fig, use_container_width=True)
+
+    # ── Secondary KPI strip (Sharpe / DD / inception P&L) ───────────
+    # The headline NLV + today's change sit at the top; this strip
+    # carries the slower-changing performance stats below the curve.
     from volscope.ui.components.metric_components import _ibkr_cell
     pl_color = "fg-cheap" if perf.total_pl >= 0 else "fg-rich"
     pl_cell  = "is-cheap" if perf.total_pl >= 0 else "is-rich"
@@ -745,58 +917,6 @@ def _render_performance_section(st_module, db: VolScopeDB, positions_df: pd.Data
         st_module,
         '<div class="volscope-ibkr-row">' + "".join(cells) + "</div>",
     )
-
-    # ── Equity curve chart ──────────────────────────────────────────
-    eq = perf.equity_curve.copy()
-    eq["date"] = pd.to_datetime(eq["date"])
-    line_color = COLORS["accent"] if perf.total_pl >= 0 else COLORS["warn"]
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=eq["date"], y=eq["total_value"],
-        mode="lines",
-        name="Portfolio value",
-        line=dict(color=line_color, width=2.0, shape="spline"),
-        fill="tozeroy",
-        fillcolor=rgba(line_color, 0.06),
-        hovertemplate="$%{y:,.0f}<extra></extra>",
-    ))
-    fig.add_hline(
-        y=perf.total_invested,
-        line=dict(color=COLORS["muted"], width=1, dash="dot"),
-        annotation_text=f"invested ${perf.total_invested:,.0f}",
-        annotation_position="top right",
-        annotation_font=dict(family=_MONO, color=COLORS["muted"], size=9),
-    )
-    fig.update_layout(
-        title=dict(
-            text="EQUITY CURVE — DAILY MTM",
-            font=dict(color=COLORS["label"], size=11, family="DM Sans"),
-            x=0.0, xanchor="left", y=0.97,
-        ),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family=_MONO, color=COLORS["text"], size=10),
-        height=240,
-        margin=dict(l=12, r=44, t=28, b=28),
-        hovermode="x unified",
-        hoverlabel=dict(
-            bgcolor="rgba(13,14,20,0.95)",
-            bordercolor=COLORS["border"],
-            font=dict(family=_MONO, size=11, color=COLORS["text"]),
-        ),
-        xaxis=dict(
-            gridcolor="rgba(255,255,255,0.03)",
-            tickfont=dict(family=_MONO, size=9, color=COLORS["label"]),
-        ),
-        yaxis=dict(
-            gridcolor="rgba(255,255,255,0.03)",
-            tickfont=dict(family=_MONO, size=9, color=COLORS["label"]),
-            side="right",
-            tickformat="$,.0f",
-        ),
-        showlegend=False,
-    )
-    st_module.plotly_chart(fig, use_container_width=True)
 
     # ── Position contribution waterfall ─────────────────────────────
     if perf.contributions:

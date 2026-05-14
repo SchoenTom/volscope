@@ -23,6 +23,7 @@ from volscope.ui.components.html_utils import render_html
 from volscope.ui.styles.theme import COLORS
 
 _MONO = "JetBrains Mono, SF Mono, Menlo, monospace"
+_SANS = "DM Sans, Inter, system-ui, sans-serif"
 
 
 def _flow_colorscale() -> list:
@@ -355,40 +356,114 @@ def render_flow_page(db: VolScopeDB, settings: dict) -> None:
         """,
     )
 
-    # ── Flow heatmap ────────────────────────────────────────────────────
-    render_html(
-        st,
-        f'<div style="font-family:\'{_MONO}\';font-size:11px;color:{COLORS["label"]};'
-        f'text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Flow Score Heatmap</div>',
-    )
-    fig = _build_flow_heatmap(flow_df, lookback_days=window_days)
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    # ── Flow views (v0.8.0 redesign) ────────────────────────────────────
+    # Operator feedback: the dense sector × date heatmap was hard to
+    # parse at-a-glance. New default is a sortable horizontal bar
+    # chart of the CURRENT flow score per sector with the heatmap
+    # retained as a secondary tab for time-series analysis.
+    tab_bars, tab_heatmap = st.tabs([
+        "█ Flow ranking",
+        "▦ Flow time-series",
+    ])
+
+    with tab_bars:
+        sort_col1, _ = st.columns([1, 4])
+        with sort_col1:
+            sort_mode = st.selectbox(
+                "Sort",
+                ["By score ▼", "By score ▲", "By name"],
+                index=0,
+                key="flow_bars_sort",
+                label_visibility="collapsed",
+            )
+        if sort_mode == "By score ▼":
+            ranked = latest_flow.sort_values("flow_score", ascending=False)
+        elif sort_mode == "By score ▲":
+            ranked = latest_flow.sort_values("flow_score", ascending=True)
+        else:
+            ranked = latest_flow.sort_values("sector", ascending=True)
+
+        # Plotly horizontal bar chart — clearer than the legacy HTML
+        # bars at a glance and supports proper hover with the
+        # underlying component breakdown.
+        sectors_x = ranked["sector"].tolist()
+        scores_x = ranked["flow_score"].astype(float).tolist()
+        bar_colors = [
+            COLORS["warn"]  if s >= 65 else
+            COLORS["amber"] if s >= 35 else
+            COLORS["accent"]
+            for s in scores_x
+        ]
+        fig_bars = go.Figure(go.Bar(
+            x=scores_x,
+            y=sectors_x,
+            orientation="h",
+            marker=dict(color=bar_colors, line=dict(width=0)),
+            text=[f"{s:.0f}" for s in scores_x],
+            textposition="outside",
+            textfont=dict(family=_MONO, size=10, color=COLORS["text"]),
+            hovertemplate="<b>%{y}</b><br>Flow score: %{x:.1f}<extra></extra>",
+        ))
+        # Vertical reference lines at 35 (quiet ↑) and 65 (active ↑).
+        for thresh, label, color in (
+            (35, "quiet", COLORS["accent"]),
+            (65, "active", COLORS["warn"]),
+        ):
+            fig_bars.add_vline(
+                x=thresh,
+                line=dict(color=color, width=1, dash="dot"),
+                annotation_text=label,
+                annotation_position="top",
+                annotation_font=dict(family=_MONO, size=9, color=color),
+            )
+        fig_bars.update_layout(
+            paper_bgcolor=COLORS["bg"], plot_bgcolor=COLORS["bg"],
+            height=max(280, len(sectors_x) * 26 + 80),
+            margin=dict(l=140, r=24, t=24, b=24),
+            font=dict(family=_MONO, color=COLORS["text"], size=10),
+            xaxis=dict(
+                title=dict(
+                    text="Flow score (0 = quiet, 100 = active)",
+                    font=dict(family=_SANS, size=11, color=COLORS["muted"]),
+                ),
+                range=[0, 110],
+                gridcolor=COLORS["border"],
+                zerolinecolor=COLORS["border"],
+            ),
+            yaxis=dict(
+                tickfont=dict(family=_MONO, size=10, color=COLORS["text"]),
+                gridcolor=COLORS["border"],
+                autorange="reversed",  # highest at top when sorted desc
+            ),
+            showlegend=False,
+            bargap=0.25,
+        )
+        st.plotly_chart(fig_bars, use_container_width=True,
+                         config={"displayModeBar": False})
+
+    with tab_heatmap:
+        render_html(
+            st,
+            f'<div style="font-family:\'{_SANS}\';font-size:11px;'
+            f'color:{COLORS["muted"]};margin-bottom:6px;">'
+            f'Sector × date flow score over the selected window. '
+            f'Use this view to spot persistent vs ephemeral flow.</div>',
+        )
+        fig_heat = _build_flow_heatmap(flow_df, lookback_days=window_days)
+        st.plotly_chart(fig_heat, use_container_width=True,
+                         config={"displayModeBar": False})
 
     st.divider()
 
-    # ── Ranking bars + divergence alerts ───────────────────────────────
-    left, right = st.columns([2, 3])
-
-    with left:
-        render_html(
-            st,
-            f'<div style="font-family:\'{_MONO}\';font-size:11px;color:{COLORS["label"]};'
-            f'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Current Rankings</div>',
-        )
-        sector_flows = [
-            (row["sector"], float(row["flow_score"]))
-            for _, row in latest_flow.iterrows()
-        ]
-        render_html(st, _ranking_bars_html(sector_flows))
-
-    with right:
-        render_html(
-            st,
-            f'<div style="font-family:\'{_MONO}\';font-size:11px;color:{COLORS["label"]};'
-            f'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Divergence Alerts</div>',
-        )
-        divergences = detect_flow_divergence(flow_df, sector_hist=sector_hist)
-        render_html(st, _divergence_cards_html(divergences))
+    # ── Divergence alerts (kept — these are the actionable signal) ──────
+    render_html(
+        st,
+        f'<div style="font-family:\'{_MONO}\';font-size:11px;color:{COLORS["label"]};'
+        f'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">'
+        f'Divergence Alerts</div>',
+    )
+    divergences = detect_flow_divergence(flow_df, sector_hist=sector_hist)
+    render_html(st, _divergence_cards_html(divergences))
 
     st.divider()
 

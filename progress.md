@@ -1,5 +1,55 @@
 # VolScope Progress
 
+## Last Session: 2026-05-14 (v0.8.0 — page redesigns + universe expansion)
+
+CEO-mode autonomous session driven by an operator audit that called
+out four pages as visual liabilities vs TradingView / IBKR / TR. All
+five items shipped + universe grew from 630 to 842 unique tickers.
+
+**Shipped:**
+1. **Heatmap → TradingView Treemap** (`volscope/ui/views/heatmap_page.py`)
+   — `plotly.graph_objects.Treemap` with sector parents, rectangle
+   size by OI, color by IV percentile OR symmetric Δ-IV (1d / 30d
+   modes selectable via radio). Click-to-Scope path simplified to
+   the treemap's native `label` field.
+2. **Rotation → Relative Rotation Graph** (`rotation_page.py`)
+   — Julius de Kempenaer 2005 RRG adapted to vol: X = sector IV
+   percentile minus cross-sector median, Y = 21-day momentum, four
+   quadrants labelled Vol Heating / Cooling / Cold / Warming with
+   coloured 8-week trails per sector. Old dense heatmap retained as
+   second tab for time-series analysts.
+3. **Portfolio Performance hero** (`portfolio_page.py`)
+   — IBKR / TR layout: 36-px NLV big-number + today's $ change pill
+   on top, 1D/1W/1M/3M/YTD/All time-range pills, equity curve via
+   streamlit-lightweight-charts (TradingView feel) with Plotly fall-
+   back if dep missing. Existing 6-cell KPI strip moved below curve.
+4. **Flow → sortable Plotly bars** (`flow_page.py`)
+   — horizontal bar chart of current flow score per sector with
+   sort-mode selector (▼ score, ▲ score, by name), reference lines
+   at 35/65 thresholds. Heatmap kept as second tab. Divergence cards
+   preserved.
+5. **Options Lab — absolute expiry picker** (`options_lab_page.py`)
+   — `_render_expiry_picker()` adds four preset tiles (Weekly /
+   Monthly / Quarterly / LEAPS) with absolute dates + DTE shown,
+   plus a custom `st.date_input` that auto-syncs DTE. Relative DTE
+   slider stays for quick overview. Helpers: `_next_friday`,
+   `_next_third_friday`, `_next_quarterly_friday`, `_next_january_leaps`.
+6. **Ticker universe** (`volscope/data/ticker_universe.py`)
+   — 630 → 842 unique tickers. New sectors: Leveraged ETF (36
+   tickers), Crypto ETF (13), LatAm ADRs (12), Europe ADRs (13).
+   Existing sectors expanded with S&P 500 mid-cap completers,
+   recent listings (RDDT, ARM, CART, ALAB), more biotech, more
+   regional banks. All new names verified optionable (OI > 1000
+   on front-month ATM).
+
+**Documented + decision-logged** at `docs/decisions.md` with full
+trade-offs (TradingView widget embed explicitly rejected for the
+Heatmap; equity-rotation RRG labels remapped to vol semantics).
+
+**Version bump:** 0.7.1 → 0.8.0.
+
+---
+
 ## Last Session: 2026-05-14 (v0.7.1 — matched-horizon IV-HV spread)
 
 Focused academic-correctness fix on top of v0.7.0. Driven by an

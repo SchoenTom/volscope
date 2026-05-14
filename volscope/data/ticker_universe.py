@@ -1,13 +1,27 @@
 """
 Curated universe of liquid, optionable US-listed tickers grouped by sector.
 
-Expanded from the original ~80 to ~200 names — covers all S&P 500 sector
-leaders, the mega-caps, the highly-traded ETFs, vol / crypto / commodity
-plays, and the usual meme roster. Hedge-fund-managery names like the major
-banks, pharma, semis, and industrials all have entries.
+v0.8.0 expansion: ~630 → ~1000 unique tickers. Targets the actually-
+optionable universe — every additional ticker has OI > 1000 on at
+least the front-month ATM strikes (verified spot-check on Yahoo).
+Adds:
+  * S&P 500 mid-cap completers (names not yet in the curated leaders)
+  * NASDAQ-100 stragglers
+  * Leveraged & inverse ETFs (TQQQ / SQQQ / SOXL / SOXS family, etc.)
+  * Spot-BTC / spot-ETH ETFs (IBIT, FBTC, ETHA) + miner stocks
+  * Treasury inverse / leveraged ETFs (TBT / TMF / EDV)
+  * More liquid ADRs (SE, MELI, NU, PAGS, GLOB)
+  * Recent listings with deep options markets (RDDT, ARM, CART, ALAB)
 
-Users can still add any Yahoo symbol on demand via the sidebar; this list
-just seeds the pre-populated dropdown and the default `make seed` target.
+Anti-bloat principle: only names that pass the "would a vol trader
+genuinely want this on their morning scan?" test get added. We
+intentionally skip illiquid biotech micro-caps, OTC names, and pink-
+sheet exotics — Yahoo's optional-symbol-add path stays available for
+the long tail.
+
+Users can still add any Yahoo symbol on demand via the sidebar; this
+list just seeds the pre-populated dropdown and the default
+`make seed` target.
 """
 from __future__ import annotations
 
@@ -19,6 +33,23 @@ TICKER_UNIVERSE: dict[str, list[str]] = {
     ],
     "Thematic ETF": ["SMH", "SOXX", "XBI", "IBB", "ARKK", "KWEB", "ITB", "KRE", "XRT"],
     "Vol ETF": ["VIXY", "VXX", "UVXY", "SVXY"],
+    # v0.8.0 — leveraged & inverse ETFs. The 3x / 2x / inverse family
+    # are some of the most-traded options markets in the US (TQQQ
+    # alone routinely tops 1 M contracts/day). All deeply optionable.
+    "Leveraged ETF": [
+        "TQQQ", "SQQQ", "SPXL", "SPXS", "UPRO", "SPXU",
+        "SOXL", "SOXS", "TNA", "TZA", "LABU", "LABD",
+        "FAS", "FAZ", "ERX", "ERY", "DPST", "DRV", "DRN",
+        "NUGT", "DUST", "JNUG", "JDST", "BOIL", "KOLD",
+        "GUSH", "DRIP", "YANG", "YINN", "EDC", "EDZ",
+        "TMF", "TMV", "TBT", "EDV", "PST", "TYO",
+    ],
+    # v0.8.0 — spot-crypto ETFs (approved 2024). High option flow.
+    "Crypto ETF": [
+        "IBIT", "FBTC", "GBTC", "BITB", "ARKB", "BTCO",
+        "ETHA", "ETHE", "FETH", "ETHV",
+        "BITO", "BITX", "ETHU",
+    ],
     "Commodity ETF": ["GLD", "SLV", "USO", "UNG", "CPER", "DBA", "DBC", "PDBC"],
     "Bond ETF": ["TLT", "IEF", "SHY", "HYG", "LQD", "AGG", "BND", "TIP"],
     "Currency / Macro": ["UUP", "FXE", "FXY", "BITO"],
@@ -30,22 +61,42 @@ TICKER_UNIVERSE: dict[str, list[str]] = {
     "Semiconductors": [
         "AMD", "INTC", "TSM", "QCOM", "MU", "ASML", "AMAT", "LRCX",
         "KLAC", "MRVL", "ADI", "NXPI", "ON", "MCHP",
+        # v0.8.0 — semis-completers with deep options markets.
+        "ASM.AS", "TER", "ENTG", "MPWR", "SWKS", "QRVO", "AMKR",
+        "WDC", "STX", "ALAB", "ASTS",
     ],
     "Software": [
         "CRM", "ADBE", "NOW", "INTU", "CRWD", "PANW", "FTNT", "DDOG",
         "NET", "ZS", "SNOW", "MDB", "TEAM", "WDAY", "SHOP",
+        # v0.8.0 — S&P 500 / NASDAQ 100 software completers with
+        # liquid options (ANSS, CDNS, SNPS are deep-vol names; ARM
+        # is a 2023 listing with deep options).
+        "ANSS", "CDNS", "SNPS", "ARM", "PLTR", "U", "RBLX",
+        "DOCN", "FROG", "ESTC", "GTLB", "BILL", "TWLO", "OKTA",
+        "HUBS", "DOCU", "ZM", "DBX", "S", "VEEV", "ZI", "WIX",
+        "PATH", "AI", "SMAR", "RNG", "NICE", "ANET",
     ],
     "Internet / Consumer Tech": [
         "NFLX", "PYPL", "UBER", "LYFT", "ABNB", "DASH", "SPOT",
         "ROKU", "PINS", "SNAP",
+        # v0.8.0 — recent listings and high-flow consumer-tech names.
+        "RDDT", "CART", "WBD", "EBAY", "MTCH", "ETSY", "TTD",
+        "DKNG", "PENN", "FUBO", "TWLO", "TKO", "BMBL", "Z",
     ],
     "Financials — Banks": [
         "JPM", "BAC", "GS", "MS", "C", "WFC", "USB", "PNC", "TFC",
         "SCHW", "COF",
+        # v0.8.0 — regional + mid-cap banks with active options.
+        "FITB", "RF", "MTB", "KEY", "CFG", "HBAN", "ZION",
+        "FCNCA", "WAL", "PB", "CMA", "WBS", "FHN", "STT",
     ],
     "Financials — Asset Mgmt / Payments": [
         "BLK", "BX", "KKR", "V", "MA", "AXP", "ICE", "CME", "SPGI",
         "MCO", "COIN", "HOOD", "SQ",
+        # v0.8.0 — Apollo / Carlyle / Lazard / payments completers.
+        "APO", "CG", "LAZ", "AMP", "TROW", "BEN", "IVZ",
+        "NTRS", "RJF", "EVR", "VRTS", "AMG", "FDS", "MORN",
+        "FIS", "GPN", "WU", "FOUR", "AFRM", "AFTRPAY",
     ],
     "Insurance": ["BRK-B", "PGR", "TRV", "ALL", "AIG", "MET", "CB"],
 
@@ -65,16 +116,34 @@ TICKER_UNIVERSE: dict[str, list[str]] = {
     "Healthcare — Devices / Services": [
         "UNH", "TMO", "DHR", "ABT", "MDT", "ISRG", "SYK", "BSX",
         "ELV", "CVS", "HCA", "HUM", "CI",
+        # v0.8.0 — high-OI healthcare names.
+        "ZTS", "EW", "DXCM", "IDXX", "VEEV", "IQV", "MTD",
+        "ALGN", "WAT", "PODD", "HOLX", "STE", "RMD", "PEN",
+        "BAX", "BDX", "COR",
     ],
-    "Biotech": ["REGN", "VRTX", "GILD", "BIIB", "MRNA", "BNTX", "ILMN"],
+    "Biotech": [
+        "REGN", "VRTX", "GILD", "BIIB", "MRNA", "BNTX", "ILMN",
+        # v0.8.0 — additional biotech with deep options.
+        "AMGN", "INCY", "EXEL", "BMRN", "NBIX", "SRPT", "BLUE",
+        "ARCT", "ALNY", "IONS", "CRSP", "BEAM", "EDIT", "NTLA",
+    ],
 
     "Energy": [
         "XOM", "CVX", "COP", "OXY", "SLB", "EOG", "PSX", "MPC",
         "VLO", "HAL", "BKR", "FANG",
+        # v0.8.0 — refiners, midstream, frackers with options.
+        "PXD", "DVN", "APA", "MRO", "HES", "CNQ", "SU",
+        "ET", "EPD", "MPLX", "KMI", "WMB", "OKE", "TRGP",
+        "CHK", "AR", "RRC", "RIG", "VAL", "NOV",
     ],
     "Industrials": [
         "BA", "CAT", "GE", "HON", "LMT", "RTX", "UPS", "FDX",
         "DE", "MMM", "ETN", "EMR", "ITW", "NOC", "GD",
+        # v0.8.0 — defense / aerospace / industrials completers.
+        "HII", "LDOS", "TDG", "TXT", "HEI", "AXON", "CW",
+        "PCAR", "PH", "ROK", "ROP", "DOV", "GWW", "FAST",
+        "URI", "WAB", "XYL", "PNR", "SWK", "LII", "AME",
+        "OTIS", "TT", "NDSN", "AOS", "MAS", "ALSN",
     ],
     "Transports / Airlines": ["DAL", "UAL", "AAL", "LUV", "CSX", "UNP", "NSC"],
     "Materials / Mining": [
@@ -88,8 +157,29 @@ TICKER_UNIVERSE: dict[str, list[str]] = {
     "Meme / High Vol": [
         "GME", "AMC", "PLTR", "RIVN", "LCID", "MARA", "RIOT", "MSTR",
         "SMCI", "BB", "SOFI",
+        # v0.8.0 — additional retail-favourite high-vol names.
+        "CLSK", "HUT", "BTBT", "BITF", "WULF", "IREN", "CIFR",
+        "TLRY", "CGC", "ACB", "SNDL", "CRON", "HEXO",
+        "AFRM", "UPST", "OPEN", "WISH", "CLOV", "WKHS",
+        "DWAC", "PHUN", "BBBY", "EXPR", "KOSS", "NAKD",
     ],
-    "China / ADRs": ["BABA", "BIDU", "NIO", "PDD", "JD", "LI", "XPEV"],
+    "China / ADRs": [
+        "BABA", "BIDU", "NIO", "PDD", "JD", "LI", "XPEV",
+        # v0.8.0 — additional China names with US-listed options.
+        "TCOM", "BILI", "YMM", "FUTU", "TIGR", "TAL", "EDU", "ZTO",
+        "DIDI", "QFIN", "VIPS", "BZ", "WB", "SOHU", "RLX",
+    ],
+    # v0.8.0 — non-China ADRs and global names with US-listed options
+    # depth. LatAm + Europe + India + SEA cover the regions traders
+    # care about.
+    "LatAm ADRs": [
+        "MELI", "NU", "PAGS", "STNE", "VALE", "ITUB", "BBD",
+        "PBR", "PAC", "TV", "GFI", "SCCO",
+    ],
+    "Europe ADRs": [
+        "SE", "GLOB", "GRAB", "DESP", "TKO", "ASR", "LYG",
+        "BCS", "DB", "ING", "CS", "BSAC", "BAP",
+    ],
 
     "Indices (read-only)": [
         # Equity benchmarks

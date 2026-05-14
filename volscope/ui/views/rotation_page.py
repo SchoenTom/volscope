@@ -47,6 +47,239 @@ def _perc_colorscale() -> list:
     return [list(stop) for stop in HEATMAP_SCALE]
 
 
+def _compute_rrg_panel(
+    sector_hist: pd.DataFrame,
+    *,
+    tail_weeks: int = 8,
+    momentum_lookback_days: int = 21,
+) -> dict[str, list[dict]]:
+    """Compute Relative Rotation Graph (RRG) trails per sector.
+
+    Adapts the Julius de Kempenaer 2005 RRG framework to volatility:
+
+      • **RS-Ratio** = sector median IV percentile − cross-sector
+        median IV percentile (centred around 0). Positive = sector vol
+        is richer than the cross-sector benchmark, negative = cheaper.
+      • **RS-Momentum** = N-day rate of change of RS-Ratio (default
+        N=21 trading days ≈ one month).
+
+    Both series are smoothed with a 5-day EMA to reduce the daily
+    noise that would otherwise make the trails illegible.
+
+    Quadrants (vol-semantics, NOT equity-rotation semantics):
+      • TR  Vol Heating   — sector richer than benchmark, momentum up
+      • BR  Vol Cooling   — sector richer, momentum down
+      • BL  Vol Cold      — sector cheaper, momentum down
+      • TL  Vol Warming   — sector cheaper, momentum up
+
+    Returns a dict keyed by sector with a list of {date, x, y} points
+    (most recent ``tail_weeks * 5`` trading days).
+    """
+    if sector_hist is None or sector_hist.empty:
+        return {}
+    if "median_perc" not in sector_hist.columns:
+        return {}
+
+    df = sector_hist[["date", "sector", "median_perc"]].copy()
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values(["date", "sector"])
+
+    # Cross-sector median per date (the "benchmark" for RRG).
+    benchmark = (
+        df.groupby("date")["median_perc"].median().rename("bench_perc")
+    )
+    df = df.merge(benchmark, left_on="date", right_index=True, how="left")
+
+    # RS-Ratio = sector vs benchmark (in percentile-points).
+    df["rs_ratio"] = df["median_perc"] - df["bench_perc"]
+
+    panel: dict[str, list[dict]] = {}
+    tail_days = max(10, tail_weeks * 5)
+
+    for sector, g in df.groupby("sector"):
+        g = g.sort_values("date").copy()
+        if len(g) < momentum_lookback_days + 5:
+            continue
+        # Smooth ratio with 5-day EMA, then compute momentum as the
+        # absolute change vs ``momentum_lookback_days`` days ago.
+        g["rs_smooth"] = g["rs_ratio"].ewm(span=5, adjust=False).mean()
+        g["rs_mom"] = (
+            g["rs_smooth"] - g["rs_smooth"].shift(momentum_lookback_days)
+        ).ewm(span=5, adjust=False).mean()
+        tail = g.dropna(subset=["rs_smooth", "rs_mom"]).tail(tail_days)
+        if tail.empty:
+            continue
+        panel[sector] = [
+            {
+                "date": ts.strftime("%Y-%m-%d"),
+                "x": float(rs),
+                "y": float(mom),
+            }
+            for ts, rs, mom in zip(
+                tail["date"], tail["rs_smooth"], tail["rs_mom"]
+            )
+        ]
+    return panel
+
+
+def _build_rrg_figure(panel: dict[str, list[dict]]) -> go.Figure:
+    """Render an RRG scatter with quadrant background + per-sector trails.
+
+    Each sector gets a coloured line tracing its last ``tail_weeks``
+    of (RS-Ratio, RS-Momentum). The head (most recent point) is a
+    large filled marker with the sector label; the tail fades to
+    illustrate direction of travel.
+    """
+    fig = go.Figure()
+    if not panel:
+        fig.update_layout(
+            paper_bgcolor=COLORS["bg"], plot_bgcolor=COLORS["bg"],
+            height=480,
+            annotations=[dict(
+                text="Not enough sector history for RRG — need ≥ 30 trading "
+                     "days of sector aggregates.",
+                xref="paper", yref="paper", x=0.5, y=0.5,
+                showarrow=False,
+                font=dict(family=_MONO, size=12, color=COLORS["muted"]),
+            )],
+        )
+        return fig
+
+    # Compute symmetric bounds so quadrants are visually centred.
+    all_x = [pt["x"] for pts in panel.values() for pt in pts]
+    all_y = [pt["y"] for pts in panel.values() for pt in pts]
+    bound_x = max(8.0, max(abs(v) for v in all_x))
+    bound_y = max(4.0, max(abs(v) for v in all_y))
+    bound_x *= 1.15
+    bound_y *= 1.15
+
+    # Quadrant background shapes.
+    q_alpha = "0.05"
+    fig.add_shape(type="rect", xref="x", yref="y",
+                  x0=0, x1=bound_x, y0=0, y1=bound_y,
+                  fillcolor=f"rgba(255, 68, 102, {q_alpha})", line=dict(width=0),
+                  layer="below")
+    fig.add_shape(type="rect", xref="x", yref="y",
+                  x0=0, x1=bound_x, y0=-bound_y, y1=0,
+                  fillcolor=f"rgba(255, 159, 67, {q_alpha})", line=dict(width=0),
+                  layer="below")
+    fig.add_shape(type="rect", xref="x", yref="y",
+                  x0=-bound_x, x1=0, y0=-bound_y, y1=0,
+                  fillcolor=f"rgba(0, 212, 170, {q_alpha})", line=dict(width=0),
+                  layer="below")
+    fig.add_shape(type="rect", xref="x", yref="y",
+                  x0=-bound_x, x1=0, y0=0, y1=bound_y,
+                  fillcolor=f"rgba(91, 140, 255, {q_alpha})", line=dict(width=0),
+                  layer="below")
+
+    # Quadrant labels — vol-semantics, anchored in corners.
+    label_font = dict(family=_MONO, size=11, color=COLORS["muted"])
+    fig.add_annotation(x=bound_x * 0.94, y=bound_y * 0.94, xref="x", yref="y",
+                       text="VOL HEATING", showarrow=False, font=label_font,
+                       xanchor="right", yanchor="top")
+    fig.add_annotation(x=bound_x * 0.94, y=-bound_y * 0.94, xref="x", yref="y",
+                       text="VOL COOLING", showarrow=False, font=label_font,
+                       xanchor="right", yanchor="bottom")
+    fig.add_annotation(x=-bound_x * 0.94, y=-bound_y * 0.94, xref="x", yref="y",
+                       text="VOL COLD", showarrow=False, font=label_font,
+                       xanchor="left", yanchor="bottom")
+    fig.add_annotation(x=-bound_x * 0.94, y=bound_y * 0.94, xref="x", yref="y",
+                       text="VOL WARMING", showarrow=False, font=label_font,
+                       xanchor="left", yanchor="top")
+
+    # Centre cross.
+    fig.add_shape(type="line", x0=-bound_x, x1=bound_x, y0=0, y1=0,
+                  line=dict(color=COLORS["border"], width=1, dash="dot"),
+                  layer="below")
+    fig.add_shape(type="line", x0=0, x1=0, y0=-bound_y, y1=bound_y,
+                  line=dict(color=COLORS["border"], width=1, dash="dot"),
+                  layer="below")
+
+    # Per-sector trail + head marker. Colour cycles through a
+    # categorical palette deterministically by sorted name so the
+    # legend ordering matches across reruns.
+    palette = [
+        "#00d4aa", "#5b8cff", "#ff9f43", "#ff4466", "#a78bfa",
+        "#06b6d4", "#fbbf24", "#f472b6", "#34d399", "#60a5fa",
+        "#fb923c", "#e879f9", "#22d3ee", "#facc15",
+    ]
+    for i, sector in enumerate(sorted(panel.keys())):
+        pts = panel[sector]
+        if not pts:
+            continue
+        col = palette[i % len(palette)]
+        xs = [p["x"] for p in pts]
+        ys = [p["y"] for p in pts]
+        # Trail (fading line, no markers).
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys,
+            mode="lines",
+            line=dict(color=col, width=2),
+            opacity=0.55,
+            name=sector,
+            hovertemplate=(
+                f"<b>{sector}</b><br>"
+                "RS-Ratio: %{x:.2f}<br>"
+                "RS-Mom: %{y:.2f}<extra></extra>"
+            ),
+            legendgroup=sector,
+            showlegend=True,
+        ))
+        # Head marker — slightly bigger circle with the sector label.
+        fig.add_trace(go.Scatter(
+            x=[xs[-1]], y=[ys[-1]],
+            mode="markers+text",
+            marker=dict(size=14, color=col,
+                        line=dict(color=COLORS["bg"], width=2)),
+            text=[sector[:12]],
+            textposition="top center",
+            textfont=dict(family=_MONO, size=10, color=COLORS["text"]),
+            hovertemplate=(
+                f"<b>{sector}</b><br>"
+                "RS-Ratio: %{x:.2f}<br>"
+                "RS-Mom: %{y:.2f}<extra></extra>"
+            ),
+            legendgroup=sector,
+            showlegend=False,
+        ))
+
+    fig.update_layout(
+        paper_bgcolor=COLORS["bg"],
+        plot_bgcolor=COLORS["bg"],
+        height=560,
+        margin=dict(l=40, r=20, t=30, b=40),
+        font=dict(family=_MONO, color=COLORS["text"], size=10),
+        xaxis=dict(
+            title=dict(
+                text="RS-Ratio (sector IV pct − benchmark)",
+                font=dict(family=_SANS, size=11, color=COLORS["muted"]),
+            ),
+            range=[-bound_x, bound_x],
+            gridcolor=COLORS["border"],
+            zerolinecolor=COLORS["border"],
+            zeroline=False,
+        ),
+        yaxis=dict(
+            title=dict(
+                text="RS-Momentum (21-day Δ)",
+                font=dict(family=_SANS, size=11, color=COLORS["muted"]),
+            ),
+            range=[-bound_y, bound_y],
+            gridcolor=COLORS["border"],
+            zerolinecolor=COLORS["border"],
+            zeroline=False,
+        ),
+        legend=dict(
+            orientation="v",
+            yanchor="top", y=1.0,
+            xanchor="left", x=1.02,
+            bgcolor="rgba(0,0,0,0)",
+            font=dict(family=_MONO, size=9, color=COLORS["text"]),
+        ),
+    )
+    return fig
+
+
 def _build_sector_heatmap(agg: pd.DataFrame, lookback_days: int = 180) -> go.Figure:
     """Build a time-series heatmap: y=sectors, x=dates, z=median_perc."""
     if agg is None or agg.empty:
@@ -350,16 +583,41 @@ def render_rotation_page(db: VolScopeDB, settings: dict) -> None:
         """,
     )
 
-    # ── Heatmap ────────────────────────────────────────────────────────
-    render_html(
-        st,
-        f'<div style="font-family:\'{_MONO}\';font-size:11px;color:{COLORS["label"]};'
-        f'text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">IV Percentile Heatmap</div>',
-    )
-    heatmap_col = "median_perc" if "median_perc" in sector_hist.columns else None
-    if heatmap_col:
-        fig = _build_sector_heatmap(sector_hist, lookback_days=window_days)
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    # ── Rotation views (RRG default, heatmap secondary) ────────────────
+    # v0.8.0 redesign: the dense sector × date heatmap was the
+    # operator's #2 "Schandfleck" complaint. The new Relative Rotation
+    # Graph (Julius de Kempenaer 2005) plots each sector as a head +
+    # trail across two intuitive axes (vs benchmark on x, momentum on
+    # y) so the same data reads as "what's heating up, what's cooling
+    # off" in one glance. The legacy heatmap is preserved as the
+    # second tab for operators who want the dense time-series view.
+    tab_rrg, tab_heatmap = st.tabs([
+        "↻ Rotation Graph (RRG)",
+        "▦ IV Percentile Heatmap",
+    ])
+    with tab_rrg:
+        render_html(
+            st,
+            f'<div style="font-family:\'{_SANS}\';font-size:11px;'
+            f'color:{COLORS["muted"]};margin-bottom:6px;">'
+            f'Each sector as a head + 8-week trail. '
+            f'<span style="color:#ff4466;">●</span> heating, '
+            f'<span style="color:#ff9f43;">●</span> cooling, '
+            f'<span style="color:#00d4aa;">●</span> cold, '
+            f'<span style="color:#5b8cff;">●</span> warming.'
+            f'</div>',
+        )
+        rrg_panel = _compute_rrg_panel(sector_hist, tail_weeks=8)
+        fig_rrg = _build_rrg_figure(rrg_panel)
+        st.plotly_chart(fig_rrg, use_container_width=True,
+                         config={"displayModeBar": False})
+
+    with tab_heatmap:
+        heatmap_col = "median_perc" if "median_perc" in sector_hist.columns else None
+        if heatmap_col:
+            fig = _build_sector_heatmap(sector_hist, lookback_days=window_days)
+            st.plotly_chart(fig, use_container_width=True,
+                             config={"displayModeBar": False})
 
     st.divider()
 

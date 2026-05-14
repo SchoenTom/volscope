@@ -358,6 +358,137 @@ def _render_quickstart_tiles() -> None:
                     st.rerun()
 
 
+# ── Expiry picker (absolute-date layer, v0.8.0) ─────────────────────
+
+def _next_friday(today: "date") -> "date":
+    """Next Friday strictly after ``today`` (weekday 4)."""
+    from datetime import timedelta
+    days_ahead = (4 - today.weekday()) % 7 or 7
+    return today + timedelta(days=days_ahead)
+
+
+def _next_third_friday(today: "date") -> "date":
+    """Next 3rd Friday of any month strictly after ``today``.
+
+    Monthly equity options expire on the 3rd Friday of every month
+    — this is the most-traded standard expiry on US exchanges.
+    """
+    from datetime import date as _date, timedelta
+    # Try this month's 3rd Friday; if it's already past, roll to next month.
+    for offset in range(0, 3):
+        year  = today.year  + ((today.month - 1 + offset) // 12)
+        month = ((today.month - 1 + offset) % 12) + 1
+        first = _date(year, month, 1)
+        # First Friday of the month
+        first_friday = first + timedelta(days=(4 - first.weekday()) % 7)
+        third_friday = first_friday + timedelta(days=14)
+        if third_friday > today:
+            return third_friday
+    return today + timedelta(days=30)
+
+
+def _next_quarterly_friday(today: "date") -> "date":
+    """Next 3rd Friday of Mar / Jun / Sep / Dec strictly after ``today``.
+
+    Quarterly expiries are the deepest-OI monthlies on most names —
+    LEAPS roll-down + index rebalancing both happen on the same day.
+    """
+    from datetime import date as _date, timedelta
+    quarters = (3, 6, 9, 12)
+    year = today.year
+    for _ in range(8):                                       # at most 2 yrs
+        for q in quarters:
+            if (q < today.month) or (q == today.month and today.day >= 15):
+                continue
+            first = _date(year, q, 1)
+            first_friday = first + timedelta(days=(4 - first.weekday()) % 7)
+            third_friday = first_friday + timedelta(days=14)
+            if third_friday > today:
+                return third_friday
+        year += 1
+    return today + timedelta(days=90)
+
+
+def _next_january_leaps(today: "date") -> "date":
+    """The 3rd Friday of next January — standard LEAPS anchor."""
+    from datetime import date as _date, timedelta
+    target_year = today.year + 1 if today.month >= 1 else today.year
+    first = _date(target_year, 1, 1)
+    first_friday = first + timedelta(days=(4 - first.weekday()) % 7)
+    return first_friday + timedelta(days=14)
+
+
+def _render_expiry_picker() -> None:
+    """Absolute-date expiry tiles + custom date input.
+
+    Layout:
+      [ ⚡ Weekly (Fri 22 Nov, 8d) ] [ 📆 Monthly (Fri 19 Dec, 35d) ]
+      [ 📊 Quarterly (Fri 20 Mar 2026, 126d) ] [ 🗓 LEAPS (Jan 2027, 426d) ]
+      [ Custom: <st.date_input> → DTE auto-set ]
+
+    Each preset writes ``st.session_state["ol_dte"]`` and triggers a
+    rerun; the existing DTE number_input in the builder strip then
+    reads that value as its initial. Operator can still fine-tune
+    the DTE manually after picking a preset.
+    """
+    from datetime import date as _date
+
+    today = _date.today()
+    presets = [
+        ("⚡ Weekly",    _next_friday(today),          "Next Friday"),
+        ("📆 Monthly",   _next_third_friday(today),    "Next 3rd Friday"),
+        ("📊 Quarterly", _next_quarterly_friday(today), "Mar/Jun/Sep/Dec cycle"),
+        ("🗓 LEAPS",      _next_january_leaps(today),    "Next January 3rd Friday"),
+    ]
+
+    render_html(
+        st,
+        f'<div style="margin:8px 0 6px 0;'
+        f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        f'color:{COLORS["muted"]};letter-spacing:0.02em;font-weight:500;">'
+        f'EXPIRY — pick a date or use a preset</div>',
+    )
+
+    cols = st.columns([1, 1, 1, 1, 2], gap="small")
+    for col, (label, exp_date, blurb) in zip(cols[:4], presets):
+        dte = (exp_date - today).days
+        with col:
+            clicked = st.button(
+                f"{label}\n{exp_date.strftime('%d %b %y')} · {dte}d",
+                key=f"ol_exp_preset_{label}",
+                use_container_width=True,
+                help=f"{blurb} — sets DTE to {dte}.",
+            )
+            if clicked:
+                st.session_state["ol_dte"] = int(dte)
+                st.rerun()
+    with cols[4]:
+        # Custom date input — read current DTE to seed the default.
+        current_dte = int(st.session_state.get("ol_dte", 60) or 60)
+        from datetime import timedelta
+        default_exp = today + timedelta(days=current_dte)
+        custom = st.date_input(
+            "or pick a custom date",
+            value=default_exp,
+            min_value=today,
+            max_value=today + timedelta(days=900),
+            key="ol_exp_custom",
+            help=(
+                "Pick any expiry date — DTE updates automatically. "
+                "Useful for matching a specific weekly / monthly / "
+                "LEAPS contract from the chain."
+            ),
+            label_visibility="collapsed",
+        )
+        if custom and isinstance(custom, _date):
+            new_dte = max(1, (custom - today).days)
+            # Only rerun if user actually changed the value — otherwise
+            # we'd be in a rerun loop on every page render.
+            if new_dte != current_dte:
+                st.session_state["ol_dte"] = int(new_dte)
+                st.rerun()
+
+
 # ── Builder strip ───────────────────────────────────────────────────
 
 def _render_builder_strip(db) -> Optional[dict]:
@@ -377,6 +508,20 @@ def _render_builder_strip(db) -> Optional[dict]:
     # glossary so every place that explains IV / DTE / Greeks reads
     # from one source of truth.
     from volscope.ui.glossary import tooltip
+
+    # ── Expiry picker (v0.8.0 absolute-date layer) ─────────────────
+    # IBKR / OptionStrat pattern: real option chains expose a list
+    # of expiries by absolute date with the DTE in parentheses
+    # ("Dec 19 '25 (24d)"). VolScope's seed-only chain doesn't have
+    # those yet, so we synthesise the four most-traded expiry kinds:
+    # the next weekly (Fri), the next monthly (3rd Fri of next
+    # month), the next quarterly (Mar/Jun/Sep/Dec 3rd Fri), and a
+    # one-year LEAPS. Each preset writes its absolute date into
+    # ``st.session_state["ol_dte"]`` (computed in days from today)
+    # so the existing DTE slider below picks it up as its initial
+    # value. The relative DTE slider stays available for fast
+    # iteration; the date picker is the absolute-precision path.
+    _render_expiry_picker()
 
     c1, c2, c3, c4 = st.columns([2, 3, 1, 1])
     with c1:
