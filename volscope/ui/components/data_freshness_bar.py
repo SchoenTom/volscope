@@ -132,9 +132,12 @@ def render_data_freshness_bar(db, *, compact: bool = False) -> None:
         ):
             ok, info = _start_background_scrape()
             if ok:
+                # Streamlit ≥1.32 rejects icon characters whose Unicode
+                # ``Emoji_Presentation`` property is "No" (e.g. ``✓``).
+                # ``✅`` (U+2705) is unambiguously emoji-presentation.
                 st.toast(
-                    f"↻ Scrape started · {n_tickers} tickers · log {os.path.basename(info)}",
-                    icon="✓",
+                    f"Scrape started · {n_tickers} tickers · log {os.path.basename(info)}",
+                    icon="✅",
                 )
             else:
                 st.error(f"Couldn't start scrape: {info}")

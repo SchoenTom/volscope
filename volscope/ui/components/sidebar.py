@@ -687,7 +687,9 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
                     stderr=subprocess.STDOUT,
                     start_new_session=True,
                 )
-            st.toast(f"Scrape started — log: {os.path.basename(log_file)}", icon="↻")
+            # Streamlit ≥1.32 rejects ``↻`` as icon — replaced by the
+            # emoji-presentation ``🔄`` (U+1F504, counterclockwise arrows).
+            st.toast(f"Scrape started — log: {os.path.basename(log_file)}", icon="🔄")
         except Exception as exc:
             st.error(f"Could not start scrape: {exc}")
 

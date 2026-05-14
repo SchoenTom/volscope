@@ -105,7 +105,9 @@ def render_signals_page(db, settings: Optional[dict] = None) -> None:
                            "historical analysis. Idempotent.")):
             try:
                 n = persist_signals(db, signals)
-                st.toast(f"Captured {n} signals into signal_log", icon="✓")
+                # Streamlit ≥1.32 rejects ``✓`` (U+2713) as icon —
+                # it is Emoji=Yes but Emoji_Presentation=No.
+                st.toast(f"Captured {n} signals into signal_log", icon="✅")
             except Exception as exc:
                 st.error(f"Capture failed: {exc}")
 

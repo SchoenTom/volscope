@@ -767,7 +767,11 @@ def render_discover_page(db, settings: dict | None = None) -> None:
                 "🔥 RICHEST = options above. ⚡ MOVERS = today's biggest IV jumps. "
                 "🌐 CROWDED = consensus extremes (reversal risk). "
                 "Click any card to drill into Scope.",
-                icon="ℹ",
+                # Streamlit ≥1.32 rejects ``ℹ`` (U+2139) as icon — it
+                # is Emoji=Yes but Emoji_Presentation=No. ``💡`` is
+                # unambiguously emoji-presentation and reads well in
+                # an info-style banner.
+                icon="💡",
             )
         with c2:
             if st.button("✕", key="onboarding_dismiss", help="Hide this onboarding banner"):
