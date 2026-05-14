@@ -7,8 +7,16 @@ enough to begin the requested task — you do not need to read everything.
 
 1. [`/WELCOME-AGENT.md`](../WELCOME-AGENT.md) — quick orientation, hard rules.
 2. [`/CLAUDE.md`](../CLAUDE.md) — developer guide, command reference,
-   non-obvious architecture notes.
-3. [`/ROADMAP.md`](../ROADMAP.md) — phase status table.
+   non-obvious architecture notes, **VolScope Operating System** section
+   (Session Boot Sequence, Tool Workflow Standards, Gotchas).
+3. [`/progress.md`](../progress.md) — last-session state, what's queued.
+4. [`/docs/decisions.md`](../docs/decisions.md) — recent non-trivial
+   decisions (last 5 are usually enough).
+5. [`/docs/roadmap/MASTER_PLAN.md`](../docs/roadmap/MASTER_PLAN.md) —
+   single source of truth for "what's next".
+6. [`/docs/TOOLS.md`](../docs/TOOLS.md) — tool catalog (every page,
+   every analytics module, synergies).
+7. [`/ROADMAP.md`](../ROADMAP.md) — high-level phase status table.
 
 ## 2. Project context (≤15 min)
 

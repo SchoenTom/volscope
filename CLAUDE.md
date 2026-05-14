@@ -134,3 +134,156 @@ Implemented in:
   build a historical crush distribution per ticker.
 - Universe heatmap (future): single-glance grid of IV percentile across all
   tickers, colored by z-score.
+
+---
+
+## VolScope Operating System (v0.4.0, 2026-05-14)
+
+This section is the **dauerhafte Framework** that structures every
+future Claude Code session on VolScope. Read on session boot. Update
+when you learn.
+
+### Session Boot Sequence
+
+When a session starts:
+
+1. Read **this file** (`CLAUDE.md`) — get oriented in 60 seconds.
+2. Read **`progress.md`** at repo root — know what the last session
+   shipped and what's queued next.
+3. Read **`docs/decisions.md`** last 5 entries — non-obvious recent
+   choices that shape current state.
+4. Run `git status` + `git log --oneline -10` — confirm working-tree
+   state matches expectations.
+5. Check active `TaskList` — claim or update as work proceeds.
+
+Then report to the operator in ≤5 lines: where we are, what's open,
+ready for direction.
+
+### Tool Workflow Standards
+
+Every action follows a chain. Don't jump straight from idea to Edit —
+always use the surrounding tools.
+
+**Bug fix workflow:**
+1. `TaskCreate` — capture the bug as a task.
+2. `Read` — load the file + its tests.
+3. Bash `grep` — search for the pattern projectwide (the bug rarely
+   lives in one place).
+4. `Edit` — apply the fix.
+5. Bash `pytest -x` (fast subset) — confirm green.
+6. Bash `ruff check .` — confirm style.
+7. Bash `mypy` on touched new-package files — confirm types.
+8. Bash `streamlit run volscope/ui/app.py --server.headless true </dev/null &` —
+   confirm the app still boots (kill after 10s).
+9. `TaskUpdate` — mark completed.
+10. Append to `progress.md` if it changed phase status or unblocked
+    something.
+
+**Feature workflow:**
+1. `TaskCreate` per sub-task.
+2. `Read` existing code in the domain — find the patterns to follow.
+3. Bash `grep` — find similar features for reference.
+4. Optionally `WebSearch` — only if the state-of-the-art is unclear
+   (skip for standard patterns).
+5. `Write` tests first (where the test infrastructure supports it).
+6. `Write`/`Edit` the implementation.
+7. Run the standard test-lint-type-app-boot chain (steps 5-8 of bug fix).
+8. Append to `docs/decisions.md` if the implementation involved a
+   non-trivial choice.
+9. `TaskUpdate` + `progress.md` update.
+
+**Research workflow:**
+1. `WebSearch` — 2-3 queries to scope the area.
+2. `WebFetch` — pull authoritative sources.
+3. Synthesise in markdown (reply or doc).
+4. If new insight that future Claudes would benefit from: append to
+   the Gotchas section below + `docs/decisions.md`.
+
+### Hard commands (memorise these)
+
+| Action | Command |
+|---|---|
+| Install deps (full) | `.venv/bin/pip install -r requirements.txt` |
+| Install bot extras | `.venv/bin/pip install transitions arch hmmlearn apscheduler ib_async` |
+| Run app | `make run` (or `streamlit run volscope/ui/app.py --server.headless true </dev/null`) |
+| Fast tests | `.venv/bin/python -m pytest -m "not slow and not integration and not perf" -x` |
+| All new-module tests | `.venv/bin/python -m pytest tests/test_signal_factors.py tests/test_signal_composite.py tests/test_signal_filters.py tests/test_signal_ranking.py tests/test_persistence_db.py tests/test_persistence_killswitch_migration.py tests/test_risk_killswitch.py tests/test_lifecycle_machine.py tests/test_execution_ibkr_stub.py tests/test_analytics_garch.py tests/test_scheduler_jobs.py tests/test_chain_snapshots.py -q` |
+| E2E smoke | `make verify-all` |
+| Release DB lock | `make unlock` |
+| Lint | `.venv/bin/ruff check .` |
+| Type check (strict on new pkgs) | `.venv/bin/mypy --strict volscope/signals volscope/risk volscope/lifecycle volscope/execution volscope/scheduler volscope/persistence` |
+| Coverage on new code | `.venv/bin/python -m pytest tests/test_signal_*.py tests/test_persistence_*.py tests/test_risk_*.py tests/test_lifecycle_*.py tests/test_execution_*.py tests/test_analytics_garch.py tests/test_scheduler_jobs.py tests/test_chain_snapshots.py --cov=volscope --cov-fail-under=65` |
+
+### Hard rules (NEVER VIOLATE)
+
+1. **Tests green before commit.** `pytest -x` exit 0 — no exceptions.
+2. **Never use yfinance `impliedVolatility`.** Always compute via own
+   BSM Newton-Raphson solver. The Yahoo value is opaque, stale, and
+   wrong by 1-3% in stress.
+3. **Analytics returns None on bad input.** No raised exceptions from
+   `volscope/analytics/*.py` — UI must keep rendering.
+4. **Plotly = `go` only.** Never `plotly.express`. Always
+   `plotly.graph_objects`.
+5. **Plotly fillcolor.** Never 8-char hex (`#00d4aa22`). Always
+   `rgba(...)` via the `rgba()` helper at
+   `volscope/ui/styles/theme.py:15`.
+6. **`st.metric` is forbidden.** Truncates values. Always use the
+   custom KPI helpers in `volscope/ui/components/html_utils.py`.
+7. **Live IBKR orders.** NEVER until Phase 4 with explicit operator
+   opt-in. v0.3.0 paper engine is the production engine right now.
+8. **No `--force` on main.** Branch protection enforces this; recovery
+   via `chore/initial-fixup` branch per `CONTRIBUTING.md`.
+9. **No `--no-verify` on commits.** Pre-commit hooks (ruff, mypy on
+   new pkgs, gitleaks, fast pytest) are sacrosanct.
+10. **Config changes are weekend-only.** `config/risk.yaml`,
+    `config/strategies.yaml`, `config/tickers.yaml` — operator-only,
+    Sunday 18:00 ET review window, 90-day cooldown.
+
+### Gotchas (extend when you learn)
+
+These are non-obvious "the codebase looks like X but actually behaves
+like Y" facts. Extend this list when you discover a new one.
+
+- **Plotly fillcolor**: rejects 8-char hex (`#00d4aa22`). Use
+  `rgba()` helper at `volscope/ui/styles/theme.py:15`.
+- **`st.metric` truncation**: values cut to "45..." when column is
+  narrow. Use `kpi_grid_html()` from `volscope/ui/components/html_utils.py`.
+- **DuckDB locking**: only one writer at a time. Dashboard
+  uses `read_only=True` reads; bot is sole writer. `make unlock` if stuck.
+- **DuckDB reserved words**: `RIGHT` is one (SQL string function). Use
+  `option_right` in chain tables (see ADR-0002 + decision-log
+  2026-05-14).
+- **DuckDB partial indexes**: not supported. Use full index +
+  `WHERE` in queries (caught in migration 001).
+- **ib_async clientId=0**: master ID — sees manual GUI orders too.
+  Bot uses specific IDs (1+) to stay isolated.
+- **HMM regime fit**: needs ≥252 days of feature history (the model
+  raises on shorter input). Test on synthetic 2-regime data first.
+- **IBKR rate limit**: 50 messages/sec hard cap. Wrap calls in
+  `asyncio.Semaphore(40)` for headroom.
+- **DuckDB no PITR**: backup via `EXPORT DATABASE` after market close
+  + hourly during. Documented in `docs/BACKUPS.md`.
+- **iCloud File Provider stall**: project must live at `~/Desktop/VolScope`,
+  not the iCloud mirror. First-import of large deps can stall 25-90s on
+  fresh shells. `scripts/ops/keep_warm.sh` warms the cache.
+- **scripts/ paths**: every script moved to `scripts/<group>/` in v0.2.0.
+  Old direct-`scripts/file.py` references in code or launchd plists
+  will break — grep before reorganising.
+- **Yahoo `impliedVolatility`**: rate-limited since Nov 2024
+  (≈360 req/hour/IP). Use sparingly; the bot's signal engine pulls
+  EOD only.
+- **`right` as a Python attribute**: keep using it on dataclasses
+  (`Quote.right`, `LegSpec.right`); the SQL column rename
+  doesn't propagate to Python.
+
+### Project Identity (one paragraph)
+
+VolScope is a **volatility-research workbench** with a **simulation
+bot** + **paper-trading capability** for retail options traders.
+Tech stack: Python 3.11+, Streamlit, DuckDB 1.4+, Plotly, yfinance
+(dev/research), `ib_async` 2.1+ (paper/live). Operator: SchoenTom.
+Stage: paper-development. **No live IBKR orders** until Phase 4
+explicit opt-in with ≥100 closed paper trades. Vision: research
+dashboard primary; bot is one user of the engine; paper trader is
+manual workflow on the same DB.
+
