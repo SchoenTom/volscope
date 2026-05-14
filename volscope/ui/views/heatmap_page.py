@@ -26,6 +26,7 @@ from __future__ import annotations
 import math
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -90,14 +91,24 @@ def _build_treemap_figure(
         working["sector"] = "Unknown"
     working["sector"] = working["sector"].fillna("Unknown")
 
-    # Rectangle size — prefer total OI (the relevance signal for a
-    # vol-research tool: deeper option markets = more important).
-    # Fall back to constant=1 if OI missing.
+    # Drop rows where the *colour* metric is fully missing — they
+    # would be coloured to the midpoint and just clutter the canvas.
+    # Also drop where iv_30d is missing entirely (a ticker with no IV
+    # is not interesting to a vol-research tool).
+    if "iv_30d" in working.columns:
+        working = working[pd.notna(working["iv_30d"])]
+    if working.empty:
+        return go.Figure().update_layout(
+            paper_bgcolor=COLORS["bg"], plot_bgcolor=COLORS["bg"], height=200,
+        )
+
+    # Rectangle size — prefer total OI (deeper option markets = more
+    # important). Add 1 so zero-OI rows still get *some* area
+    # (otherwise treemap collapses them out entirely).
     if "total_open_interest" in working.columns:
-        size_raw = working["total_open_interest"].fillna(0.0).clip(lower=0.0)
-        # Add 1 so zero-OI rows still get *some* area (otherwise treemap
-        # collapses them out entirely).
-        working["_size"] = size_raw + 1.0
+        working["_size"] = (
+            working["total_open_interest"].fillna(0.0).clip(lower=0.0) + 1.0
+        )
     else:
         working["_size"] = 1.0
 
@@ -113,39 +124,54 @@ def _build_treemap_figure(
     else:
         working["_color"] = 50.0
 
-    # Hover text — pack the headline numbers a vol trader cares about.
-    def _fmt(v, suffix: str = "%", digits: int = 1) -> str:
-        try:
-            f = float(v)
-            if pd.isna(f):
-                return "—"
-            return f"{f:.{digits}f}{suffix}"
-        except (TypeError, ValueError):
-            return "—"
+    # ── Hover text — VECTORISED ───────────────────────────────────
+    # The previous per-row ``iterrows()`` loop with ~8 ``row.get()``
+    # lookups per row was the dominant cost on the heatmap render
+    # (~200ms at 800 rows). Building the strings via pandas
+    # vector-string-ops collapses that to ~5ms.
+    #
+    # The matched-HV fallback also fixes a subtle bug: ``a or b``
+    # falls through to ``b`` when ``a`` is exactly 0.0, which is a
+    # legitimate (if rare) HV value. We use ``np.where(notna(a), a, b)``
+    # so only true-NaN triggers the fallback.
+    hv_yz = pd.to_numeric(working.get("hv_yz_30d"), errors="coerce")
+    hv_cc = pd.to_numeric(working.get("hv_20d"),    errors="coerce")
+    hv = pd.Series(np.where(hv_yz.notna(), hv_yz, hv_cc), index=working.index)
 
-    hover = []
-    for _, row in working.iterrows():
-        iv      = _fmt(row.get("iv_30d"))
-        # Prefer matched-horizon Yang-Zhang HV30 (v0.7.1); fall back to CC HV20.
-        hv      = _fmt(row.get("hv_yz_30d") or row.get("hv_20d"))
-        perc    = _fmt(row.get("iv_percentile"), suffix="", digits=0)
-        spread  = _fmt(row.get("iv_hv_spread_matched") or row.get("iv_hv_spread"),
-                        suffix="", digits=1)
-        oi      = row.get("total_open_interest")
-        oi_str  = f"{int(oi):,}" if oi is not None and not pd.isna(oi) else "—"
-        chg1d   = _fmt(row.get("iv_change_1d"), suffix="", digits=1)
-        chg30d  = _fmt(row.get("iv_change_30d"), suffix="", digits=1)
-        hover.append(
-            f"<b>{row['ticker']}</b><br>"
-            f"Sector: {row['sector']}<br>"
-            f"IV 30d: {iv}<br>"
-            f"HV: {hv}<br>"
-            f"IV − HV: {spread}<br>"
-            f"IV Percentile: {perc}<br>"
-            f"OI: {oi_str}<br>"
-            f"Δ1d: {chg1d} · Δ30d: {chg30d}"
-        )
-    working["_hover"] = hover
+    spread_m = pd.to_numeric(working.get("iv_hv_spread_matched"), errors="coerce")
+    spread_l = pd.to_numeric(working.get("iv_hv_spread"),         errors="coerce")
+    spread = pd.Series(
+        np.where(spread_m.notna(), spread_m, spread_l), index=working.index,
+    )
+
+    iv      = pd.to_numeric(working.get("iv_30d"),           errors="coerce")
+    perc    = pd.to_numeric(working.get("iv_percentile"),    errors="coerce")
+    oi      = pd.to_numeric(working.get("total_open_interest"), errors="coerce")
+    chg1d   = pd.to_numeric(working.get("iv_change_1d"),     errors="coerce")
+    chg30d  = pd.to_numeric(working.get("iv_change_30d"),    errors="coerce")
+
+    def _vec_fmt(s: pd.Series, suffix: str = "%", digits: int = 1) -> pd.Series:
+        out = s.map(lambda v: f"{v:.{digits}f}{suffix}" if pd.notna(v) else "—")
+        return out.astype(str)
+
+    iv_s     = _vec_fmt(iv,   suffix="%", digits=1)
+    hv_s     = _vec_fmt(hv,   suffix="%", digits=1)
+    spread_s = _vec_fmt(spread, suffix="", digits=1)
+    perc_s   = _vec_fmt(perc, suffix="", digits=0)
+    oi_s     = oi.map(lambda v: f"{int(v):,}" if pd.notna(v) else "—").astype(str)
+    chg1d_s  = _vec_fmt(chg1d,  suffix="", digits=1)
+    chg30d_s = _vec_fmt(chg30d, suffix="", digits=1)
+
+    working["_hover"] = (
+        "<b>" + working["ticker"].astype(str) + "</b><br>" +
+        "Sector: " + working["sector"].astype(str) + "<br>" +
+        "IV 30d: " + iv_s + "<br>" +
+        "HV: " + hv_s + "<br>" +
+        "IV − HV: " + spread_s + "<br>" +
+        "IV Percentile: " + perc_s + "<br>" +
+        "OI: " + oi_s + "<br>" +
+        "Δ1d: " + chg1d_s + " · Δ30d: " + chg30d_s
+    )
 
     # Use the existing per-percentile palette for the diverging IV-percentile
     # case; for symmetric change-mode use a red→neutral→green scale.
@@ -320,11 +346,33 @@ def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
         f'</div>',
     )
 
-    fig = _build_treemap_figure(
-        latest,
-        color_metric=color_metric,
-        color_range=color_range,
-    )
+    # Build the figure inside a cached wrapper so subsequent reruns
+    # (radio toggle / sidebar interaction) replay an existing
+    # Plotly-spec dict instead of rebuilding the 800+ hover strings
+    # and re-running the squarify tiling. ``_df`` is underscore-
+    # prefixed to skip the (very expensive) DataFrame hash; the
+    # ``cache_key`` carries the snapshot date.
+    from volscope.ui.components.cached_data import make_cache_key
+
+    @st.cache_data(ttl=600, show_spinner=False)
+    def _cached_treemap_spec(
+        cache_key: str,
+        color_metric: str,
+        color_range_t: tuple[float, float],
+        _df: pd.DataFrame,
+    ) -> dict:
+        return _build_treemap_figure(
+            _df, color_metric=color_metric, color_range=color_range_t,
+        ).to_dict()
+
+    with st.spinner("Rendering universe treemap …", show_time=False):
+        spec = _cached_treemap_spec(
+            make_cache_key(db),
+            color_metric,
+            tuple(color_range),
+            latest,
+        )
+        fig = go.Figure(spec)
     clicked = st.plotly_chart(
         fig,
         use_container_width=True,
