@@ -773,6 +773,29 @@ def render_discover_page(db, settings: dict | None = None) -> None:
         _render_first_run_welcome(st, db)
         return
 
+    # v0.6.1 — IV quality filter. Excludes BLOCK-recommended tickers
+    # by default (FISV-class contamination). User can opt out to see
+    # the full universe including dirty rows.
+    exclude_low_quality = st.toggle(
+        "Exclude low-quality data",
+        value=True,
+        key="discover_quality_filter",
+        help=(
+            "Hides tickers whose IV metrics are flagged as BLOCK by the "
+            "robustness subsystem (single-spike contamination, recent "
+            "structural break, or insufficient data). See docs/IV_ROBUSTNESS.md."
+        ),
+    )
+    if exclude_low_quality and "iv_recommendation" in latest.columns:
+        n_before = len(latest)
+        latest = latest[latest["iv_recommendation"] != "BLOCK"]
+        n_filtered = n_before - len(latest)
+        if n_filtered > 0:
+            st.caption(
+                f"_filter hid {n_filtered} ticker{'s' if n_filtered != 1 else ''} "
+                f"flagged as BLOCK — disable the toggle above to include them_"
+            )
+
     # ── TODAY'S BEST SETUP — hero card above all sections ───────────
     # Combines Edge Score (cheapness) + Strategy Recommender (structure) +
     # Backtest hit-rate (calibration) into a single concrete trade idea.

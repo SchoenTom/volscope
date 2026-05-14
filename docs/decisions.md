@@ -19,6 +19,32 @@ or future-agent doesn't have to spelunk through commits.
 
 ---
 
+## 2026-05-14 Add IV Robustness Subsystem (v0.6.1)
+
+**Choice:** New module `volscope/analytics/iv_robustness.py` with four
+primitives (`robust_iv_rank`, `detect_contamination`,
+`detect_structural_break`, `assess_iv_quality`); migration 006 adds
+nine quality columns to `daily_vol`; nightly compute job; Scope-page
+warning banner; Scanner QUALITY column; Discover toggle filter.
+**Alternatives:** (a) Extend `volscope/signals/factors.py` directly
+(rejected — Single Responsibility violation; bigger blast radius).
+(b) Replace standard IVR entirely (rejected — breaks backward compat;
+legacy metric is still useful in CLEAN cases).
+**Why:** Observed 2026-05-14 dashboard bug: FISV showed IVR 12.5
+("CHEAP") vs IVP 78.6 ("HIGH"). Standard IVR is range-based; a single
+extreme IV spike (forecast reset / M&A / crisis) inflates the 52-week
+MAX and pulls IVR toward 0 even when IV has just regime-shifted
+permanently higher. Trading on the contaminated signal = short-vol
+entry on a permanently-elevated ticker. Separate module allows
+robustness to be toggled, tested in isolation, and owned by the
+risk-auditor agent without touching signal-engineer's factors.
+**Evidence:** FISV case study captured in `docs/IV_ROBUSTNESS.md` +
+regression test `tests/test_iv_robustness.py::TestFISVRegression`.
+External: FISV had a real forecast-reset / litigation crisis Q3-Q4 2025.
+**Reversibility:** reversible — additive subsystem; existing `ivr` and
+`ivp` in `factors.py` unchanged; the UI gate is a toggle.
+**Confidence:** high.
+
 ## 2026-05-14 Wire `/full-review` as a real 5-agent panel
 
 **Choice:** Implement `volscope/orchestration/full_review.py` +

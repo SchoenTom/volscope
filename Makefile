@@ -272,3 +272,10 @@ full-review:
 
 compute-sectors:
 	@.venv/bin/python -m scripts.compute.compute_sector_rotation
+
+# ── v0.6.1 IV robustness ─────────────────────────────────────
+compute-iv-quality:
+	@.venv/bin/python -m scripts.compute.compute_iv_quality
+
+quality-audit:
+	@.venv/bin/python -m scripts.compute.compute_iv_quality --dry-run --verbose

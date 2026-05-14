@@ -246,6 +246,13 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
     )
 
     _render_header(st, db, ticker, latest, history)
+    # v0.6.1 — IV quality warning banner (FISV-class single-spike
+    # contamination). Renders ABOVE the headline KPIs so the operator
+    # sees the verdict before any IVR / IVP / "CHEAP" claim below it.
+    from volscope.ui.components.iv_quality_banner import (
+        render_iv_quality_banner,
+    )
+    render_iv_quality_banner(st, latest)
     # 52-week IV verdict — the single most actionable read on this page.
     # Sits directly under the header so the user knows in 1 second whether
     # to even keep scrolling.

@@ -301,6 +301,7 @@ def render_scan_page(db, settings: dict | None = None) -> None:
         ("iv_change_30d", "30D D"),
         ("iv_rank", "RANK"),
         ("iv_percentile", "PERC"),
+        ("iv_quality_score", "QUALITY"),  # v0.6.1 — IV Robustness Subsystem
         ("perc_trend", "PERC TREND"),
         ("hv_20d", "HV20"),
         ("put_call_ratio", "PC"),
@@ -379,6 +380,18 @@ def render_scan_page(db, settings: dict | None = None) -> None:
         column_config["PERC"] = st.column_config.ProgressColumn(
             "PERC",
             help="IV Percentile: fraction of past-year IV readings BELOW current (0-100).",
+            format="%.0f",
+            min_value=0,
+            max_value=100,
+        )
+    if "QUALITY" in table.columns:
+        column_config["QUALITY"] = st.column_config.ProgressColumn(
+            "QUALITY",
+            help=(
+                "IV data quality score (0-100). Composite of contamination "
+                "(IVR/IVP divergence), structural-break recency, and data "
+                "sufficiency. ≥70 trade · 40-69 caution · <40 block."
+            ),
             format="%.0f",
             min_value=0,
             max_value=100,

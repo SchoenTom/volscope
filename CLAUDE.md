@@ -153,6 +153,11 @@ Non-obvious "the codebase looks like X but actually behaves like Y":
   only the SQL column was renamed to `option_right`.
 - **orjson canonical JSON** — audit chain uses `OPT_SORT_KEYS` for
   deterministic hashing. Don't substitute a different serializer.
+- **IV Rank single-spike contamination** — `|IVR − IVP| > 30` flags
+  the FISV-class bug where one extreme spike inflates the 52-week
+  MAX, making standard IVR misleadingly "CHEAP". Always check
+  `iv_recommendation` from `daily_vol` before trading on IVR alone.
+  See `docs/IV_ROBUSTNESS.md` + `volscope/analytics/iv_robustness.py`.
 
 ## Where things live
 
