@@ -278,4 +278,52 @@ because `render_lwc_safe()` returns False on import failure.
 
 ---
 
+## 2026-05-14 v0.7.1 — Matched-horizon IV-HV spread (academic correctness)
+
+**Choice:** Add ``hv_yz_30d`` (Yang-Zhang at 30 trading days) and the
+derived ``iv_hv_spread_matched = iv_30d - hv_yz_30d`` to ``daily_vol``.
+Wire both into the seed-backfill in ``ticker_resolver._backfill_hv_history``.
+Keep ``hv_20d`` (close-to-close) and the legacy ``iv_hv_spread`` columns
+unchanged so existing scanner / discover code paths keep working.
+**Alternatives considered:**
+- 30 new columns covering 5 estimators × 5 windows + cone metrics (the
+  prompt the operator originally drafted) — rejected as over-engineered.
+  Five estimators are highly correlated (r > 0.95 between YZ / GK /
+  Parkinson), so storing all of them daily wastes column-store reads
+  without adding independent signal. Two estimators (YZ as primary,
+  CC as sanity) is the academic standard for cross-validation.
+- Vol-cone columns + UI in the same release — deferred to v0.8.0;
+  the cone math already lives in ``volscope/analytics/vol_cones.py``
+  but isn't wired to a page yet, which is a focused UI pass on its own.
+- GARCH(1,1)-t forecast volatility — deferred to v0.9.0; that's
+  forward-looking, the matched-horizon HV fix is backward-looking, and
+  conflating them slows both shipping cycles.
+**Why:** Up to v0.7.0, ``iv_hv_spread = iv_30d - hv_20d`` compared a
+30-day implied figure against a 20-day realised figure (~28 calendar
+days). The horizon mismatch is small (~2 vol points typical bias) but
+real, and is an unforced academic-correctness loss for a workbench
+that aspires to paid-product credibility. Yang-Zhang at 30 trading
+days is the industry default for daily-OHLC equity data: drift-
+independent, handles overnight gaps, ~3-5× more efficient than CC in
+practice (theoretical bound 7× per Yang-Zhang 2000, lower in real
+data with imperfect OHLC quality).
+**Evidence:**
+- ``volscope/persistence/migrations/007_hv_matched_horizon.sql`` (new
+  columns + scanner index)
+- ``volscope/data/database.py`` (CREATE TABLE + backfill ALTER + ``_DAILY_FIELDS`` extended)
+- ``volscope/data/ticker_resolver.py::_backfill_hv_history`` (computes
+  ``hv_yz_m`` at ``DEFAULT_HV_MATCHED`` and persists ``hv_yz_30d`` +
+  ``iv_hv_spread_matched``)
+- ``volscope/config.py::DEFAULT_HV_MATCHED = 30``
+- ``tests/test_hv_matched_horizon.py`` — three properties: log-normal
+  recovery within ±2.5 vol pt, HV30 std ≤ HV20 std (estimator variance
+  monotonicity), DB round-trip for the new columns.
+**Reversibility:** fully reversible. Legacy columns / spread untouched;
+new columns are additive and nullable on existing rows. Reverting
+the column writes is a one-line revert in ``_backfill_hv_history``;
+the migration leaves the columns NULL on rollback, no data loss.
+**Confidence:** high.
+
+---
+
 (append new decisions here, newest at the top)

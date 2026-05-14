@@ -1,5 +1,50 @@
 # VolScope Progress
 
+## Last Session: 2026-05-14 (v0.7.1 — matched-horizon IV-HV spread)
+
+Focused academic-correctness fix on top of v0.7.0. Driven by an
+operator audit of the underlying methodology: "ist HV20 vs IV30 der
+akademische Standard und sind die Berechnungen verlässlich?"
+
+The answer was nuanced — Yang-Zhang at 20 days is already in the
+codebase and academically sound, but the IV-HV *spread* metric
+compared a 30-day implied figure against a 20-day realised one. Not
+"konzeptionell falsch" as the original prompt claimed, but a real
+~2-vol-point horizon bias that's an unforced credibility loss.
+
+**Decision (in-session as CEO):** ship the minimum that fixes the
+academic concern; defer the 30-column / 5-estimator / vol-cone-UI
+expansion to v0.8.0 + v0.9.0 because the marginal information from
+extra estimators is small (r > 0.95 correlation) and would just add
+column-store read cost.
+
+**Shipped:**
+- ``volscope/persistence/migrations/007_hv_matched_horizon.sql`` —
+  ``hv_yz_30d`` + ``iv_hv_spread_matched`` columns, scanner index.
+- ``volscope/data/database.py`` — schema sync + backfill ALTER + new
+  fields in ``_DAILY_FIELDS`` so ``upsert_daily`` accepts them.
+- ``volscope/data/ticker_resolver.py::_backfill_hv_history`` — computes
+  Yang-Zhang at ``DEFAULT_HV_MATCHED = 30`` and persists both new
+  columns alongside the legacy ones.
+- ``volscope/config.py::DEFAULT_HV_MATCHED`` — single source of truth
+  for the matched window (Christensen-Prabhala 1998 uses 22-day
+  Parkinson; we use 30 to align exactly with IV30).
+- ``tests/test_hv_matched_horizon.py`` — four tests covering
+  log-normal recovery within ±2.5 vol pt, monotonic estimator-variance
+  property (HV30 std ≤ HV20 std), low-vol synthetic close to zero,
+  and DB round-trip of the new columns.
+
+**Explicitly deferred (CEO call):**
+- v0.8.0 — wire the existing ``volscope/analytics/vol_cones.py`` into
+  Scope page. The math is there, the UI isn't.
+- v0.9.0 — GARCH(1,1)-t forecast vol via the already-installed ``arch``
+  package; earnings-aware rolling window that excludes ±2 days around
+  ``bot_earnings_calendar`` dates.
+
+Version bumped to **0.7.1**. CI green watched.
+
+---
+
 ## Last Session: 2026-05-14 (v0.7.0 — paid-product UX wave)
 
 Four-wave session driven by an operator audit ("die linke Reiter sieht

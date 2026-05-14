@@ -32,6 +32,7 @@ from volscope.analytics.historical_vol import (
 from volscope.analytics.vol_metrics import iv_percentile, iv_rank
 from volscope.config import (
     DEFAULT_HV_LONG,
+    DEFAULT_HV_MATCHED,
     DEFAULT_HV_SHORT,
     DEFAULT_RANK_LOOKBACK,
 )
@@ -198,6 +199,16 @@ def _backfill_hv_history(
         )
     except Exception:
         hv_yz_s = pd.Series(index=df.index, dtype=float)
+    # v0.7.1 — matched-horizon HV (Yang-Zhang at 30 trading days). The
+    # apples-to-apples partner for IV30. Kept separately from hv_yz_20d
+    # so legacy scanner / discover queries that read hv_yz_20d keep
+    # working without change.
+    try:
+        hv_yz_m = hv_yang_zhang(
+            df["Open"], df["High"], df["Low"], df["Close"], DEFAULT_HV_MATCHED
+        )
+    except Exception:
+        hv_yz_m = pd.Series(index=df.index, dtype=float)
 
     # IV proxy: scale YZ by VRP multiplier. Produces a series that visibly
     # differs from the CC baseline, giving the Scope spread chart real signal.
@@ -229,6 +240,16 @@ def _backfill_hv_history(
         if iv_val is not None and hv_val is not None:
             spread = iv_val - hv_val
 
+        # v0.7.1 — matched-horizon spread: IV30 - YZ-HV30. Uses the
+        # same iv_val proxy and the 30-day Yang-Zhang series. None
+        # whenever either side is missing (early-window or bad OHLC).
+        hv_yz_30 = (
+            float(hv_yz_m.iloc[i]) if pd.notna(hv_yz_m.iloc[i]) else None
+        )
+        spread_matched = None
+        if iv_val is not None and hv_yz_30 is not None:
+            spread_matched = iv_val - hv_yz_30
+
         db.upsert_daily(
             ticker,
             d,
@@ -237,6 +258,7 @@ def _backfill_hv_history(
             hv_20d=hv_val,
             hv_60d=float(hv_cc_l.iloc[i]) if pd.notna(hv_cc_l.iloc[i]) else None,
             hv_yz_20d=float(hv_yz_s.iloc[i]) if pd.notna(hv_yz_s.iloc[i]) else None,
+            hv_yz_30d=hv_yz_30,
             iv_rank=(
                 iv_rank(iv_val, rank_history.tolist())
                 if iv_val is not None and not rank_history.empty
@@ -248,6 +270,7 @@ def _backfill_hv_history(
                 else None
             ),
             iv_hv_spread=spread,
+            iv_hv_spread_matched=spread_matched,
             sector=sector,
             company_name=company_name,
         )

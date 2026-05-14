@@ -52,9 +52,11 @@ class VolScopeDB:
                 hv_20d DOUBLE,
                 hv_60d DOUBLE,
                 hv_yz_20d DOUBLE,
+                hv_yz_30d DOUBLE,
                 iv_rank DOUBLE,
                 iv_percentile DOUBLE,
                 iv_hv_spread DOUBLE,
+                iv_hv_spread_matched DOUBLE,
                 put_call_ratio DOUBLE,
                 total_call_volume BIGINT,
                 total_put_volume BIGINT,
@@ -75,6 +77,9 @@ class VolScopeDB:
             ("convergence_mispricing", "DOUBLE"),
             ("convergence_neglect", "DOUBLE"),
             ("convergence_reversal", "DOUBLE"),
+            # v0.7.1 — matched-horizon HV + spread (Yang-Zhang at 30d).
+            ("hv_yz_30d", "DOUBLE"),
+            ("iv_hv_spread_matched", "DOUBLE"),
         ]:
             try:
                 self.con.execute(
@@ -335,9 +340,13 @@ class VolScopeDB:
         "hv_20d",
         "hv_60d",
         "hv_yz_20d",
+        # v0.7.1 — matched-horizon HV at 30 trading days (Yang-Zhang)
+        # plus the academically-correct IV-HV spread that uses it.
+        "hv_yz_30d",
         "iv_rank",
         "iv_percentile",
         "iv_hv_spread",
+        "iv_hv_spread_matched",
         "put_call_ratio",
         "total_call_volume",
         "total_put_volume",

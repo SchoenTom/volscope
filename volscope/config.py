@@ -64,6 +64,11 @@ TRADING_DAYS_PER_YEAR = 252
 CALENDAR_DAYS_PER_YEAR = 365
 
 DEFAULT_HV_SHORT = 20
+# v0.7.1 — matched-horizon HV (Yang-Zhang at 30 trading days). This is
+# the academically-correct window to compare against IV30: Christensen-
+# Prabhala 1998 use 22-day Parkinson against 1-month IV; we use 30
+# trading days against IV30 so the apples-to-apples spread holds.
+DEFAULT_HV_MATCHED = 30
 DEFAULT_HV_LONG = 60
 DEFAULT_RANK_LOOKBACK = 252
 
