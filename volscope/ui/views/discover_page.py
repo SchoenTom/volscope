@@ -777,7 +777,10 @@ def render_discover_page(db, settings: dict | None = None) -> None:
     import streamlit as st
 
     from volscope.ui.components.auto_refresh import auto_refresh_toggle
+    from volscope.ui.components.regime_header import render_regime_header
 
+    # v0.9.0 — persistent vol-regime header strip.
+    render_regime_header(db)
     st.markdown("## ◈ Discover")
     render_html(
         st,
@@ -854,8 +857,38 @@ def render_discover_page(db, settings: dict | None = None) -> None:
     # Market regime strip — the one-glance "where is vol" indicator.
     _render_regime_strip(st, latest)
 
-    cheapest = find_cheapest_vol(latest, n=10)
+    # v0.9.0 — Crisis-tier hard filter: a ticker flagged as
+    # ``VOL_CRISIS`` (per the HMM + override in compute_vol_regime.py)
+    # is excluded from the CHEAPEST panel because in a vol-explosion
+    # regime "cheap" is a snapshot artifact, not a tradable signal.
+    # The ticker still appears in RICHEST / MOVERS / CROWDED so the
+    # operator can see *why* it's flagged.
+    if "vol_regime" in latest.columns:
+        crisis_mask = latest["vol_regime"] == "VOL_CRISIS"
+        cheapest_pool = latest[~crisis_mask.fillna(False)]
+        n_crisis_blocked = int(crisis_mask.fillna(False).sum())
+    else:
+        cheapest_pool = latest
+        n_crisis_blocked = 0
+
+    cheapest = find_cheapest_vol(cheapest_pool, n=10)
     richest = find_richest_premium(latest, n=10)
+
+    if n_crisis_blocked > 0:
+        render_html(
+            st,
+            f'<div style="background:{COLORS["card"]};border:1px solid '
+            f'{COLORS["warn"]}55;border-left:3px solid {COLORS["warn"]};'
+            f'border-radius:6px;padding:8px 12px;margin:6px 0 10px 0;'
+            f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
+            f'color:{COLORS["text"]};">'
+            f'⚠ <strong>{n_crisis_blocked}</strong> ticker(s) flagged as '
+            f'<span style="color:{COLORS["warn"]};">VOL_CRISIS</span> '
+            f'were excluded from CHEAPEST. In a vol-explosion regime '
+            f'"cheap" is a snapshot artifact — long-vega entries are '
+            f'risk-managed away by the HMM + VIX/IV-HV override.'
+            f'</div>',
+        )
 
     from volscope.ui.components.cached_data import get_recent_for_tickers_cached
     all_ticker_list = (

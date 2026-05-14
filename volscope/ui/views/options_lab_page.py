@@ -156,20 +156,54 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
         st.error(f"Could not materialise legs: {exc}")
         return
 
+    # ── Spot-range sliders (v0.9.0) ─────────────────────────────────
+    # Operator wanted absolute control over the x-axis: default 60%-
+    # 140% is too tight for catastrophic-move analysis (e.g. SMCI
+    # +400%, GME +1500%). Slider goes up to 5× current spot.
+    with st.expander("Plot range — spot / move %", expanded=False):
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            spot_low_mult = st.slider(
+                "Lower bound (× current spot)",
+                min_value=0.05, max_value=1.0,
+                value=float(st.session_state.get("ol_spot_low", 0.60)),
+                step=0.05, key="ol_spot_low",
+                help="Lower edge of the x-axis. 0.20 = −80 %, 0.05 = −95 %.",
+            )
+        with sc2:
+            spot_high_mult = st.slider(
+                "Upper bound (× current spot)",
+                min_value=1.0, max_value=5.0,
+                value=float(st.session_state.get("ol_spot_high", 1.40)),
+                step=0.05, key="ol_spot_high",
+                help="Upper edge of the x-axis. 2.0 = +100 %, 5.0 = +400 %.",
+            )
+
     # ── Payoff diagram ──────────────────────────────────────────────
-    _render_payoff_diagram(mat, spot, iv, r, q)
+    _render_payoff_diagram(
+        mat, spot, iv, r, q,
+        spot_low_mult=float(spot_low_mult),
+        spot_high_mult=float(spot_high_mult),
+    )
 
     # ── Metrics row ─────────────────────────────────────────────────
     _render_metrics_row(mat, spot, iv, r, q, dte)
 
     # ── Tabs ────────────────────────────────────────────────────────
-    tab_g, tab_s, tab_t, tab_p, tab_u = st.tabs([
+    tab_surf, tab_g, tab_s, tab_t, tab_p, tab_u = st.tabs([
+        "🗻 Payoff Surface",        # v0.9.0 — 3D P&L(spot, DTE)
         "📊 Greeks Surface",
         "▦ Scenario Matrix",
         "⏱ Time Decay",
         "📈 Probability Cone",
         "🕯 Underlying",
     ])
+    with tab_surf:
+        _render_payoff_surface(
+            mat, spot, iv, r, q, dte,
+            spot_low_mult=float(spot_low_mult),
+            spot_high_mult=float(spot_high_mult),
+        )
     with tab_g:
         _render_greeks_surface(mat, spot, iv, r, q, dte)
     with tab_s:
@@ -620,8 +654,20 @@ def _render_builder_strip(db) -> Optional[dict]:
 
 # ── Payoff diagram ─────────────────────────────────────────────────
 
-def _render_payoff_diagram(mat, spot, iv, r, q):
-    S = np.linspace(spot * 0.60, spot * 1.40, _PNL_GRID_POINTS)
+def _render_payoff_diagram(
+    mat, spot, iv, r, q,
+    *,
+    spot_low_mult: float = 0.60,
+    spot_high_mult: float = 1.40,
+):
+    """v0.9.0: spot range is now slider-controlled (callers above).
+
+    Defaults preserve the prior 60-140 % look for backward compat
+    with any old call sites; the page-level wiring passes the live
+    slider values so the operator can stretch the x-axis to ±400 %
+    for catastrophic-move analysis.
+    """
+    S = np.linspace(spot * spot_low_mult, spot * spot_high_mult, _PNL_GRID_POINTS)
     pnl_expiry = mat.payoff_at_expiry(S)
 
     fig = go.Figure()
@@ -711,6 +757,173 @@ def _render_payoff_diagram(mat, spot, iv, r, q):
         ),
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+# ── 3D Payoff Surface (v0.9.0) ─────────────────────────────────────
+
+def _render_payoff_surface(
+    mat, spot, iv, r, q, dte,
+    *,
+    spot_low_mult: float = 0.60,
+    spot_high_mult: float = 1.40,
+    n_spot: int = 60,
+    n_time: int = 32,
+) -> None:
+    """Plotly ``go.Surface`` of P&L(spot, DTE) for the current trade.
+
+    The 2D payoff line shows the P&L *at expiry*; the surface shows
+    the full path — for every (spot, days-remaining) cell, compute
+    the BSM-priced mark-to-market P&L. The surface morphs as DTE
+    decreases toward zero, terminating at the expiry payoff curve at
+    the front edge of the chart.
+
+    Two reference planes overlay the surface:
+      • Vertical translucent plane at ``spot`` (the current
+        underlying price) so the operator sees where they stand.
+      • Horizontal translucent plane at zero P&L so breakevens
+        are the visible intersection between the surface and the
+        z=0 plane.
+
+    Grid resolution is intentionally modest (60 × 32) so the
+    payoff-surface tab feels responsive even for multi-leg
+    structures with expensive ``mat.net_premium`` calls.
+    """
+    if dte <= 0:
+        st.info("Set a positive DTE in the builder strip above to render "
+                 "the payoff surface.")
+        return
+
+    S = np.linspace(spot * spot_low_mult, spot * spot_high_mult, n_spot)
+    # Time axis: 0 days remaining = expiry; ``dte`` = today.
+    # Render in days-from-today rather than days-to-expiry so the
+    # surface "morphs forward" — left edge = today, right edge = expiry.
+    days_remaining = np.linspace(dte, 0.5, n_time)
+
+    Z = np.zeros((n_time, n_spot))
+    for i, dr in enumerate(days_remaining):
+        T_i = max(1e-4, float(dr) / 365.0)
+        # Vectorised over S via ``mat.net_premium`` — the materialised
+        # template handles broadcasting internally.
+        try:
+            row = mat.net_premium(S, iv=iv, r=r, q=q, T=T_i)
+            entry = mat.net_premium(spot, iv=iv, r=r, q=q, T=dte / 365.0)
+            Z[i, :] = np.asarray(row) - float(entry)
+        except Exception:                                       # noqa: BLE001
+            # Some legs may not vectorise cleanly — fall back to a
+            # Python loop. Still faster than skipping the row.
+            entry = mat.net_premium(spot, iv=iv, r=r, q=q, T=dte / 365.0)
+            for j, s in enumerate(S):
+                try:
+                    Z[i, j] = mat.net_premium(
+                        float(s), iv=iv, r=r, q=q, T=T_i,
+                    ) - float(entry)
+                except Exception:                              # noqa: BLE001
+                    Z[i, j] = 0.0
+
+    # Divergent colour scale centred on zero so green is profit, red
+    # is loss, and the breakeven line is the colourless ridge.
+    z_max = float(np.nanmax(np.abs(Z))) or 1.0
+    colorscale = [
+        [0.0,  COLORS["candle_down"]],
+        [0.5,  COLORS["bg"]],
+        [1.0,  COLORS["candle_up"]],
+    ]
+
+    fig = go.Figure(data=[go.Surface(
+        x=S,
+        y=days_remaining,
+        z=Z,
+        colorscale=colorscale,
+        cmid=0.0,
+        cmin=-z_max,
+        cmax= z_max,
+        contours_z=dict(show=True, usecolormap=True, project_z=True),
+        colorbar=dict(
+            title=dict(
+                text="P&L ($)",
+                font=dict(family=_MONO, size=10, color=COLORS["muted"]),
+            ),
+            thickness=8, len=0.5,
+            tickfont=dict(family=_MONO, size=9, color=COLORS["muted"]),
+        ),
+        opacity=0.92,
+        showscale=True,
+        # v0.9.0 — operator wanted real $ amounts on hover (rather
+        # than the Plotly-default raw "x: 100.0, y: 30.0, z: 1234.5").
+        hovertemplate=(
+            "Spot: $%{x:,.2f}<br>"
+            "Days remaining: %{y:.0f}<br>"
+            "P&L: %{z:+$,.0f}<extra></extra>"
+        ),
+    )])
+
+    # Vertical plane at current spot — implemented as a thin Surface
+    # of the same Z dimensions so it renders correctly in 3D.
+    plane_x = np.array([spot, spot])
+    plane_y = np.array([days_remaining.min(), days_remaining.max()])
+    plane_z = np.array([[-z_max, -z_max], [z_max, z_max]])
+    fig.add_trace(go.Surface(
+        x=plane_x, y=plane_y, z=plane_z.T,
+        showscale=False,
+        colorscale=[[0, COLORS["accent2"]], [1, COLORS["accent2"]]],
+        opacity=0.10,
+        hoverinfo="skip",
+    ))
+
+    # Zero-P&L horizontal plane — same trick.
+    plane2_x = np.array([S.min(), S.max()])
+    plane2_y = np.array([days_remaining.min(), days_remaining.max()])
+    plane2_z = np.zeros((2, 2))
+    fig.add_trace(go.Surface(
+        x=plane2_x, y=plane2_y, z=plane2_z,
+        showscale=False,
+        colorscale=[[0, COLORS["muted"]], [1, COLORS["muted"]]],
+        opacity=0.10,
+        hoverinfo="skip",
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text=f"PAYOFF SURFACE · P&L (spot × DTE) · {mat.template_name}",
+            font=dict(color=COLORS["label"], size=11, family="DM Sans"),
+            x=0.0, xanchor="left", y=0.97,
+        ),
+        paper_bgcolor=COLORS["bg"],
+        scene=dict(
+            xaxis=dict(
+                title=dict(text="Spot",
+                            font=dict(family="DM Sans", size=11,
+                                       color=COLORS["muted"])),
+                backgroundcolor=COLORS["bg"],
+                gridcolor=COLORS["border"],
+                tickfont=dict(family=_MONO, size=9, color=COLORS["text"]),
+                tickformat="$,.0f",
+            ),
+            yaxis=dict(
+                title=dict(text="Days remaining",
+                            font=dict(family="DM Sans", size=11,
+                                       color=COLORS["muted"])),
+                backgroundcolor=COLORS["bg"],
+                gridcolor=COLORS["border"],
+                tickfont=dict(family=_MONO, size=9, color=COLORS["text"]),
+            ),
+            zaxis=dict(
+                title=dict(text="P&L ($)",
+                            font=dict(family="DM Sans", size=11,
+                                       color=COLORS["muted"])),
+                backgroundcolor=COLORS["bg"],
+                gridcolor=COLORS["border"],
+                tickfont=dict(family=_MONO, size=9, color=COLORS["text"]),
+                tickformat="$,.0f",
+            ),
+            camera=dict(eye=dict(x=1.7, y=1.7, z=0.9)),
+            aspectratio=dict(x=1.4, y=1.0, z=0.7),
+        ),
+        height=520,
+        margin=dict(l=0, r=0, t=44, b=0),
+    )
+    st.plotly_chart(fig, use_container_width=True,
+                     config={"displayModeBar": False})
 
 
 # ── Metrics row ────────────────────────────────────────────────────

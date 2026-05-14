@@ -53,6 +53,8 @@ _PAGE_REGISTRY: dict[str, tuple[str, str]] = {
     "LEAPS Lab":  ("volscope.ui.views.leaps_page",          "render_leaps_page"),
     "Dossier":    ("volscope.ui.views.leaps_dossier_page",  "render_leaps_dossier_page"),
     "Backtest":   ("volscope.ui.views.backtest_page",       "render_backtest_page"),
+    # v0.9.0 — Research page: 4-test statistical gauntlet.
+    "Research":   ("volscope.ui.views.research_page",       "render_research_page"),
     "Help":       ("volscope.ui.views.help_page",           "render_help_page"),
 }
 

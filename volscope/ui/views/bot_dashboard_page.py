@@ -136,6 +136,10 @@ def _equity_curve_fragment(db: Any) -> None:
 
 def render_bot_dashboard_page(db: Any, settings: dict) -> None:
     """Render the operator-facing Bot Dashboard."""
+    # v0.9.0 — persistent vol-regime header strip.
+    from volscope.ui.components.regime_header import render_regime_header
+    render_regime_header(db)
+
     render_html(
         st,
         page_banner_html(

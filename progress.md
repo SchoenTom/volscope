@@ -1,5 +1,69 @@
 # VolScope Progress
 
+## Last Session: 2026-05-15 (v0.9.0 — statistical rigor + Crisis layer + payoff surface)
+
+Driven by the operator's Gelato-extraction prompt. I rejected 9 of 13
+proposed ideas (animated surfaces, 3D stacked areas, time scrubbers,
+fee model) on stack-feasibility / data-sparsity grounds and shipped
+the 4 that genuinely matter. Full reasoning in `docs/adr/0007-...md`.
+
+**W1 — Statistical-validation gauntlet** (`volscope/research/`):
+- `t_test_sharpe`, `block_bootstrap_sharpe` (Künsch 1989 moving-
+  block, Politis-White 2004 length heuristic), `permutation_test_alpha`,
+  `deflated_sharpe_ratio` (Bailey-López de Prado 2014 eq. 12 with
+  exact skew/kurt correction).
+- `walk_forward_split` chronological 60/40, `run_gauntlet`
+  orchestrator. Inline smoke-test confirmed: real positive-alpha
+  series clear t-test + bootstrap; weak signals correctly fail —
+  no false positives.
+
+**W1b — Research page** (`volscope/ui/views/research_page.py`):
+- User picks signal (Cheap-IV-Mean-Reversion / Rich-IV-Premium /
+  IV-HV-Spread-Reversion / Term-Structure-Inversion), universe,
+  holding period.
+- 4 colour-coded p-value chips + the test table (t / bootstrap /
+  permutation / DSR) + equity curve vs SPY benchmark on test window.
+- Wired into the RESEARCH nav group.
+
+**W2 — 6-state Vol Regime + Crisis** (`volscope/analytics/vol_regime.py`):
+- `hmmlearn.GaussianHMM(n_components=5)` on a 6-feature vector
+  (`ivr_z, iv_hv_spread_z, term_slope, vix_level, vix_z, rv_z`),
+  states re-mapped by IVR-richness to stable labels
+  `VOL_CRUSHED → CHEAP → FAIR → RICH → EXTREME`.
+- Hard `VOL_CRISIS` override when VIX > 40 or |IV-HV spread| > 15.
+- Migration 008 + schema-backfill for `vol_regime` + 6 posterior cols.
+- `scripts/compute/compute_vol_regime.py` nightly job.
+- Discover page now hard-filters `VOL_CRISIS` tickers out of
+  CHEAPEST (with explicit operator-facing warning) — long-vega
+  entries blocked during vol-explosion regimes.
+
+**W3 — 3D Payoff Surface in Options Lab**:
+- `_render_payoff_surface(mat, spot, iv, r, q, dte)` — Plotly
+  `go.Surface(spot, days_remaining, P&L)` with vertical plane at
+  current spot, horizontal at zero P&L (breakevens = intersection).
+- New "🗻 Payoff Surface" tab added as the FIRST tab on Options Lab.
+- Operator-asked: spot range now slider-controlled (0.05× – 5×)
+  so catastrophic-move analysis up to +400% is one click away.
+- Custom `$`-formatted hovertemplate (operator wanted $ amounts
+  visible on hover, not raw Plotly defaults).
+
+**W4 — Persistent regime header strip**
+(`volscope/ui/components/regime_header.py`):
+- 32 px top bar: colour-coded REGIME chip + SIGNAL text + VIX +
+  Median IVR + last-scrape timestamp.
+- Mounted on Command Center, Discover, Scope, Pre-Trade, Bot.
+
+**Side hotfixes shipped during the session**:
+- `adf691f` — heatmap perf: vectorised hover + cache wrapper +
+  0.0-or-fallback bug.
+- `24f6ab3` — lwc fetch: don't cache empty / stale yfinance frames
+  (root cause of "DAX IV chart ends in mid-April" complaint).
+
+Version bumped to **0.9.0**. ADR-0007 documents which 4-of-13
+Gelato ideas were adopted and why the other 9 were rejected.
+
+---
+
 ## Last Session: 2026-05-14 (v0.8.0 — page redesigns + universe expansion)
 
 CEO-mode autonomous session driven by an operator audit that called

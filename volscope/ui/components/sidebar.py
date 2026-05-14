@@ -417,7 +417,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # markdown headers between rows. Active page = green, others = muted.
     NAV_GROUPS: list[tuple[str, list[str]]] = [
         ("◆ DECISIONS",  ["Command", "Discover", "Signals", "Bot", "Alerts", "Earnings Hub", "Portfolio", "Mega-Scan"]),
-        ("◇ RESEARCH",   ["Scope", "Scanner", "Heatmap", "Rotation", "Flow"]),
+        ("◇ RESEARCH",   ["Scope", "Scanner", "Heatmap", "Rotation", "Flow", "Research"]),
         ("▷ EXECUTION",  ["Pre-Trade", "Builder", "Options Lab", "LEAPS Lab", "Dossier", "Earnings Trades", "Backtest"]),
         ("? REFERENCE",  ["Help"]),
     ]

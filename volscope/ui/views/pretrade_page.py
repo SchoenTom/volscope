@@ -122,6 +122,10 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
     """Render the Pre-Trade Card view."""
     ticker = st.session_state.get("selected_ticker", "QQQ")
 
+    # v0.9.0 — persistent vol-regime header strip.
+    from volscope.ui.components.regime_header import render_regime_header
+    render_regime_header(db)
+
     render_html(
         st,
         page_banner_html(

@@ -912,6 +912,10 @@ def _render_alerts_expander(
 def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
     """Render the Command Center page."""
 
+    # v0.9.0 — persistent vol-regime header strip.
+    from volscope.ui.components.regime_header import render_regime_header
+    render_regime_header(db)
+
     render_html(
         st,
         page_banner_html(

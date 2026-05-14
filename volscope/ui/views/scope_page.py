@@ -277,6 +277,10 @@ def _render_history_price_lwc(
 def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
     import streamlit as st
 
+    # v0.9.0 — persistent vol-regime header strip.
+    from volscope.ui.components.regime_header import render_regime_header
+    render_regime_header(db)
+
     render_html(
         st,
         page_banner_html(

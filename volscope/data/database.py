@@ -80,6 +80,14 @@ class VolScopeDB:
             # v0.7.1 — matched-horizon HV + spread (Yang-Zhang at 30d).
             ("hv_yz_30d", "DOUBLE"),
             ("iv_hv_spread_matched", "DOUBLE"),
+            # v0.9.0 — 6-state Vol Regime label + posterior probabilities.
+            ("vol_regime", "VARCHAR"),
+            ("p_vol_crushed", "DOUBLE"),
+            ("p_vol_cheap",   "DOUBLE"),
+            ("p_vol_fair",    "DOUBLE"),
+            ("p_vol_rich",    "DOUBLE"),
+            ("p_vol_extreme", "DOUBLE"),
+            ("p_vol_crisis",  "DOUBLE"),
         ]:
             try:
                 self.con.execute(
