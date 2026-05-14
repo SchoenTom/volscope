@@ -124,6 +124,9 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
     from volscope.ui.components.data_freshness_bar import render_data_freshness_bar
     render_data_freshness_bar(db, compact=True)
 
+    # ── Quick-start tiles (OptionStrat / Unusual Whales style) ──────
+    _render_quickstart_tiles()
+
     # ── Builder strip ───────────────────────────────────────────────
     cfg = _render_builder_strip(db)
     if cfg is None:
@@ -252,6 +255,109 @@ def _render_preset_loader(db, available_tickers: list[str]) -> None:
             st.rerun()
 
 
+# ── Quick-start tiles ───────────────────────────────────────────────
+
+# Each tile entry maps a user-facing label to:
+#   * the canonical TEMPLATES key (so a click sets `ol_template`)
+#   * a one-line "what it is" line
+#   * a direction tag (long_vol / short_vol / neutral_vol) for chip colour
+#   * an ASCII payoff icon — purely cosmetic but readable at a glance
+#
+# Order is intentional: read top-row left→right for "simplest → spreads",
+# bottom-row left→right for "vol-plays → premium-harvest". This matches
+# how OptionStrat and Unusual Whales group their preset rails.
+_QUICKSTART_TILES = [
+    # ── row 1: directional bets ──
+    {"label": "Long Call",         "template": "Long Call",
+     "blurb": "bullish · long vol",  "tag": "long_vol",   "icon": "↗"},
+    {"label": "Long Put",          "template": "Long Put",
+     "blurb": "bearish · long vol",  "tag": "long_vol",   "icon": "↘"},
+    {"label": "Bull Call Spread",  "template": "Bull Call Spread",
+     "blurb": "capped bullish",      "tag": "long_vol",   "icon": "⤴"},
+    {"label": "Bear Put Spread",   "template": "Bear Put Spread",
+     "blurb": "capped bearish",      "tag": "long_vol",   "icon": "⤵"},
+    # ── row 2: vol & premium plays ──
+    {"label": "Long Straddle",     "template": "Long Straddle",
+     "blurb": "vol expansion",       "tag": "long_vol",   "icon": "⋁"},
+    {"label": "Long Strangle",     "template": "Long Strangle",
+     "blurb": "cheaper expansion",   "tag": "long_vol",   "icon": "⋀"},
+    {"label": "Iron Condor",       "template": "Short Iron Condor",
+     "blurb": "neutral · premium",   "tag": "short_vol",  "icon": "◇"},
+    {"label": "Iron Butterfly",    "template": "Iron Butterfly",
+     "blurb": "pin-the-strike",      "tag": "short_vol",  "icon": "◆"},
+]
+
+_QUICKSTART_TAG_COLOR = {
+    "long_vol":     ("#00d4aa", "rgba(0, 212, 170, 0.10)"),    # accent
+    "short_vol":    ("#ff9f43", "rgba(255, 159, 67, 0.10)"),   # amber
+    "neutral_vol":  ("#5b8cff", "rgba(91, 140, 255, 0.10)"),   # accent2
+}
+
+
+def _render_quickstart_tiles() -> None:
+    """OptionStrat / Unusual-Whales style preset rail.
+
+    Renders 8 strategy tiles in a 4×2 grid above the builder strip.
+    A click sets ``st.session_state["ol_template"]`` to the canonical
+    TEMPLATES key, normalises DTE / contracts to safe defaults, and
+    triggers a rerun. The selectbox below picks up the new template
+    on its next instantiation because Streamlit honours
+    ``st.session_state[key]`` as the initial value for keyed widgets.
+
+    Visual choices:
+      • Single chip per tile (direction colour, ~10px) — fast scan.
+      • 1-line blurb instead of a paragraph — the in-app glossary
+        carries the long form (tooltip() helper, v0.6.2).
+      • Icon is intentionally an arrow / shape, NOT a Material symbol
+        ligature — those can leak as literal text on slow font loads.
+
+    No side effects beyond session_state + st.rerun() on click.
+    """
+    render_html(
+        st,
+        f'<div style="margin:6px 0 8px 0;'
+        f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        f'color:{COLORS["muted"]};letter-spacing:0.02em;font-weight:500;">'
+        f'QUICK START — click a strategy to load defaults</div>',
+    )
+
+    rows = [_QUICKSTART_TILES[:4], _QUICKSTART_TILES[4:]]
+    for row in rows:
+        cols = st.columns(4, gap="small")
+        for col, tile in zip(cols, row):
+            color, bg = _QUICKSTART_TAG_COLOR[tile["tag"]]
+            with col:
+                # The label is plain text because Streamlit's
+                # `button(label=...)` does NOT parse markdown — we
+                # render the chrome ourselves below the button so
+                # the button itself stays accessible and screen-
+                # reader friendly.
+                clicked = st.button(
+                    f"{tile['icon']}  {tile['label']}",
+                    key=f"ol_qs_{tile['template']}",
+                    use_container_width=True,
+                    help=f"{tile['template']} — {tile['blurb']}",
+                )
+                render_html(
+                    st,
+                    f'<div style="margin-top:-4px;margin-bottom:8px;'
+                    f'background:{bg};border:1px solid {color}33;'
+                    f'border-radius:4px;padding:3px 6px;'
+                    f'font-family:\'DM Sans\',sans-serif;font-size:10px;'
+                    f'color:{color};text-align:center;">'
+                    f'{tile["blurb"]}</div>',
+                )
+                if clicked:
+                    # Set the strategy key BEFORE the rerun so the
+                    # builder-strip selectbox initialises with the
+                    # new template selected.
+                    st.session_state["ol_template"] = tile["template"]
+                    # Sensible defaults that work for every preset.
+                    st.session_state["ol_dte"] = 30
+                    st.session_state["ol_ctr"] = 1
+                    st.rerun()
+
+
 # ── Builder strip ───────────────────────────────────────────────────
 
 def _render_builder_strip(db) -> Optional[dict]:
@@ -267,22 +373,31 @@ def _render_builder_strip(db) -> Optional[dict]:
 
     _render_preset_loader(db, available)
 
+    # Inline glossary tooltips — pull from the v0.6.2 centralised
+    # glossary so every place that explains IV / DTE / Greeks reads
+    # from one source of truth.
+    from volscope.ui.glossary import tooltip
+
     c1, c2, c3, c4 = st.columns([2, 3, 1, 1])
     with c1:
         ticker = st.selectbox(
             "Ticker", available, index=available.index(cur), key="ol_ticker",
+            help="The underlying symbol whose spot + IV the engine prices against.",
         )
     with c2:
         template_name = st.selectbox(
             "Strategy", list(TEMPLATES.keys()), index=0, key="ol_template",
+            help="Pick one of the Quick-Start tiles above for sane defaults.",
         )
     with c3:
         contracts = st.number_input(
             "Contracts", min_value=1, max_value=200, value=1, step=1, key="ol_ctr",
+            help="Multiplier applied to every leg. 1 contract = 100 shares of underlying.",
         )
     with c4:
         dte = st.number_input(
             "DTE", min_value=7, max_value=900, value=60, step=7, key="ol_dte",
+            help=tooltip("DTE") or "Days to Expiration.",
         )
 
     # Pull live state
@@ -299,21 +414,25 @@ def _render_builder_strip(db) -> Optional[dict]:
         spot = st.number_input(
             "Underlying $", min_value=0.5, max_value=1_000_000.0,
             value=default_spot, step=0.5, format="%.2f", key="ol_spot",
+            help="Spot price of the underlying. Pre-filled from the latest scrape.",
         )
     with c6:
         iv = st.slider(
             "IV (%)", min_value=5.0, max_value=200.0,
             value=float(default_iv), step=0.5, key="ol_iv",
+            help=tooltip("IV") or "Implied volatility — drives every BSM price below.",
         )
     with c7:
         r = st.number_input(
             "r (%)", min_value=0.0, max_value=15.0, value=4.5, step=0.25,
             format="%.2f", key="ol_r",
+            help="Risk-free rate. 4.5% ≈ current 3-month T-bill yield.",
         ) / 100.0
     with c8:
         q = st.number_input(
             "q (%)", min_value=0.0, max_value=15.0, value=0.0, step=0.25,
             format="%.2f", key="ol_q",
+            help="Continuous dividend yield. 0% for non-dividend names.",
         ) / 100.0
 
     # ── Optional strike + expiry override (single-leg only) ────────
@@ -703,20 +822,46 @@ def _render_probability_cone(mat, spot, iv, r, q, dte):
 
 
 def _render_underlying_context(history: pd.DataFrame, ticker: str) -> None:
-    """Embedded Pro Chart of the underlying — last ~6 months by default."""
+    """Embedded TradingView-style chart of the underlying.
+
+    Uses ``streamlit-lightweight-charts`` with real OHLCV from yfinance
+    + an IV-30 overlay from our daily_vol. Falls back to the legacy
+    Plotly pro_chart helper if the lwc wrapper isn't available
+    (fresh-checkout / pip-missing situations).
+    """
     if history is None or history.empty:
         st.info("No price history available.")
         return
+
+    # Prefer the TradingView path. Anything that can break in here
+    # (yfinance rate limit, missing dep, malformed history) is caught
+    # below — we then degrade to the Plotly pro_chart we had before.
+    try:
+        from volscope.ui.components.lwc_chart import (
+            fetch_daily_ohlcv, price_chart_lwc, render_lwc_safe,
+        )
+        ohlcv = fetch_daily_ohlcv(ticker, period="1y")
+        spec, key = price_chart_lwc(
+            history,
+            ohlcv=ohlcv,
+            height=420,
+            with_volume=True,
+            with_iv_overlay=True,
+            title=f"{ticker} · 1Y · IV30 overlay",
+        )
+        if spec and render_lwc_safe(spec, key=f"opt_lab_{key}_{ticker}"):
+            return                                              # success path
+    except Exception:                                           # noqa: BLE001
+        pass
+
+    # Plotly fallback — the old Pro Chart helper, unchanged.
     df = history.copy()
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"])
-    # Try to derive OHLC from spot_price + intraday ranges; otherwise
-    # fall back to a single close-only series (still valid for chart).
-    rename_map = {}
     if "open" not in df.columns and "spot_price" in df.columns:
-        df["open"] = df["spot_price"]
-        df["high"] = df["spot_price"]
-        df["low"]  = df["spot_price"]
+        df["open"]  = df["spot_price"]
+        df["high"]  = df["spot_price"]
+        df["low"]   = df["spot_price"]
         df["close"] = df["spot_price"]
     fig = render_pro_chart(
         df, title=f"{ticker} · history · IV overlay",

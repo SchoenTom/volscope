@@ -70,13 +70,18 @@ def _top_movers_snippet(db, latest: pd.DataFrame, n: int = 3) -> list[tuple[str,
 def _render_ticker_picker(st, db) -> str:
     """Search-style ticker picker + 'add any symbol' inline action.
 
-    Visual structure:
-      ┌── label ──────────────────────────┐
-      │ ⌕  selected ticker dropdown       │
-      └───────────────────────────────────┘
-      ┌── inline add row ─────────────────┐
-      │ [PLTR, BRK.B, …]            [+]   │
-      └───────────────────────────────────┘
+    Visual structure (post-v0.7.0):
+      ┌── TICKER ────────────────────────────────────┐
+      │ [ AAPL ▾ ]                                   │
+      │                                              │
+      │ add symbol                                   │
+      │ [ z.B. PLTR oder ^VIX        ] [ + ADD ]     │
+      └──────────────────────────────────────────────┘
+
+    Single shared container, one label scale (11px DM Sans,
+    color :muted), single placeholder, single visual rhythm. Prior
+    layout used a Mono 9px caps label at #424666 which was
+    sub-WCAG (~1.8:1 contrast) — unreadable on dark theme.
     """
     available = db.get_available_tickers() or all_tickers()
     current = st.session_state.get("selected_ticker", "SPY")
@@ -85,9 +90,9 @@ def _render_ticker_picker(st, db) -> str:
 
     render_html(
         st,
-        '<div style="font-family:JetBrains Mono,monospace;font-size:9px;'
-        'letter-spacing:1.6px;text-transform:uppercase;color:#424666;'
-        'margin:4px 0 4px 0;font-weight:600;">⌕ ticker</div>',
+        '<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        'color:#9aa0b3;margin:6px 0 4px 0;font-weight:500;'
+        'letter-spacing:0.02em;">Ticker</div>',
     )
     ticker = st.selectbox(
         "Ticker",
@@ -97,24 +102,23 @@ def _render_ticker_picker(st, db) -> str:
         label_visibility="collapsed",
     )
 
-    # Inline add — no expander, no form-frame chrome. The text_input is
-    # rendered without a label and the button sits beside it.
     render_html(
         st,
-        '<div style="font-family:JetBrains Mono,monospace;font-size:9px;'
-        'letter-spacing:1.6px;text-transform:uppercase;color:#424666;'
-        'margin:10px 0 4px 0;font-weight:600;">+ add symbol</div>',
+        '<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        'color:#9aa0b3;margin:12px 0 4px 0;font-weight:500;'
+        'letter-spacing:0.02em;">Add symbol</div>',
     )
     with st.form("add_ticker_form", clear_on_submit=True):
         c1, c2 = st.columns([3, 1])
         with c1:
             raw = st.text_input(
                 "Symbol",
-                placeholder="PLTR  ^VIX  1810  BRK.B",
+                placeholder="z.B. PLTR oder ^VIX",
                 label_visibility="collapsed",
                 help=(
-                    "Digit-only codes auto-resolve to HK / TW / Shanghai. "
-                    "Alpha codes that fail bare also try London / XETRA / Paris."
+                    "Single symbol per add. Digit-only codes auto-resolve to "
+                    "HK / TW / Shanghai. Alpha codes that fail bare also try "
+                    "London / XETRA / Paris."
                 ),
             )
         with c2:
@@ -151,11 +155,11 @@ def _render_live_screener(st, db) -> None:
         render_html(
             st,
             """
-<div style="font-family:'JetBrains Mono',monospace;font-size:10px;
-            color:#00d4aa;padding:5px 9px;margin-top:6px;
+<div style="font-family:'DM Sans',sans-serif;font-size:11px;
+            color:#00d4aa;padding:6px 10px;margin-top:6px;
             background:rgba(0,212,170,0.06);border-radius:5px;
             border:1px solid rgba(0,212,170,0.18);">
-  ● universe complete
+  ● Universe complete
 </div>""",
         )
         return
@@ -170,12 +174,12 @@ def _render_live_screener(st, db) -> None:
         st,
         f"""
 <div style="display:flex;justify-content:space-between;align-items:center;
-            font-family:'JetBrains Mono',monospace;font-size:10px;
-            color:#8a8f9e;margin-top:6px;padding:4px 0;">
-  <span>universe</span>
+            font-family:'DM Sans',sans-serif;font-size:11px;
+            color:#9aa0b3;margin-top:6px;padding:4px 0;">
+  <span>Universe</span>
   <span><span style="color:#e0e4ef;font-weight:600;">{already}</span>
-        <span style="color:#424666;">/{universe_size}</span>
-        <span style="color:#424666;">·{coverage_pct}%</span></span>
+        <span style="color:#6c7286;">/{universe_size}</span>
+        <span style="color:#6c7286;">· {coverage_pct}%</span></span>
 </div>""",
     )
 
@@ -194,12 +198,12 @@ def _render_live_screener(st, db) -> None:
     render_html(
         st,
         f"""
-<div style="font-family:'JetBrains Mono',monospace;font-size:10px;
-            color:#8a8f9e;padding:6px 8px;margin-top:4px;
+<div style="font-family:'DM Sans',sans-serif;font-size:11px;
+            color:#c8ccd9;padding:8px 10px;margin-top:4px;
             background:rgba(255,159,67,0.06);border-radius:5px;
             border-left:2px solid #ff9f43;">
-  <div style="color:#ff9f43;font-weight:600;letter-spacing:0.5px;">long-running job</div>
-  <div style="margin-top:2px;">{missing} tickers · ~{eta_min} min · idempotent · safe to interrupt</div>
+  <div style="color:#ff9f43;font-weight:600;letter-spacing:0.02em;">Long-running job</div>
+  <div style="margin-top:3px;color:#9aa0b3;">{missing} tickers · ~{eta_min} min · idempotent · safe to interrupt</div>
 </div>""",
     )
 
@@ -272,10 +276,10 @@ def _render_page_context(
                 for t, c in movers
             )
             movers_html = (
-                f'<div style="margin-top:10px;font-family:\'JetBrains Mono\',monospace;'
-                f'font-size:10px;color:#8a8f9e;">'
-                f'<div style="color:#424666;text-transform:uppercase;letter-spacing:1px;'
-                f'margin-bottom:4px;">top movers</div>'
+                f'<div style="margin-top:10px;font-family:\'DM Sans\',sans-serif;'
+                f'font-size:11px;color:#c8ccd9;">'
+                f'<div style="color:#9aa0b3;font-size:11px;'
+                f'margin-bottom:4px;font-weight:500;">Top movers</div>'
                 f'{rows}</div>'
             )
 
@@ -283,7 +287,7 @@ def _render_page_context(
             st,
             f"""
             <div style="background:#12131a;border:1px solid #1e2038;border-radius:6px;padding:10px 12px;margin-top:8px;">
-              <div style="color:#424666;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">market pulse</div>
+              <div style="color:#9aa0b3;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;margin-bottom:4px;">Market pulse</div>
               <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:{color};font-weight:600;">● {regime}</div>
               {movers_html}
             </div>
@@ -336,8 +340,8 @@ def _render_page_context(
         render_html(
             st,
             f"""
-            <div style="background:#12131a;border:1px solid #1e2038;border-radius:6px;padding:10px 12px;margin-top:8px;font-family:'JetBrains Mono',monospace;">
-              <div style="color:#424666;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">universe by sector</div>
+            <div style="background:#12131a;border:1px solid #1e2038;border-radius:6px;padding:10px 12px;margin-top:8px;">
+              <div style="color:#9aa0b3;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;margin-bottom:6px;">Universe by sector</div>
               {rows}
             </div>
             """,
@@ -379,18 +383,19 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
                          -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
               ◈ VolScope
             </div>
-            <div style="color:#3a3d52;font-size:8px;letter-spacing:1.4px;
-                         text-transform:uppercase;margin-top:2px;font-weight:500;">
-              vol intelligence
+            <div style="color:#6c7286;font-size:10px;letter-spacing:0.04em;
+                         text-transform:uppercase;margin-top:3px;font-weight:500;
+                         font-family:'DM Sans',sans-serif;">
+              Vol intelligence
             </div>
           </div>
-          <div style="text-align:right;font-family:'JetBrains Mono',monospace;
-                       font-size:9px;line-height:1.2;">
-            <div style="color:#e0e4ef;font-weight:600;font-size:11px;">
-              <span style="color:{_brand_dot_color};font-size:8px;">●</span> {_n_loaded_brand}
+          <div style="text-align:right;line-height:1.25;">
+            <div style="color:#e0e4ef;font-weight:600;font-size:12px;
+                         font-family:'JetBrains Mono',monospace;">
+              <span style="color:{_brand_dot_color};font-size:9px;">●</span> {_n_loaded_brand}
             </div>
-            <div style="color:#424666;font-size:8px;letter-spacing:1px;
-                         text-transform:uppercase;">tickers</div>
+            <div style="color:#9aa0b3;font-size:10px;letter-spacing:0.04em;
+                         text-transform:uppercase;font-family:'DM Sans',sans-serif;">tickers</div>
           </div>
         </div>
         """,
@@ -436,9 +441,9 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     for group_label, group_pages in NAV_GROUPS:
         render_html(
             st,
-            f'<div style="font-family:JetBrains Mono,monospace;font-size:9px;'
-            f'color:#5b8cff;letter-spacing:1.6px;margin-top:10px;margin-bottom:4px;'
-            f'font-weight:600;">{group_label}</div>',
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
+            f'color:#5b8cff;letter-spacing:0.04em;margin-top:12px;margin-bottom:5px;'
+            f'font-weight:600;text-transform:uppercase;">{group_label}</div>',
         )
         for p in group_pages:
             is_active = (p == current_page)
@@ -523,10 +528,10 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     render_html(
         st,
         f"""
-        <div style="margin-top:18px;padding-top:12px;border-top:1px solid #1e2038;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9e;line-height:1.7;">
-          <div><span style="color:#e0e4ef;font-weight:600;">{n_loaded}</span> loaded · <span style="color:#8a8f9e;">{n_curated}</span> curated <span style="color:#8a8f9e;">({coverage_pct}%)</span></div>
+        <div style="margin-top:18px;padding-top:12px;border-top:1px solid #1e2038;font-family:'DM Sans',sans-serif;font-size:11px;color:#9aa0b3;line-height:1.7;">
+          <div><span style="color:#e0e4ef;font-weight:600;">{n_loaded}</span> loaded · <span style="color:#9aa0b3;">{n_curated}</span> curated <span style="color:#9aa0b3;">({coverage_pct}%)</span></div>
           <div>last scrape — <span style="color:#e0e4ef;">{last_str}</span></div>
-          <div style="margin-top:6px;"><span style="background:{color}22;color:{color};padding:2px 8px;border-radius:4px;">● {label}</span></div>
+          <div style="margin-top:6px;"><span style="background:{color}22;color:{color};padding:2px 8px;border-radius:4px;font-weight:500;">● {label}</span></div>
         </div>
         """,
     )
@@ -604,8 +609,8 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
                         glyph = "●" if fired else "○"
                         glyph_color = "#ff4466" if fired else "#8a8f9e"
                         rows_html.append(
-                            f'<div style="font-family:JetBrains Mono,monospace;'
-                            f'font-size:10px;color:#8a8f9e;padding:3px 0;">'
+                            f'<div style="font-family:\'DM Sans\',sans-serif;'
+                            f'font-size:11px;color:#9aa0b3;padding:3px 0;">'
                             f'<span style="color:{glyph_color};">{glyph}</span> '
                             f'<span style="color:#e0e4ef;">{rule.label}</span>'
                             f'</div>'

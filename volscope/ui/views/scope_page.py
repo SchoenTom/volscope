@@ -173,11 +173,20 @@ _CACHE_FN_BY_TTL: dict[int, object] = {
 
 
 def _render_intraday_section(st, ticker: str) -> None:
-    """Show 1D / 5D / 1M price chart with volume bars below."""
+    """Show 1D / 5D / 1M price chart with volume bars below.
+
+    Engine choice:
+      • > 1D timeframes → TradingView Lightweight-Charts (candles +
+        volume pane + crosshair) via ``lwc_chart.price_chart_lwc``.
+      • 1D intraday → Plotly fallback (LWC handles daily bars; the
+        intraday-minute series shape doesn't suit it).
+    """
     render_html(
         st,
-        f'<div style="margin-top:16px;margin-bottom:4px;font-family:JetBrains Mono,monospace;'
-        f'font-size:11px;color:{COLORS["muted"]};text-transform:uppercase;letter-spacing:1px;">PRICE CHART</div>',
+        f'<div style="margin-top:16px;margin-bottom:4px;'
+        f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        f'color:{COLORS["muted"]};letter-spacing:0.02em;font-weight:500;">'
+        f'INTRADAY · 1D / 5D / 1M</div>',
     )
 
     tf = st.radio(
@@ -196,6 +205,73 @@ def _render_intraday_section(st, ticker: str) -> None:
     with error_boundary(st, f"Intraday price chart [{tf}]"):
         fig = create_intraday_price_chart(bars, ticker, timeframe=tf)
         st.plotly_chart(fig, use_container_width=True)
+
+
+def _render_history_price_lwc(
+    st,
+    ticker: str,
+    history,
+    earnings_dates: list | None = None,
+) -> None:
+    """TradingView-feel daily candlestick chart on top of the page.
+
+    Renders the full available history as candles + a volume sub-pane
+    + a dashed IV-30 overlay on a second price scale + earnings
+    markers (passed in from ``_earnings_list``, not re-derived).
+
+    Why this exists separately from ``_render_intraday_section``:
+        • Daily history (multi-year) → Lightweight-Charts: candles,
+          range navigation, crosshair, drag-to-zoom.
+        • Intraday minute bars (1D / 5D / 1M) → Plotly stays;
+          Lightweight-Charts is built around daily / business-day
+          spacing and minute-granularity needs special handling we
+          don't ship in v0.7.0.
+    """
+    from volscope.ui.components.lwc_chart import (
+        fetch_daily_ohlcv, price_chart_lwc, render_lwc_safe,
+    )
+
+    # Empty / one-row history is a no-op — caller renders an
+    # IBKR-style "No data" card upstream.
+    if history is None or history.empty:
+        return
+
+    # daily_vol carries only the close (spot_price). Real candles +
+    # volume require a separate OHLCV source — pulled from yfinance
+    # via a 1-hour-cached helper. On failure the fallback inside
+    # ``price_chart_lwc`` synthesises a flat-OHLC line from history.
+    ohlcv = fetch_daily_ohlcv(ticker, period="5y")
+
+    spec, key = price_chart_lwc(
+        history,
+        ohlcv=ohlcv,
+        height=380,
+        with_volume=True,
+        with_iv_overlay=True,
+        with_regime_shading=False,
+        earnings_dates=earnings_dates or [],
+        title=ticker,
+    )
+    if not spec:
+        return
+
+    render_html(
+        st,
+        f'<div style="margin-top:18px;margin-bottom:6px;'
+        f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        f'color:{COLORS["muted"]};letter-spacing:0.02em;font-weight:500;">'
+        f'DAILY · CANDLES · VOLUME · IV30 OVERLAY</div>',
+    )
+    with error_boundary(st, "TradingView price chart"):
+        ok = render_lwc_safe(spec, key=f"{key}_{ticker}")
+        if not ok:
+            render_html(
+                st,
+                f'<div style="color:{COLORS["muted"]};font-size:11px;'
+                f'font-family:\'DM Sans\',sans-serif;">'
+                f'TradingView candles unavailable — the intraday '
+                f'view below still renders.</div>',
+            )
 
 
 def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
@@ -354,6 +430,7 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
             )
 
     with tab_price:
+        _render_history_price_lwc(st, ticker, history, earnings_dates=earnings)
         _render_intraday_section(st, ticker)
         if has_skew:
             with error_boundary(st, "25Δ Skew chart"):

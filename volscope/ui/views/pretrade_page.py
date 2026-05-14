@@ -57,6 +57,145 @@ from volscope.ui.styles.theme import COLORS, rgba
 _MONO = "JetBrains Mono, SF Mono, Menlo, monospace"
 
 
+# ── Paper-trading affordances ───────────────────────────────────────
+
+def _render_paper_mode_banner() -> None:
+    """The single most important affordance on this page.
+
+    Operators reach Pre-Trade from Discover / Scope / Scanner with a
+    ticker they want to act on — and the next clickable thing on the
+    page is a BUY-shaped button. Without an explicit "paper mode"
+    notice, a fresh user can reasonably assume real money is at
+    stake. This banner removes that ambiguity in 4 lines and links
+    to the Bot Dashboard where paper-trade lifecycle is visible.
+    """
+    accent = COLORS["accent"]
+    bg     = rgba(COLORS["accent"], 0.07)
+    border = rgba(COLORS["accent"], 0.35)
+    render_html(
+        st,
+        f'<div style="background:{bg};border:1px solid {border};'
+        f'border-left:3px solid {accent};border-radius:6px;'
+        f'padding:10px 14px;margin-bottom:14px;'
+        f'font-family:\'DM Sans\',sans-serif;">'
+        f'<div style="display:flex;align-items:center;'
+        f'justify-content:space-between;gap:14px;flex-wrap:wrap;">'
+        f'<div>'
+        f'<div style="color:{accent};font-size:12px;font-weight:600;'
+        f'letter-spacing:0.04em;">🧪 PAPER MODE</div>'
+        f'<div style="color:{COLORS["text"]};font-size:12px;'
+        f'margin-top:3px;line-height:1.55;">'
+        f'Clicking <strong>BUY</strong> writes the trade to '
+        f'<code style="background:{COLORS["border"]};padding:1px 5px;'
+        f'border-radius:3px;font-family:JetBrains Mono,monospace;">'
+        f'bot_trades</code> as <span style="color:{accent};">'
+        f'PROPOSED</span>. No IBKR call, no real money. Live trading '
+        f'is Phase 4 (≥ 100 closed paper trades + operator opt-in).'
+        f'</div>'
+        f'</div>'
+        f'<div>'
+        f'</div>'
+        f'</div>'
+        f'</div>',
+    )
+    # The CTA needs a real Streamlit button (anchor links don't trigger
+    # rerun reliably in Streamlit), rendered separately so the banner
+    # HTML stays presentation-only.
+    cta_col, _ = st.columns([1, 6])
+    with cta_col:
+        if st.button(
+            "→ Open Paper Portfolio",
+            key="pretrade_open_bot_dashboard",
+            help="Jump to the Bot Dashboard where every paper trade lives.",
+            use_container_width=True,
+        ):
+            nav_to(NavIntent(page="Bot Dashboard", source="Pre-Trade"))
+            st.rerun()
+
+
+def _maybe_show_paper_intro(db: VolScopeDB) -> None:
+    """First-run 3-slide tutorial via st.dialog.
+
+    Strategy:
+      • Try to read ``user_settings.paper_intro_seen_at`` (a single-row
+        key/value table). If present + non-NULL → skip.
+      • Otherwise, open a modal with three explanatory slides + a
+        "Got it" button that writes the timestamp and closes.
+
+    Cross-session persistence caveat: v0.6.2 opens the UI's DuckDB
+    handle in ``read_only=True`` mode, so the INSERT below quietly
+    fails on the live UI. Within a session the modal stays closed via
+    ``st.session_state``; a fresh tab will re-open it once. Acceptable
+    until v0.7.1 adds a writable-on-demand persistence helper.
+    """
+    # Cheap session-level cache so we only hit the DB once per session.
+    if st.session_state.get("vs_paper_intro_done"):
+        return
+
+    already_seen = False
+    try:
+        row = db.con.execute(
+            "SELECT value FROM user_settings WHERE key = 'paper_intro_seen_at'"
+        ).fetchone()
+        already_seen = bool(row and row[0])
+    except Exception:                                          # noqa: BLE001
+        # Table missing on a fresh checkout — that's the "first run".
+        already_seen = False
+
+    if already_seen:
+        st.session_state["vs_paper_intro_done"] = True
+        return
+
+    # Only show the modal on Streamlit versions that support st.dialog.
+    show_dialog = getattr(st, "dialog", None)
+    if show_dialog is None:
+        st.session_state["vs_paper_intro_done"] = True
+        return
+
+    @st.dialog("Paper Trading — 3 things to know")            # type: ignore[misc]
+    def _intro_modal() -> None:
+        st.markdown(
+            "**1 · What is paper trading?**\n\n"
+            "Every trade you place on Pre-Trade is a simulation. The "
+            "engine writes it to a database table called `bot_trades` "
+            "with status `PROPOSED`. No order is sent to IBKR or any "
+            "broker — nothing touches real money."
+        )
+        st.markdown(
+            "**2 · Where do I see my open trades?**\n\n"
+            "Open the **Bot Dashboard** from the sidebar. Live signals, "
+            "open trades, and the equity curve all live there. "
+            "Refreshes every 30 seconds via Streamlit fragments."
+        )
+        st.markdown(
+            "**3 · When can I go live?**\n\n"
+            "Live IBKR orders unlock in Phase 4 — after 100+ closed "
+            "paper trades, a stable Sharpe, and explicit operator "
+            "opt-in. Until then, BUY = simulation only."
+        )
+        st.divider()
+        if st.button("Got it", key="paper_intro_ack", use_container_width=True):
+            try:
+                db.con.execute(
+                    "CREATE TABLE IF NOT EXISTS user_settings "
+                    "(key VARCHAR PRIMARY KEY, value VARCHAR)"
+                )
+                db.con.execute(
+                    "INSERT OR REPLACE INTO user_settings (key, value) "
+                    "VALUES ('paper_intro_seen_at', ?)",
+                    [pd.Timestamp.now().isoformat()],
+                )
+            except Exception:                                  # noqa: BLE001
+                # Read-only UI connection (post-v0.6.2): persistence
+                # fails silently but the modal still doesn't reopen
+                # in the same session.
+                pass
+            st.session_state["vs_paper_intro_done"] = True
+            st.rerun()
+
+    _intro_modal()
+
+
 def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
     """Render the Pre-Trade Card view."""
     ticker = st.session_state.get("selected_ticker", "QQQ")
@@ -69,6 +208,18 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
             when="right before paper-buying",
         ),
     )
+
+    # ── Paper-trading mode banner ──────────────────────────────────
+    # The single biggest UX risk on this page is operator confusion:
+    # "Did I just place a real order?" The banner below answers that
+    # unambiguously and links to the Bot Dashboard where every paper
+    # trade lives. It deliberately sits ABOVE the page header so the
+    # trader cannot miss it.
+    _render_paper_mode_banner()
+
+    # First-run modal — opens once per user, persisted via
+    # user_settings.paper_intro_seen_at. Subsequent visits skip it.
+    _maybe_show_paper_intro(db)
 
     render_html(
         st,
@@ -87,6 +238,35 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
     if history is None or history.empty:
         st.info(f"No data for {ticker} — load it on Scanner or Discover first.")
         return
+
+    # Underlying price context — a compact TradingView-style candle
+    # chart so the trader sees the recent move before they click BUY.
+    # Failure-tolerant: any exception (no yfinance, no streamlit-lwc,
+    # bad ticker) silently degrades to skipping this section.
+    try:
+        from volscope.ui.components.lwc_chart import (
+            fetch_daily_ohlcv, price_chart_lwc, render_lwc_safe,
+        )
+        ohlcv = fetch_daily_ohlcv(ticker, period="1y")
+        spec, lwc_key = price_chart_lwc(
+            history,
+            ohlcv=ohlcv,
+            height=260,
+            with_volume=True,
+            with_iv_overlay=False,
+            title=f"{ticker} · 1Y",
+        )
+        if spec:
+            render_html(
+                st,
+                f'<div style="margin-top:6px;margin-bottom:4px;'
+                f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
+                f'color:{COLORS["muted"]};letter-spacing:0.02em;'
+                f'font-weight:500;">UNDERLYING · 1Y · TRADINGVIEW</div>',
+            )
+            render_lwc_safe(spec, key=f"pretrade_{lwc_key}_{ticker}")
+    except Exception:                                          # noqa: BLE001
+        pass
 
     latest = history.iloc[-1]
     spot       = _safe_float(latest.get("spot_price"))
@@ -449,6 +629,87 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
             source="Pre-Trade",
         ))
         st.rerun()
+
+    # ── Help & FAQ ──────────────────────────────────────────────────
+    _render_help_and_faq()
+
+
+def _render_help_and_faq() -> None:
+    """Bottom-of-page FAQ panel.
+
+    Six expandable questions covering the operator's most common
+    confusions when first using Pre-Trade. Deliberately collapsed by
+    default so it doesn't dominate the page; the operator finds it
+    when scrolling to the end and clicks the one that matches their
+    blocker.
+
+    Content is intentionally written in 2-4 short sentences per
+    answer — long-form documentation lives in ``docs/`` and is
+    deep-linked where relevant.
+    """
+    render_html(
+        st,
+        f'<div style="margin-top:24px;padding-top:14px;'
+        f'border-top:1px solid {COLORS["border"]};'
+        f'font-family:\'DM Sans\',sans-serif;font-size:13px;'
+        f'font-weight:600;color:{COLORS["muted"]};'
+        f'letter-spacing:0.02em;">HELP &amp; FAQ</div>',
+    )
+
+    with st.expander("What actually happens when I click BUY?", expanded=False):
+        st.markdown(
+            "Pre-Trade is **simulation-only**. A click on BUY inserts a "
+            "row into the `bot_trades` DuckDB table with status "
+            "`PROPOSED`. The lifecycle engine then walks it through "
+            "`OPEN → MTM` daily based on EOD scrapes. No IBKR call, no "
+            "real order. The audit chain (`bot_audit_chain`) records "
+            "every state transition so you can replay the trade later."
+        )
+    with st.expander("Where do I see my open paper trades?", expanded=False):
+        st.markdown(
+            "**Bot Dashboard** in the sidebar. The 'Open Trades' panel "
+            "refreshes every 30 seconds via `@st.fragment(run_every)`. "
+            "Click any trade ID to drill into its full audit log."
+        )
+    with st.expander("How are Greeks priced — what's BSM-priced mean?", expanded=False):
+        st.markdown(
+            "Every option premium and Greek on this page is computed "
+            "with Black-Scholes-Merton using the **IV slider** value, "
+            "the live spot from the latest scrape, and risk-free + "
+            "dividend yields from the inputs. No bid/ask chain quotes "
+            "yet — strikes are derived from delta via the inverse "
+            "solver in `volscope/analytics/iv_solver.py`. See "
+            "`docs/MATHEMATICAL_FOUNDATIONS.md` for the full BSM "
+            "reference."
+        )
+    with st.expander("When can I switch to live trading?", expanded=False):
+        st.markdown(
+            "**Phase 4** in the roadmap. Pre-conditions:\n\n"
+            "- **≥ 100 closed paper trades** with full lifecycle\n"
+            "- Stable rolling Sharpe within ±0.3 of the paper backtest\n"
+            "- Explicit operator opt-in via `OPERATOR_APPROVED=yes` "
+            "in the config trailer (weekend-only review window)\n\n"
+            "Until then, even with IBKR credentials in `.env`, live "
+            "orders are hard-blocked by the kill-switch."
+        )
+    with st.expander("Why does the IV-30 number differ from Yahoo's?", expanded=False):
+        st.markdown(
+            "VolScope **never uses Yahoo's `impliedVolatility`** field "
+            "(it is opaque, rate-limited, and historically 1–3 % off "
+            "in stress). Every IV you see is computed in-house by a "
+            "Newton-Raphson root-finder on the bid/ask mid. See "
+            "`.claude/skills/iv-solver/SKILL.md` for the algorithm."
+        )
+    with st.expander("What is 'paper-buying'? Is my P&L real?", expanded=False):
+        st.markdown(
+            "Paper-buying = the simulation places a hypothetical "
+            "order at the BSM-modelled mid price. Daily mark-to-market "
+            "P&L on the Bot Dashboard is computed from the latest "
+            "scrape — it is **realistic** because the inputs are real "
+            "market data, but it is **not realised** because no "
+            "broker ever filled an order. The point of paper mode is "
+            "to test strategy quality before any real capital risk."
+        )
 
 
 # ── Internals ────────────────────────────────────────────────────────────

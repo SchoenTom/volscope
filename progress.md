@@ -1,5 +1,80 @@
 # VolScope Progress
 
+## Last Session: 2026-05-14 (v0.7.0 — paid-product UX wave)
+
+Four-wave session driven by an operator audit ("die linke Reiter sieht
+HÄSSLICH aus, Charts wie Lab-Notebook, Option-Builder kryptisch, Paper
+Trading nicht erklärt"). Each wave was scoped, designed, asked for
+trade-off approval, and shipped.
+
+**Welle 1 — Lesbarkeit + Sidebar-Bugs:**
+- `theme.py` — `header[data-testid="stHeader"]` was `height:0` which
+  clipped the floating "open sidebar" button after collapse. Replaced
+  with `min-height:32px; overflow:visible` + pinned `collapsedControl`
+  to `position:fixed; top:8px; left:8px; z-index:9999`. Operator can
+  now reopen the sidebar from any state.
+- `sidebar.py::_render_ticker_picker` — collapsed two parallel
+  Mono-9px-#424666 label/input pairs into one cohesive picker block.
+  Single label scale (DM Sans 11px #9aa0b3), single placeholder
+  ("z.B. PLTR oder ^VIX"), shared visual rhythm.
+- Sidebar-wide contrast sweep — every Mono-9px-#424666 label →
+  DM-Sans-11px-#9aa0b3 (WCAG 1.8:1 → 5.2:1). Hit market-pulse, top-
+  movers, universe-by-sector, brand strip, nav-group headers, data-
+  status footer, watchlist rows, bulk-loader warning box.
+
+**Welle 2 — TradingView Lightweight Charts:**
+- New `streamlit-lightweight-charts` dep (TradingView's own MIT lib).
+  ADR-0006 documents the choice + the explicit rejection of the
+  TradingView widget embed (which kills our IV / regime / earnings
+  overlay layer).
+- New `volscope/ui/components/lwc_chart.py` — `price_chart_lwc()`
+  accepts an OHLCV frame (typically yfinance) + our daily_vol history
+  + earnings dates and emits a candlestick + volume + dashed IV30
+  overlay spec. `fetch_daily_ohlcv()` cached 1h, `render_lwc_safe()`
+  degrades to False if the dep is missing. Unit-tested inline against
+  a 20-day synthetic frame (3 series, fallback path, empty path).
+- Scope tab_price — new "DAILY · CANDLES · VOLUME · IV30 OVERLAY"
+  section above the existing intraday Plotly section (renamed
+  "INTRADAY · 1D / 5D / 1M"). Earnings markers wired from
+  `_earnings_list(db, ticker)`.
+- Pre-Trade — new compact "UNDERLYING · 1Y · TRADINGVIEW" section
+  above the KPI strip. Failure-tolerant.
+- Options-Lab `_render_underlying_context` — tries LWC first, falls
+  back to the existing Plotly `pro_chart` helper on any failure.
+
+**Welle 3 — Options Lab à la OptionStrat / Unusual Whales:**
+- 8 Quick-Start tiles in a 4×2 grid above the builder strip:
+  Long Call · Long Put · Bull Call Spread · Bear Put Spread ·
+  Long Straddle · Long Strangle · Iron Condor · Iron Butterfly.
+  Each tile is a Streamlit button with a direction-colored
+  chip below it (green long_vol, amber short_vol). Click sets
+  `ol_template`, normalises DTE=30 and contracts=1, then `st.rerun()`.
+- Builder strip — every input now carries an explicit `help=`
+  tooltip, pulled from the v0.6.2 centralised `glossary.tooltip()`
+  for IV / DTE so future glossary updates propagate.
+
+**Welle 4 — Paper Trading explained:**
+- `_render_paper_mode_banner()` — green accent-bordered box ABOVE
+  the page header on Pre-Trade. Says explicitly: "Clicking BUY
+  writes the trade to bot_trades as PROPOSED. No IBKR call, no
+  real money. Live trading is Phase 4." Plus a real "→ Open Paper
+  Portfolio" Streamlit button that navigates to Bot Dashboard via
+  `NavIntent`.
+- `_maybe_show_paper_intro(db)` — first-run `st.dialog` 3-slide
+  tutorial ("What is paper trading", "Where do I see open trades",
+  "When can I go live"). Session-state-persisted; cross-session
+  persistence falls back gracefully because the UI now opens DuckDB
+  read-only (v0.6.2). Caveat documented inline.
+- `_render_help_and_faq()` — 6-question FAQ panel at the bottom of
+  Pre-Trade, every question collapsed by default. Covers BUY-click
+  semantics, where to see open trades, BSM pricing, Phase-4 go-live
+  conditions, why our IV differs from Yahoo's, what "paper-buying"
+  really means for P&L.
+
+Version bumped to **0.7.0**. ADR-0006 added. CI watched green.
+
+---
+
 ## Last Session: 2026-05-14 (v0.6.2 — performance + design polish)
 
 On top of v0.6.1 (IV-robustness subsystem) we shipped seven coordinated

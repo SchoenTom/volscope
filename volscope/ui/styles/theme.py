@@ -253,44 +253,66 @@ CUSTOM_CSS = f"""
         display: none !important;
         visibility: hidden !important;
     }}
-    /* Header strip: keep it functional but invisible (height 0).
-       The sidebar collapse button (top-left chevron) lives inside it
-       and must remain interactive. */
+    /* Header strip: kept slim but NOT collapsed to 0. Previous
+       `height:0; overflow:hidden` clipped Streamlit's floating
+       "open sidebar" chevron when the sidebar was collapsed —
+       meaning operators could close the sidebar but had no way to
+       reopen it. Now: low height, transparent bg, overflow visible
+       so the chevron can spill into the page if it lives there. */
     header[data-testid="stHeader"] {{
         background: transparent !important;
-        height: 0 !important;
-        min-height: 0 !important;
+        min-height: 32px !important;
+        height: auto !important;
+        overflow: visible !important;
     }}
     header[data-testid="stHeader"] [data-testid="stToolbar"] {{
         background: transparent !important;
     }}
-    /* Floating "open sidebar" button when sidebar is collapsed —
-       must stay visible and on top of the page content. */
+    /* Floating "open sidebar" button (visible when sidebar is
+       collapsed) — pinned top-left so it is never clipped regardless
+       of where Streamlit currently mounts it in the DOM. */
     [data-testid="collapsedControl"],
     [data-testid="stSidebarCollapsedControl"] {{
+        position: fixed !important;
+        top: 8px !important;
+        left: 8px !important;
         display: flex !important;
         visibility: visible !important;
         opacity: 1 !important;
-        z-index: 999 !important;
+        z-index: 9999 !important;
         background: {COLORS['surface']} !important;
         border: 1px solid {COLORS['border']} !important;
         border-radius: 6px !important;
-        padding: 4px 6px !important;
+        padding: 6px 8px !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+        pointer-events: auto !important;
+    }}
+    [data-testid="collapsedControl"]:hover,
+    [data-testid="stSidebarCollapsedControl"]:hover {{
+        border-color: {COLORS['accent']} !important;
     }}
     [data-testid="collapsedControl"] svg,
     [data-testid="stSidebarCollapsedControl"] svg {{
         color: {COLORS['accent']} !important;
         fill: {COLORS['accent']} !important;
+        width: 16px !important;
+        height: 16px !important;
     }}
     /* Sidebar collapse chevron (the one inside the open sidebar) —
-       make sure it is visible and styled to match the cockpit. */
+       make it bigger + brighter so operators see it before clicking. */
     [data-testid="stSidebarCollapseArrow"],
     [data-testid="stSidebarCollapseButton"],
     button[kind="header"] {{
         display: inline-flex !important;
         visibility: visible !important;
         opacity: 1 !important;
-        color: {COLORS['muted']} !important;
+        color: {COLORS['accent']} !important;
+    }}
+    [data-testid="stSidebarCollapseArrow"]:hover,
+    [data-testid="stSidebarCollapseButton"]:hover,
+    button[kind="header"]:hover {{
+        color: {COLORS['accent']} !important;
+        background: rgba(0, 212, 170, 0.08) !important;
     }}
 
     /* ── IBKR-Density Layout ────────────────────────────────────────────

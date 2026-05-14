@@ -12,7 +12,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-__version__ = "0.6.2"
+__version__ = "0.7.0"
 
 
 def _read_commit_sha() -> str:

@@ -229,4 +229,53 @@ risk thresholds.
 
 ---
 
+## 2026-05-14 v0.7.0 — Paid-product UX wave (readability, charts, paper trading)
+
+**Choice:** Four coordinated waves: (W1) fix the sidebar
+collapse-button regression in `theme.py` + redesign the Add-Ticker
+block + contrast-sweep Mono-9px-#424666 labels to DM-Sans-11px-#9aa0b3
+across the sidebar (WCAG 1.8:1 → 5.2:1). (W2) Adopt
+`streamlit-lightweight-charts` for the price surface on Scope /
+Pre-Trade / Options-Lab; Plotly stays for IV/HV/skew/heatmaps; new
+`volscope/ui/components/lwc_chart.py` accepts a yfinance OHLCV +
+our daily_vol history and overlays IV30 / earnings markers. (W3)
+8-tile OptionStrat-style Quick-Start rail in Options-Lab + inline
+glossary tooltips on every builder-strip input. (W4) Paper-mode
+banner + "Open Paper Portfolio" CTA + first-run `st.dialog` tutorial
++ Help-&-FAQ panel at the bottom of Pre-Trade.
+
+**Alternatives considered:** (a) TradingView widget embed — killed
+because it cannot render our own IV / regime / earnings overlays
+(the entire reason VolScope exists). See ADR-0006. (b) Pure
+Plotly upgrade — feasible but visually still feels like a research
+plot, not a trader chart. (c) Defer paper-trade affordances to
+v0.8.0 — rejected; operator confusion at the BUY button is a real
+risk that one banner removes.
+
+**Why:** v0.6.2 made the surface readable; v0.7.0 makes it *feel
+like a paid product*. Every change targets a specific operator-
+reported pain: invisible collapse button, ugly mono-9px labels,
+spline-smoothed price chart vs TradingView, cryptic Options-Lab
+first paint, paper-trading mode never explained.
+
+**Evidence:** `volscope/ui/styles/theme.py` (collapse-button +
+floating reopen pinned `position:fixed`), `volscope/ui/components/sidebar.py`
+(Add-Ticker block, brand strip), `volscope/ui/components/lwc_chart.py`
+(LWC wrapper + yfinance OHLCV fetcher), `docs/adr/0006-tradingview-lightweight-charts-for-price.md`,
+`volscope/ui/views/scope_page.py::_render_history_price_lwc`,
+`volscope/ui/views/pretrade_page.py::_render_paper_mode_banner`
+/ `_maybe_show_paper_intro` / `_render_help_and_faq`,
+`volscope/ui/views/options_lab_page.py::_render_quickstart_tiles`,
+`requirements.txt` (streamlit-lightweight-charts pin).
+
+**Reversibility:** reversible — every change is additive (new
+component module, new helper functions, two-line theme.py edit).
+The TradingView dep can be removed by deleting `lwc_chart.py`
+calls; pages fall back to the existing Plotly path automatically
+because `render_lwc_safe()` returns False on import failure.
+
+**Confidence:** high.
+
+---
+
 (append new decisions here, newest at the top)
