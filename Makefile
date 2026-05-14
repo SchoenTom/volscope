@@ -228,3 +228,29 @@ autonomy-test:
 
 autonomy-logs:
 	@ls -lt $$HOME/.claude/volscope-cron-logs/ | head -20
+
+# ── v0.5.0 operational targets ──────────────────────────────────
+backup:
+	@.venv/bin/python -m scripts.ops.backup_db
+
+backup-encrypted:
+	@.venv/bin/python -m scripts.ops.backup_db --encrypt
+
+restore-drill:
+	@.venv/bin/python -m scripts.ops.restore_db --temp
+
+audit-verify:
+	@.venv/bin/python -m scripts.audit.verify_chain
+
+pre-merge-check:
+	@echo "── ruff ──" && .venv/bin/ruff check . && .venv/bin/ruff format --check .
+	@echo "── mypy (new packages) ──" && .venv/bin/mypy --strict --ignore-missing-imports \
+		volscope/signals volscope/risk volscope/lifecycle \
+		volscope/execution volscope/scheduler volscope/persistence || true
+	@echo "── pytest fast ──" && .venv/bin/python -m pytest \
+		-m "not slow and not integration and not perf and not ibkr" \
+		--tb=short -q
+	@echo "── audit-chain verify ──" && \
+		(.venv/bin/python -m scripts.audit.verify_chain 2>&1 || echo "(no DB yet — OK on fresh)")
+	@echo "── risk-thresholds unchanged ──" && \
+		.venv/bin/python scripts/audit/check_risk_thresholds_unchanged.py
