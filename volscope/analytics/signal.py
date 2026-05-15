@@ -22,18 +22,20 @@ from dataclasses import dataclass
 from typing import Optional
 
 # ── Signal thresholds ──────────────────────────────────────────────────────
-# Calibrated for a long-vol buyer perspective (DAX/Nasdaq puts, knock-outs).
-# The user wants to *buy* cheap vol, so cheap signals are the actionable ones.
+# v0.9.3 — re-pointed to ``volscope.analytics.iv_thresholds`` as the
+# single source of truth. Discover, Scope, Heatmap, Pre-Trade and
+# Strategy Recommender now all agree on the same band boundaries.
 
-_PERC_BUY_STRONG  = 25.0   # both signals need perc below this for STRONG BUY
-_PERC_BUY_LEAN    = 35.0   # solo perc signal needs to be below this
-_PERC_RICH_LEAN   = 65.0   # solo perc signal needs to be above this
-_PERC_RICH_STRONG = 75.0   # both signals need perc above this for STRONG RICH
-
-_VRP_BUY_STRONG   = 0.95   # options < 95% of realized → cheap vs realized
-_VRP_BUY_LEAN     = 1.00   # options below realized (any discount)
-_VRP_RICH_LEAN    = 1.00   # options above realized (any premium)
-_VRP_RICH_STRONG  = 1.05   # options > 105% of realized → rich vs realized
+from volscope.analytics.iv_thresholds import (
+    PERC_VERY_CHEAP as _PERC_BUY_STRONG,
+    PERC_CHEAP      as _PERC_BUY_LEAN,
+    PERC_RICH       as _PERC_RICH_LEAN,
+    PERC_VERY_RICH  as _PERC_RICH_STRONG,
+    VRP_BUY_STRONG  as _VRP_BUY_STRONG,
+    VRP_BUY_LEAN    as _VRP_BUY_LEAN,
+    VRP_RICH_LEAN   as _VRP_RICH_LEAN,
+    VRP_RICH_STRONG as _VRP_RICH_STRONG,
+)
 
 
 @dataclass(frozen=True)

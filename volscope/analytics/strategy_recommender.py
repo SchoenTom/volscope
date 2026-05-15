@@ -61,11 +61,16 @@ class StrategyRec:
 
 
 # ── Configuration thresholds ─────────────────────────────────────────────
+# v0.9.3 — re-pointed to ``volscope.analytics.iv_thresholds`` as the
+# single source of truth. See that module's docstring for the five-
+# band convention.
 
-_PERC_VERY_CHEAP    = 20.0
-_PERC_CHEAP         = 35.0
-_PERC_RICH          = 65.0
-_PERC_VERY_RICH     = 80.0
+from volscope.analytics.iv_thresholds import (
+    PERC_VERY_CHEAP as _PERC_VERY_CHEAP,
+    PERC_CHEAP      as _PERC_CHEAP,
+    PERC_RICH       as _PERC_RICH,
+    PERC_VERY_RICH  as _PERC_VERY_RICH,
+)
 
 _SKEW_PUT_RICH      = 4.0    # vol pts; high put-side richness
 _SKEW_NEUTRAL_BAND  = 1.5
