@@ -142,9 +142,15 @@ Non-obvious "the codebase looks like X but actually behaves like Y":
   `asyncio.Semaphore(40)`.
 - **DuckDB no PITR** — `EXPORT DATABASE` after market close + hourly
   during. See `docs/BACKUPS.md`.
-- **iCloud File Provider stall** — project at `~/Desktop/VolScope`,
-  not the iCloud mirror. First-import of large deps can stall 25-90s
-  on fresh shells. `scripts/ops/keep_warm.sh` warms the cache.
+- **Canonical project path is `~/dev/VolScope`** (NOT `~/Desktop/VolScope`).
+  The repo was migrated off iCloud-synced Desktop on 2026-05-15 after
+  iCloud File Provider timeouts (`Errno 60: Operation timed out` on
+  numpy `.so` imports) made Streamlit cold-boot take 8+ minutes and
+  caused chain-scrape failures that overwrote iv_30d with NULL across
+  52 tickers. Cold-import on `~/dev` is ~10 s (normal Python startup).
+  Old `~/Desktop/VolScope` may still exist as a frozen snapshot; do
+  not edit it. `scripts/ops/keep_warm.sh` is retained as a no-op
+  safety-net but should never be needed again.
 - **scripts/ paths moved in v0.2.0** to `scripts/<group>/`. Old direct
   references will break — grep before reorganising.
 - **Yahoo `impliedVolatility`** rate-limited since Nov 2024
