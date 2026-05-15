@@ -94,7 +94,15 @@ def _card(
     When the source row has data-quality issues (stale, incomplete, suspect),
     a small inline badge surfaces it so the trader doesn't act on bad data.
     """
-    perc_cls = "low" if perc < 20 else "high" if perc > 80 else "mid"
+    # v0.9.3 — canonical thresholds from analytics/iv_thresholds.py.
+    # Was hard-coded 20/80 (matched recommender but not signal.py at
+    # 25/75). Now sourced from the single source of truth.
+    from volscope.analytics.iv_thresholds import PERC_VERY_CHEAP, PERC_VERY_RICH
+    perc_cls = (
+        "low"  if perc < PERC_VERY_CHEAP else
+        "high" if perc > PERC_VERY_RICH  else
+        "mid"
+    )
     spread_cls = "low" if spread < 0 else "high" if spread > 0 else "mid"
     badge = (
         '<span class="volscope-earnings-badge">⚠ ER ≤30d</span>' if earnings_flag else ""
