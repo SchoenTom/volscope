@@ -23,15 +23,41 @@ from volscope.ui.components.metric_components import render_warning_card
 
 
 def _company_map(db, tickers: list[str]) -> dict[str, str]:
-    out: dict[str, str] = {}
-    for t in tickers:
-        try:
-            name = db.get_company_name(t)
-        except Exception:
-            name = None
-        if name:
-            out[t] = name
-    return out
+    """v0.9.2: bulk single-SELECT instead of N per-ticker queries.
+
+    Scanner renders the universe (~842 tickers); the prior loop did
+    one DuckDB ``get_company_name`` per row → ~842 sequential
+    queries per Scanner render. Replaced with one indexed SELECT
+    that returns all (ticker, company_name) pairs in a single
+    round-trip.
+    """
+    if not tickers:
+        return {}
+    try:
+        ph = ",".join(["?"] * len(tickers))
+        rows = db.con.execute(
+            f"""
+            SELECT ticker, company_name
+            FROM daily_vol
+            WHERE ticker IN ({ph})
+              AND company_name IS NOT NULL
+            GROUP BY ticker, company_name
+            """,
+            list(tickers),
+        ).fetchall()
+        return {str(t): str(n) for t, n in rows if n}
+    except Exception:                                          # noqa: BLE001
+        # Fall back to per-ticker if the bulk query fails (e.g.
+        # company_name column missing on a fresh DB).
+        out: dict[str, str] = {}
+        for t in tickers:
+            try:
+                name = db.get_company_name(t)
+            except Exception:                                  # noqa: BLE001
+                name = None
+            if name:
+                out[t] = name
+        return out
 
 
 def _augment_with_derived_columns(
