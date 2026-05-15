@@ -88,13 +88,35 @@ class VolScopeDB:
             ("p_vol_rich",    "DOUBLE"),
             ("p_vol_extreme", "DOUBLE"),
             ("p_vol_crisis",  "DOUBLE"),
+            # v0.6.1 — IV quality / robustness columns (migration
+            # 006_iv_quality.sql). VolScopeDB.__init__ doesn't run the
+            # persistence/migrations system, so we mirror those ADD
+            # COLUMN statements here to keep the UI schema consistent
+            # on every open. Without this, scope_page reads from
+            # iv_recommendation and gets a "column does not exist" on
+            # a DB that bypassed the bot migration runner.
+            ("iv_quality_score",          "INTEGER"),
+            ("iv_recommendation",         "VARCHAR"),
+            ("iv_warnings",               "VARCHAR"),
+            ("contamination_level",       "VARCHAR"),
+            ("ivr_ivp_divergence",        "DOUBLE"),
+            ("robust_iv_rank",            "DOUBLE"),
+            ("structural_break_date",     "DATE"),
+            ("structural_break_days_ago", "INTEGER"),
+            ("structural_break_magnitude", "DOUBLE"),
         ]:
             try:
                 self.con.execute(
                     f"ALTER TABLE daily_vol ADD COLUMN IF NOT EXISTS {_col} {_type}"
                 )
-            except Exception:
-                pass
+            except Exception as _add_exc:                          # noqa: BLE001
+                # ALTER may fail on race with another writer or if the
+                # column was added by the bot-side migration runner; both
+                # are non-fatal. Log so a real schema break surfaces.
+                import logging as _lg
+                _lg.getLogger("volscope.data.database").debug(
+                    "ALTER daily_vol ADD %s %s failed: %s", _col, _type, _add_exc,
+                )
         self.con.execute(
             """
             CREATE TABLE IF NOT EXISTS earnings (
