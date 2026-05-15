@@ -66,7 +66,7 @@ def _render_watchlist_strip(db) -> None:
             if st.button(
                 f"◈ {entry.ticker}",
                 key=f"wl_open_{entry.ticker}",
-                use_container_width=True,
+                width='stretch',
                 help=f"Pinned {entry.pinned_at.isoformat()} · open dossier",
             ):
                 st.session_state["dossier_ticker"] = entry.ticker
@@ -358,7 +358,7 @@ def render_leaps_page(db, settings: Optional[dict] = None) -> None:
                     if st.button(
                         "Open dossier →",
                         key=f"open_dossier_{ticker_str}",
-                        use_container_width=True,
+                        width='stretch',
                         help="Drill into the full single-ticker analysis: "
                              "sizing, risk, scenarios, execution checklist.",
                     ):

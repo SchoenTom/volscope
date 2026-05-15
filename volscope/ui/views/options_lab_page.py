@@ -229,7 +229,7 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
             if st.button(
                 "↺ Reset",
                 key="ol_spot_range_reset",
-                use_container_width=True,
+                width='stretch',
                 help="Restore the default 0.60×–1.40× spot range.",
             ):
                 st.session_state["ol_spot_low"]  = 0.60
@@ -337,14 +337,14 @@ def _render_paper_buy_cta(
             "▶ paper-buy this structure",
             key="ol_paper_buy",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             help="Materialise all legs and insert as a Portfolio position.",
         )
     with pb_col2:
         do_open_portfolio = st.button(
             "▷ portfolio →",
             key="ol_open_portfolio",
-            use_container_width=True,
+            width='stretch',
             help="Jump to the Portfolio page (no insert).",
         )
     with pb_col3:
@@ -424,7 +424,7 @@ def _render_preset_loader(db, available_tickers: list[str]) -> None:
             key="ol_preset_idx",
             label_visibility="collapsed",
         )
-        if st.button("Load preset", key="ol_load_preset", use_container_width=True):
+        if st.button("Load preset", key="ol_load_preset", width='stretch'):
             p = presets[idx]
             spec = p.legs_spec or {}
             if p.ticker in available_tickers:
@@ -536,7 +536,7 @@ def _render_quickstart_tiles() -> None:
                 clicked = st.button(
                     f"{tile['icon']}  {tile['label']}",
                     key=f"ol_qs_{tile['template']}",
-                    use_container_width=True,
+                    width='stretch',
                     help=f"{tile['template']} — {tile['blurb']}",
                 )
                 render_html(
@@ -657,7 +657,7 @@ def _render_expiry_picker() -> None:
             clicked = st.button(
                 f"{label}\n{exp_date.strftime('%d %b %y')} · {dte}d",
                 key=f"ol_exp_preset_{label}",
-                use_container_width=True,
+                width='stretch',
                 help=f"{blurb} — sets DTE to {dte}.",
             )
             if clicked:
@@ -946,7 +946,7 @@ def _render_payoff_diagram(
             side="right",
         ),
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
 
 
 # ── 3D Payoff Surface (v0.9.0) ─────────────────────────────────────
@@ -995,7 +995,7 @@ def _render_payoff_surface(
         if st.button(
             "↺ Reset view",
             key="ol_payoff_surface_view_reset",
-            use_container_width=True,
+            width='stretch',
             help="Snap the 3D camera back to the default angle.",
         ):
             st.session_state["ol_payoff_surface_view_rev"] = (
@@ -1138,7 +1138,7 @@ def _render_payoff_surface(
         height=520,
         margin=dict(l=0, r=0, t=44, b=0),
     )
-    st.plotly_chart(fig, use_container_width=True,
+    st.plotly_chart(fig, width='stretch',
                      config={"displayModeBar": False})
 
 
@@ -1361,7 +1361,7 @@ def _render_one_greek_surface(
         height=height,
         margin=dict(l=0, r=0, t=36, b=0),
     )
-    st.plotly_chart(fig, use_container_width=True,
+    st.plotly_chart(fig, width='stretch',
                      config={"displayModeBar": False})
 
 
@@ -1406,7 +1406,7 @@ def _render_greeks_surface(mat, spot, iv, r, q, dte):
                 if st.button(
                     "↺ Reset view",
                     key=f"ol_greek_{key}_reset",
-                    use_container_width=True,
+                    width='stretch',
                     help="Snap the 3D camera back to the default angle.",
                 ):
                     st.session_state[f"ol_greek_{key}_view_rev"] = (
@@ -1474,7 +1474,7 @@ def _render_scenario_matrix(mat, spot, iv, r, q, dte):
         yaxis=dict(autorange="reversed",
                    tickfont=dict(family=_MONO, size=10, color=COLORS["text"])),
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
 
 
 def _render_time_decay(mat, spot, iv, r, q, dte):
@@ -1519,7 +1519,7 @@ def _render_time_decay(mat, spot, iv, r, q, dte):
                    side="right", tickformat="$,.0f"),
         hovermode="x unified",
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
 
 
 def _render_probability_cone(mat, spot, iv, r, q, dte):
@@ -1589,7 +1589,7 @@ def _render_probability_cone(mat, spot, iv, r, q, dte):
                    side="right", tickformat="$,.0f"),
         hovermode="x unified",
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
 
 
 def _render_underlying_context(history: pd.DataFrame, ticker: str) -> None:
@@ -1638,4 +1638,4 @@ def _render_underlying_context(history: pd.DataFrame, ticker: str) -> None:
         df, title=f"{ticker} · history · IV overlay",
         iv_column="iv_30d", show_volume=False, height=460,
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})

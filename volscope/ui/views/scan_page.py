@@ -187,7 +187,7 @@ def render_scan_page(db, settings: dict | None = None) -> None:
     # ── Preset filter buttons — common queries with one click ────────
     preset_cols = st.columns([1, 1, 1, 1, 4])
     if preset_cols[0].button("💎 Cheap", help="iv_perc ≤ 25, spread < 0",
-                              use_container_width=True):
+                              width='stretch'):
         st.session_state["scan_filters_v1"] = {
             "iv_perc_range": (0, 25),
             "selected_sectors": None,
@@ -197,7 +197,7 @@ def render_scan_page(db, settings: dict | None = None) -> None:
         }
         st.rerun()
     if preset_cols[1].button("🔥 Rich", help="iv_perc ≥ 75, spread > 0",
-                              use_container_width=True):
+                              width='stretch'):
         st.session_state["scan_filters_v1"] = {
             "iv_perc_range": (75, 100),
             "selected_sectors": None,
@@ -207,7 +207,7 @@ def render_scan_page(db, settings: dict | None = None) -> None:
         }
         st.rerun()
     if preset_cols[2].button("🌐 Crowded", help="crowded_score ≥ 70",
-                              use_container_width=True):
+                              width='stretch'):
         st.session_state["scan_filters_v1"] = {
             "iv_perc_range": (0, 100),
             "selected_sectors": None,
@@ -217,7 +217,7 @@ def render_scan_page(db, settings: dict | None = None) -> None:
         }
         st.rerun()
     if preset_cols[3].button("🪓 Crushed", help="iv falling + cheap spread",
-                              use_container_width=True):
+                              width='stretch'):
         st.session_state["scan_filters_v1"] = {
             "iv_perc_range": (0, 50),
             "selected_sectors": None,
@@ -455,7 +455,7 @@ def render_scan_page(db, settings: dict | None = None) -> None:
 
     selection = st.dataframe(
         table,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         column_config=column_config,
         on_select="rerun",

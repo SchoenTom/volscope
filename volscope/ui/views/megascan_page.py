@@ -137,7 +137,7 @@ def _render_hero_strip(st_module, kpis: list[UniverseKPI]) -> None:
             )
             if kpi.target:
                 if col.button(f"◈ {kpi.target}", key=f"megascan_kpi_{kpi.label}",
-                               use_container_width=True):
+                               width='stretch'):
                     nav_to(NavIntent(page="Scope", ticker=kpi.target,
                                      source="Mega-Scan"))
                     st_module.rerun()
@@ -320,7 +320,7 @@ def _render_universe_scatter(st_module, scatter_df: pd.DataFrame) -> None:
     fig.add_hline(y=0, line_color=COLORS["border"], line_width=1)
     fig.add_vline(x=20, line_color=COLORS["border"], line_dash="dot", line_width=0.7)
     fig.add_vline(x=80, line_color=COLORS["border"], line_dash="dot", line_width=0.7)
-    st_module.plotly_chart(fig, use_container_width=True)
+    st_module.plotly_chart(fig, width='stretch')
 
 
 # ── Export ─────────────────────────────────────────────────────────────

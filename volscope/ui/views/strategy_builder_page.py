@@ -299,7 +299,7 @@ def render_strategy_builder_page(db, settings: dict | None = None) -> None:
             "▶ paper-buy",
             key="sb_paper_buy",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             disabled=insufficient,
             help=(
                 "Insufficient cash" if insufficient
@@ -307,7 +307,7 @@ def render_strategy_builder_page(db, settings: dict | None = None) -> None:
             ),
         )
     with bt_col2:
-        if st.button("▷ portfolio →", key="sb_open_portfolio_2", use_container_width=True):
+        if st.button("▷ portfolio →", key="sb_open_portfolio_2", width='stretch'):
             from volscope.ui.components.navigation import NavIntent, nav_to
             nav_to(NavIntent(page="Portfolio", ticker=ticker, source="StrategyBuilder"))
             st.rerun()

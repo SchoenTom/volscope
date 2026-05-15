@@ -852,5 +852,5 @@ def render_leaps_dossier_page(db, settings: Optional[dict] = None) -> None:
             file_name=pdf_name,
             mime="application/pdf",
             key=f"pdf_dl_{ticker}",
-            use_container_width=True,
+            width='stretch',
         )

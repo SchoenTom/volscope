@@ -139,7 +139,7 @@ def render_backtest_page(db: VolScopeDB, settings: dict) -> None:
     }
 
     st.dataframe(
-        df, use_container_width=True, hide_index=True,
+        df, width='stretch', hide_index=True,
         column_config=column_config, height=520,
     )
 

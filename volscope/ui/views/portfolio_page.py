@@ -261,7 +261,7 @@ def render_portfolio_page(db: VolScopeDB, settings: dict) -> None:
     if legs_for_var:
         with st.expander("Concentration by ticker", expanded=False):
             conc = concentration_by_ticker(legs_for_var)
-            st.dataframe(conc, use_container_width=True, hide_index=True)
+            st.dataframe(conc, width='stretch', hide_index=True)
 
     # ── Scenario Analyzer ────────────────────────────────────────────
     if legs_for_var:
@@ -352,7 +352,7 @@ def _render_add_form(db: VolScopeDB, prefill: Optional[dict] = None) -> None:
             placeholder="thesis, hedge purpose, …",
         )
 
-        submitted = st.form_submit_button("Log position", use_container_width=True)
+        submitted = st.form_submit_button("Log position", width='stretch')
         if not submitted:
             return
 
@@ -525,7 +525,7 @@ def _render_cash_strip(st_module, db: VolScopeDB) -> None:
             )
         with col2:
             if st_module.button("Reset", key="pf_reset_btn", type="primary",
-                                use_container_width=True):
+                                width='stretch'):
                 reset_cash(db, initial=float(new_initial))
                 st_module.success(f"Cash reset to ${new_initial:,.0f}")
                 st_module.rerun()
@@ -673,7 +673,7 @@ def _render_trade_journal(st_module, db: VolScopeDB) -> None:
             "net_cash", "realized_pl", "cash_after",
         ]]
         show.columns = ["When", "Event", "Ticker", "Template", "Cash flow", "P&L", "Cash after"]
-        st_module.dataframe(show, use_container_width=True, hide_index=True, height=240)
+        st_module.dataframe(show, width='stretch', hide_index=True, height=240)
 
 
 def _render_performance_section(st_module, db: VolScopeDB, positions_df: pd.DataFrame) -> None:
@@ -895,7 +895,7 @@ def _render_performance_section(st_module, db: VolScopeDB, positions_df: pd.Data
                         gridcolor="rgba(255,255,255,0.03)"),
             showlegend=False,
         )
-        st_module.plotly_chart(fig, use_container_width=True)
+        st_module.plotly_chart(fig, width='stretch')
 
     # ── Secondary KPI strip (Sharpe / DD / inception P&L) ───────────
     # The headline NLV + today's change sit at the top; this strip
@@ -968,7 +968,7 @@ def _render_performance_section(st_module, db: VolScopeDB, positions_df: pd.Data
             ),
             showlegend=False,
         )
-        st_module.plotly_chart(cfig, use_container_width=True)
+        st_module.plotly_chart(cfig, width='stretch')
 
 
 def _render_portfolio_strip(st_module, agg) -> None:
@@ -1153,7 +1153,7 @@ def _render_scenario_analyzer(st_module, legs) -> None:
 
     st_module.dataframe(
         df_scen,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         column_config={
             "scenario":     st_module.column_config.TextColumn("Scenario", width="medium"),

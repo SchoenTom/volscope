@@ -123,7 +123,7 @@ def _render_welcome(st_module) -> None:
     cols = st_module.columns([3, 1, 1])
     with cols[2]:
         if st_module.button("Continue →", key="ob_step1_next",
-                             type="primary", use_container_width=True):
+                             type="primary", width='stretch'):
             st_module.session_state["onboarding_step"] = 2
             st_module.rerun()
 
@@ -168,12 +168,12 @@ def _render_pack_picker(st_module) -> None:
     cols = st_module.columns([1, 2, 1])
     with cols[0]:
         if st_module.button("← Back", key="ob_step2_back",
-                             use_container_width=True):
+                             width='stretch'):
             st_module.session_state["onboarding_step"] = 1
             st_module.rerun()
     with cols[2]:
         if st_module.button("Load pack →", key="ob_step2_next",
-                             type="primary", use_container_width=True):
+                             type="primary", width='stretch'):
             st_module.session_state["onboarding_step"] = 3
             st_module.rerun()
 
@@ -252,7 +252,7 @@ def _render_loading(st_module, db: VolScopeDB) -> None:
         "Open Command Center →",
         key="ob_step3_open",
         type="primary",
-        use_container_width=True,
+        width='stretch',
     ):
         try:
             db.set_user_setting("onboarding_complete", "true")

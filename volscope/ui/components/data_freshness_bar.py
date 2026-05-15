@@ -128,7 +128,7 @@ def render_data_freshness_bar(db, *, compact: bool = False) -> None:
             key="vs_fresh_refresh",
             help=(f"Run `make scrape` in the background (~{max(2, n_tickers * 0.025):.0f}-{max(5, n_tickers * 0.06):.0f} min). "
                   "Reload this page when the toast says complete."),
-            use_container_width=True,
+            width='stretch',
         ):
             ok, info = _start_background_scrape()
             if ok:

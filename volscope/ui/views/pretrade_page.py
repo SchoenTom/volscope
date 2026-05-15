@@ -109,7 +109,7 @@ def _render_paper_mode_banner() -> None:
             "→ Open Paper Portfolio",
             key="pretrade_open_bot_dashboard",
             help="Jump to the Bot Dashboard where every paper trade lives.",
-            use_container_width=True,
+            width='stretch',
         ):
             # Page-registry key is "Bot" (not the human-readable
             # "Bot Dashboard"). Mismatch silently fell through the
@@ -311,7 +311,7 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
             if st.button(
                 ("● selected" if is_active else "▷ build this"),
                 key=f"pt_pick_{rec.name}",
-                use_container_width=True,
+                width='stretch',
                 type="primary" if is_active else "secondary",
             ):
                 st.session_state[chosen_key] = rec.name
@@ -474,7 +474,7 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
         font=dict(family=_MONO, color=COLORS["text"]),
         height=320, margin=dict(l=40, r=20, t=50, b=40),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     # ── Sizing summary ───────────────────────────────────────────────
     max_alloc = float(settings.get("max_alloc_usd", 10_000))
@@ -511,7 +511,7 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
             f"▶ paper-buy {n_contracts}×",
             key="pretrade_paper_buy",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             help=f"Insert this trade into the portfolio: {n_contracts} × {chosen.name} "
                  f"strike ${strike:,.2f} expiry {expiry_iso}.",
         )
@@ -519,7 +519,7 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
         do_open = st.button(
             "▷ portfolio →",
             key="pretrade_open_portfolio",
-            use_container_width=True,
+            width='stretch',
             help="Switch to the Portfolio page (no insert).",
         )
     with pb_col3:
@@ -907,7 +907,7 @@ def _render_comparison_view(
             if col.button(
                 f"▷ Save {rec.name} to Portfolio",
                 key=f"compare_save_{rec.name}",
-                use_container_width=True,
+                width='stretch',
             ):
                 from volscope.ui.components.navigation import NavIntent, nav_to
                 nav_to(NavIntent(
@@ -952,4 +952,4 @@ def _render_comparison_view(
         height=360, margin=dict(l=40, r=20, t=50, b=40),
         legend=dict(orientation="h", y=-0.18),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')

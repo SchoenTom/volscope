@@ -350,7 +350,7 @@ def _render_results(result: GauntletResult) -> None:
             font=dict(family=_MONO, size=10, color=COLORS["text"]),
         ),
     )
-    st.plotly_chart(fig, use_container_width=True,
+    st.plotly_chart(fig, width='stretch',
                      config={"displayModeBar": False})
 
 
@@ -444,7 +444,7 @@ def render_research_page(db: VolScopeDB, settings: dict) -> None:
         st.info("Select at least one ticker to run the gauntlet.")
         return
 
-    if st.button("▶ Run gauntlet", type="primary", use_container_width=False):
+    if st.button("▶ Run gauntlet", type="primary", width='content'):
         with st.spinner(
             f"Gathering strategy returns for {len(universe)} tickers…",
         ):

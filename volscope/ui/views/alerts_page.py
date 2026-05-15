@@ -55,7 +55,7 @@ def _render_filter_strip(st, counts: dict[str, int], total: int) -> str:
             if st.button(
                 ("▸ " if is_on else "  ") + label,
                 key=f"alerts_filter_{key}",
-                use_container_width=True,
+                width='stretch',
                 type="primary" if is_on else "secondary",
             ):
                 st.session_state["alerts_filter"] = key

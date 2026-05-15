@@ -248,18 +248,18 @@ def _render_controls(db) -> tuple[date, str, Optional[str], bool]:
 
     c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 2, 2])
     with c1:
-        if st.button("◂ prev", key="eh_prev", use_container_width=True):
+        if st.button("◂ prev", key="eh_prev", width='stretch'):
             st.session_state["eh_week_offset"] -= 1
             st.rerun()
     with c2:
         if st.button("this week", key="eh_today",
-                     use_container_width=True,
+                     width='stretch',
                      type=("primary" if st.session_state["eh_week_offset"] == 0
                             else "secondary")):
             st.session_state["eh_week_offset"] = 0
             st.rerun()
     with c3:
-        if st.button("next ▸", key="eh_next", use_container_width=True):
+        if st.button("next ▸", key="eh_next", width='stretch'):
             st.session_state["eh_week_offset"] += 1
             st.rerun()
     with c4:

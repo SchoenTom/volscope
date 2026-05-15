@@ -438,7 +438,7 @@ def render_flow_page(db: VolScopeDB, settings: dict) -> None:
             showlegend=False,
             bargap=0.25,
         )
-        st.plotly_chart(fig_bars, use_container_width=True,
+        st.plotly_chart(fig_bars, width='stretch',
                          config={"displayModeBar": False})
 
     with tab_heatmap:
@@ -450,7 +450,7 @@ def render_flow_page(db: VolScopeDB, settings: dict) -> None:
             f'Use this view to spot persistent vs ephemeral flow.</div>',
         )
         fig_heat = _build_flow_heatmap(flow_df, lookback_days=window_days)
-        st.plotly_chart(fig_heat, use_container_width=True,
+        st.plotly_chart(fig_heat, width='stretch',
                          config={"displayModeBar": False})
 
     st.divider()
@@ -488,7 +488,7 @@ def render_flow_page(db: VolScopeDB, settings: dict) -> None:
             })
             st.dataframe(
                 display_df,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 column_config={
                     col: st.column_config.NumberColumn(col, format="%+.2f")

@@ -209,7 +209,7 @@ def _render_cards(
             if st.button(
                 "▶ Scope",
                 key=f"disc_scope_{variant}_{ticker}",
-                use_container_width=True,
+                width='stretch',
                 help=f"Open Scope page for {ticker} — full IV/HV deep dive.",
             ):
                 from volscope.ui.components.navigation import NavIntent, nav_to
@@ -219,7 +219,7 @@ def _render_cards(
             if st.button(
                 "★ Alert",
                 key=f"disc_alert_{variant}_{ticker}",
-                use_container_width=True,
+                width='stretch',
                 help=(
                     f"Pre-fill an alert rule for {ticker} on the Command "
                     "Center alerts panel."
@@ -774,7 +774,7 @@ def _render_best_setup_hero(st, latest: pd.DataFrame, db) -> None:
     if st.button(
         f"▷ Open Pre-Trade for {top.ticker}",
         key="best_setup_pretrade_btn",
-        use_container_width=False,
+        width='content',
     ):
         st.session_state["selected_ticker"] = top.ticker
         st.session_state["active_page"] = "Pre-Trade"

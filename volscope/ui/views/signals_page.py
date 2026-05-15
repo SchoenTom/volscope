@@ -72,7 +72,7 @@ def render_signals_page(db, settings: Optional[dict] = None) -> None:
             if st.button(
                 ("▸ " if is_active else "  ") + label,
                 key=f"sig_f_{label}",
-                use_container_width=True,
+                width='stretch',
                 type="primary" if is_active else "secondary",
             ):
                 st.session_state["sig_filter"] = label
@@ -100,7 +100,7 @@ def render_signals_page(db, settings: Optional[dict] = None) -> None:
             placeholder="Filter by sector(s) — empty = all",
         )
     with sc3:
-        if st.button("📥 capture", key="sig_persist", use_container_width=True,
+        if st.button("📥 capture", key="sig_persist", width='stretch',
                      help=("Write today's signals into signal_log for "
                            "historical analysis. Idempotent.")):
             try:

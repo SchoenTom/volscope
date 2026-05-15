@@ -3,7 +3,7 @@ Pro Chart — TradingView/IBKR-grade candlestick + volume + IV overlay.
 
 Single public entry point ``render_pro_chart(df, …)`` returns a
 ``plotly.graph_objects.Figure``. The caller hands it to Streamlit via
-``st.plotly_chart(fig, use_container_width=True)``.
+``st.plotly_chart(fig, width='stretch')``.
 
 Architecture
 ------------

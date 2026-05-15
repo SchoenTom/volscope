@@ -392,7 +392,7 @@ def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
         fig = go.Figure(spec)
     clicked = st.plotly_chart(
         fig,
-        use_container_width=True,
+        width='stretch',
         on_select="rerun",
         key="heatmap_treemap",
     )

@@ -868,7 +868,7 @@ def _render_alerts_expander(
                 "Label (optional)",
                 placeholder="e.g. QQQ BUY vol alert",
             )
-            alert_submit = st.form_submit_button("Add rule", use_container_width=True)
+            alert_submit = st.form_submit_button("Add rule", width='stretch')
 
         if alert_submit:
             label = alert_label.strip() or (
@@ -1127,7 +1127,7 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
             if act_l.button(
                 f"▷ Pre-Trade",
                 key=f"cmd_pretrade_{ticker}",
-                use_container_width=True,
+                width='stretch',
                 help=f"Open Pre-Trade card for {ticker}",
             ):
                 from volscope.ui.components.navigation import NavIntent, nav_to
@@ -1136,7 +1136,7 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
             if act_r.button(
                 f"◈ Scope",
                 key=f"cmd_scope_{ticker}",
-                use_container_width=True,
+                width='stretch',
                 help=f"Open Scope deep-dive for {ticker}",
             ):
                 from volscope.ui.components.navigation import NavIntent, nav_to
@@ -1155,8 +1155,8 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
                 ),
             )
             col_add, col_reset = st.columns([2, 1])
-            submitted = col_add.form_submit_button("Add", use_container_width=True)
-            reset     = col_reset.form_submit_button("Reset to defaults", use_container_width=True)
+            submitted = col_add.form_submit_button("Add", width='stretch')
+            reset     = col_reset.form_submit_button("Reset to defaults", width='stretch')
 
         if reset:
             st.session_state["command_tickers"] = list(DEFAULT_COMMAND_TICKERS)
@@ -1250,7 +1250,7 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
             add_pct     = col_pct.number_input("Entry IV Pct (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0)
             add_vrp     = col_vrp.number_input("Entry VRP", min_value=0.0, max_value=10.0, value=0.0, step=0.01)
             add_notes   = st.text_input("Notes (optional)", placeholder="Sep 2027 DAX put, stress event")
-            log_submit  = st.form_submit_button("Log entry", use_container_width=True)
+            log_submit  = st.form_submit_button("Log entry", width='stretch')
 
         if log_submit and add_ticker:
             sym = add_ticker.strip().upper()
@@ -1284,8 +1284,8 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
 
     with left:
         fig_ts = create_command_term_structure(chart_data)
-        st.plotly_chart(fig_ts, use_container_width=True)
+        st.plotly_chart(fig_ts, width='stretch')
 
     with right:
         fig_vrp = create_vrp_bar(chart_data)
-        st.plotly_chart(fig_vrp, use_container_width=True)
+        st.plotly_chart(fig_vrp, width='stretch')

@@ -609,14 +609,14 @@ def render_rotation_page(db: VolScopeDB, settings: dict) -> None:
         )
         rrg_panel = _compute_rrg_panel(sector_hist, tail_weeks=8)
         fig_rrg = _build_rrg_figure(rrg_panel)
-        st.plotly_chart(fig_rrg, use_container_width=True,
+        st.plotly_chart(fig_rrg, width='stretch',
                          config={"displayModeBar": False})
 
     with tab_heatmap:
         heatmap_col = "median_perc" if "median_perc" in sector_hist.columns else None
         if heatmap_col:
             fig = _build_sector_heatmap(sector_hist, lookback_days=window_days)
-            st.plotly_chart(fig, use_container_width=True,
+            st.plotly_chart(fig, width='stretch',
                              config={"displayModeBar": False})
 
     st.divider()
@@ -659,7 +659,7 @@ def render_rotation_page(db: VolScopeDB, settings: dict) -> None:
             mom_df = pd.DataFrame(rows)
             st.dataframe(
                 mom_df,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 column_config={
                     "Regime": st.column_config.TextColumn("Regime"),

@@ -132,7 +132,7 @@ def _render_ticker_picker(st, db) -> str:
                 "London / XETRA / Paris."
             ),
         )
-        submitted = st.form_submit_button("+ ADD", use_container_width=True)
+        submitted = st.form_submit_button("+ ADD", width='stretch')
         if submitted and raw:
             with st.spinner(f"Resolving {raw.strip().upper()}..."):
                 result = resolve_and_ingest(db, raw)
@@ -198,7 +198,7 @@ def _render_live_screener(st, db) -> None:
             f"+ load {missing} missing",
             key="sb_bulk_show",
             help=f"Reveal the bulk-load button. Estimated duration ~{eta_min} min.",
-            use_container_width=True,
+            width='stretch',
         ):
             st.session_state["vs_show_bulk_loader"] = True
             st.rerun()
@@ -223,7 +223,7 @@ def _render_live_screener(st, db) -> None:
             "▶ run loader",
             key="sb_bulk_run",
             type="primary",
-            use_container_width=True,
+            width='stretch',
         )
     with c2:
         if st.button("✕", key="sb_bulk_cancel", help="Cancel"):
@@ -488,7 +488,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
             if st.button(
                 label,
                 key=f"nav_btn_{p}",
-                use_container_width=True,
+                width='stretch',
                 type="primary" if is_active else "secondary",
             ):
                 page = p
@@ -663,7 +663,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
                 if st.button(
                     "Manage rules →",
                     key="sidebar_watchlist_manage",
-                    use_container_width=True,
+                    width='stretch',
                     help="Open Command Center alerts panel",
                 ):
                     from volscope.ui.components.navigation import NavIntent, nav_to
@@ -695,7 +695,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
                             "n":     n_records_for(name),
                         })
                     df_perf = pd.DataFrame(rows).sort_values("p95", ascending=False, na_position="last")
-                    st.dataframe(df_perf, use_container_width=True, hide_index=True)
+                    st.dataframe(df_perf, width='stretch', hide_index=True)
     except Exception as exc:
         # Dev panel must never break the sidebar
         pass
@@ -708,7 +708,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
         "↻ Refresh market data",
         key="sidebar_scrape_btn",
         help="Run `make scrape` in the background (several minutes).",
-        use_container_width=True,
+        width='stretch',
     ):
         import subprocess, os, datetime as _dt
         log_dir = os.path.expanduser("~/.claude/volscope-cron-logs")

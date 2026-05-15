@@ -98,7 +98,7 @@ def _live_signals_fragment(db: Any) -> None:
     if signals_df.empty:
         render_html(st, _empty_signals_message())
     else:
-        st.dataframe(signals_df, hide_index=True, use_container_width=True)
+        st.dataframe(signals_df, hide_index=True, width='stretch')
 
 
 @st.fragment(run_every="30s")
@@ -116,7 +116,7 @@ def _open_trades_fragment(db: Any) -> None:
     if open_df.empty:
         render_html(st, _empty_signals_message())
     else:
-        st.dataframe(open_df, hide_index=True, use_container_width=True)
+        st.dataframe(open_df, hide_index=True, width='stretch')
 
 
 @st.fragment(run_every="30s")
@@ -307,7 +307,7 @@ def _render_order_history(db: Any) -> None:
             file_name=f"bot_orders_{pd.Timestamp.now().date().isoformat()}.csv",
             mime="text/csv",
             key="bot_hist_csv",
-            use_container_width=True,
+            width='stretch',
             help="Export the visible order history as CSV.",
         )
 
@@ -342,7 +342,7 @@ def _render_order_history(db: Any) -> None:
     st.dataframe(
         display,
         hide_index=True,
-        use_container_width=True,
+        width='stretch',
         height=320,
     )
 
@@ -384,7 +384,7 @@ def _render_bot_reset(db: Any) -> None:
             "⚠ Reset bot",
             key="bot_reset_action",
             disabled=(confirm != "RESET"),
-            use_container_width=True,
+            width='stretch',
             help="Enabled only when the textbox reads RESET.",
         )
 
