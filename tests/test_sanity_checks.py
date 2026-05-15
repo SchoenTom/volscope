@@ -16,7 +16,7 @@ from volscope.analytics.opportunity import (
     _looks_like_data_artifact,
     find_daily_outliers,
 )
-from scripts.daily_scrape import _iv_cap_for
+from scripts.scrape.daily_scrape import _iv_cap_for  # moved in v0.2.0 to scripts/<group>/
 
 
 class TestPlausibilityCaps:

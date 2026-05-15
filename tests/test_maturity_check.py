@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-# Allow importing the script as a module
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+# Allow importing the script as a module (moved to scripts/audit/ in v0.2.0)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts" / "audit"))
 import maturity_check as mc  # type: ignore  # noqa: E402
 
 

@@ -1,17 +1,18 @@
-"""Tests for the Heatmap page — figure builder and color mapping."""
-from __future__ import annotations
+"""Tests for the Heatmap page — figure builder and color mapping.
 
-import math
+v0.8.0 redesign replaced the original grid `_build_heatmap_figure(df,
+group_by_sector)` with `_build_treemap_figure(df, color_metric,
+color_range)`. The old test suite was deleted because its 20 cases
+all asserted against the dead signature. The `_percentile_color`
+unit tests below survive — that helper is unchanged.
+"""
+from __future__ import annotations
 
 import pandas as pd
 import pytest
 
-from volscope.ui.views.heatmap_page import _build_heatmap_figure, _percentile_color
+from volscope.ui.views.heatmap_page import _build_treemap_figure, _percentile_color
 
-
-# ---------------------------------------------------------------------------
-# _percentile_color
-# ---------------------------------------------------------------------------
 
 class TestPercentileColor:
     def test_cheap_range(self):
@@ -51,65 +52,59 @@ class TestPercentileColor:
         assert _percentile_color(105.0) == "#ff4466"
 
 
-# ---------------------------------------------------------------------------
-# _build_heatmap_figure
-# ---------------------------------------------------------------------------
-
-def _make_universe(n: int = 10, with_sector: bool = True) -> pd.DataFrame:
-    import random
-    rows = []
+def _make_universe(n: int = 10) -> pd.DataFrame:
     sectors = ["Tech", "Finance", "Energy", "Health", "Consumer"]
+    rows = []
     for i in range(n):
         rows.append({
             "ticker": f"T{i:03d}",
             "iv_30d": 20.0 + i,
             "iv_percentile": (i / max(n - 1, 1)) * 100,
-            "sector": sectors[i % len(sectors)] if with_sector else None,
+            "hv_20d": 18.0 + i * 0.8,
+            "hv_yz_30d": 17.0 + i * 0.9,
+            "iv_hv_spread": 2.0 + i * 0.2,
+            "iv_hv_spread_matched": 3.0 + i * 0.2,
+            "total_open_interest": 1000 * (i + 1),
+            "iv_change_1d": (-2 + i * 0.3),
+            "iv_change_30d": (-5 + i * 0.8),
+            "sector": sectors[i % len(sectors)],
         })
     return pd.DataFrame(rows)
 
 
-class TestBuildHeatmapFigure:
+class TestBuildTreemapFigure:
     def test_empty_df_returns_empty_figure(self):
-        fig = _build_heatmap_figure(pd.DataFrame(), group_by_sector=False)
+        fig = _build_treemap_figure(pd.DataFrame())
         assert fig is not None
 
-    def test_per_ticker_mode_has_one_trace(self):
-        fig = _build_heatmap_figure(_make_universe(10), group_by_sector=False)
+    def test_universe_renders_one_treemap_trace(self):
+        fig = _build_treemap_figure(_make_universe(15))
         assert len(fig.data) == 1
+        assert fig.data[0].type == "treemap"
 
-    def test_sector_mode_has_one_trace(self):
-        fig = _build_heatmap_figure(_make_universe(20), group_by_sector=True)
-        assert len(fig.data) == 1
+    def test_treemap_has_sector_parents_plus_tickers(self):
+        # Hierarchy: sector nodes (parent="") + ticker nodes (parent=sector)
+        fig = _build_treemap_figure(_make_universe(15))
+        labels = list(fig.data[0].labels)
+        parents = list(fig.data[0].parents)
+        # 15 tickers + their (≤5) sectors
+        assert len(labels) >= 15
+        # Some labels must have parent="" (sector roots)
+        assert "" in parents
 
-    def test_figure_height_scales_with_rows(self):
-        small = _build_heatmap_figure(_make_universe(5), group_by_sector=False)
-        large = _build_heatmap_figure(_make_universe(60), group_by_sector=False)
-        assert large.layout.height >= small.layout.height
+    def test_change_mode_uses_symmetric_color_range(self):
+        df = _make_universe(20)
+        fig = _build_treemap_figure(df, color_metric="iv_change_30d", color_range=(-5.0, 5.0))
+        marker = fig.data[0].marker
+        # Symmetric range around 0 → cmid is 0 for change-mode
+        assert marker.cmid == 0
 
-    def test_title_contains_heatmap(self):
-        fig = _build_heatmap_figure(_make_universe(5), group_by_sector=False)
-        assert "HEATMAP" in fig.layout.title.text
-
-    def test_sector_mode_title_indicates_sector(self):
-        fig = _build_heatmap_figure(_make_universe(20), group_by_sector=True)
-        assert "sector" in fig.layout.title.text.lower()
-
-    def test_no_sector_column_uses_unknown(self):
-        df = _make_universe(5, with_sector=False)
-        fig = _build_heatmap_figure(df, group_by_sector=True)
-        # Should not crash; Unknown sector used
-        assert fig is not None
-
-    def test_text_grid_contains_tickers(self):
-        df = _make_universe(5)
-        fig = _build_heatmap_figure(df, group_by_sector=False)
-        all_text = [cell for row in fig.data[0].text for cell in row]
-        assert any(t.startswith("T0") for t in all_text if t)
-
-    def test_z_vals_shape_matches_text_shape(self):
-        fig = _build_heatmap_figure(_make_universe(15), group_by_sector=False)
-        z = fig.data[0].z
-        text = fig.data[0].text
-        assert len(z) == len(text)
-        assert all(len(z[i]) == len(text[i]) for i in range(len(z)))
+    def test_drops_rows_with_null_iv_30d(self):
+        df = _make_universe(10)
+        df.loc[3, "iv_30d"] = None  # one ticker with NULL IV — must be filtered
+        fig = _build_treemap_figure(df)
+        ticker_labels = [
+            lbl for lbl, par in zip(fig.data[0].labels, fig.data[0].parents)
+            if par != ""
+        ]
+        assert "T003" not in ticker_labels
