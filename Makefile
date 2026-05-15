@@ -1,8 +1,8 @@
-.PHONY: setup test run start scrape convergence seed seed-starter seed-full quickstart clean verify verify-all sectors \
+.PHONY: setup test run start scrape convergence seed seed-starter seed-full seed-bot-universe quickstart clean verify verify-all sectors \
         audit audit-list audit-schema synth maturity loop loop-pick loop-finalize loop-forever pause unpause \
         simulate validate autonomy-status autonomy-pause autonomy-unpause autonomy-test autonomy-logs \
         load-universe load-universe-resume design-lint backtest-leaps \
-        unlock kill-stale fresh
+        unlock kill-stale fresh warm
 
 # ── Lock hygiene ────────────────────────────────────────────────────────
 # The DuckDB exclusive lock is the single most common reason `make start`
@@ -15,16 +15,25 @@ unlock:
 
 kill-stale: unlock
 
+# ── iCloud cache warmup ─────────────────────────────────────────────
+# Touches every .py + .so in the repo + .venv so iCloud File Provider
+# materialises them locally. Eliminates the 30-90s cold-import stall
+# that kills pytest and Streamlit boot on Desktop-synced installs.
+warm:
+	@bash scripts/ops/keep_warm.sh
+
 # ── Quick Start ─────────────────────────────────────────────────────
 # One command, zero decisions. Installs deps, releases any stale DB
-# lock, seeds 8 representative tickers, launches the UI in headless
-# mode (no stdin block, no telemetry).
-# Total runtime on a fresh checkout: ~30 seconds.
+# lock, seeds the Bot Universe (19 tickers: cash-settled indices +
+# Tier-2 megacap tech + Tier-3 sector ETFs), launches the UI in
+# headless mode (no stdin block, no telemetry).
+# Total runtime on a fresh checkout: ~90 seconds.
 quickstart:
+	@bash scripts/ops/keep_warm.sh
 	pip install -q -r requirements.txt
 	pip install -q -e .                                    # makes volscope importable from anywhere
 	@python scripts/ops/release_db_lock.py --force
-	python scripts/ops/seed_database.py --tickers SPY,QQQ,AAPL,NVDA,TSLA,META,GLD,TLT
+	$(MAKE) seed-bot-universe
 	$(MAKE) run
 
 # ── Individual stages ───────────────────────────────────────────────
@@ -74,9 +83,23 @@ fresh:
 	python scripts/compute/compute_convergence_daily.py
 	$(MAKE) run
 
-# Minimal 8-ticker seed — matches quickstart's seed stage, no install, no run.
+# Minimal 8-ticker seed — legacy entrypoint kept for back-compat with
+# external docs and existing setups. Prefer `seed-bot-universe`.
 seed-starter:
 	python scripts/ops/seed_database.py --tickers SPY,QQQ,AAPL,NVDA,TSLA,META,GLD,TLT
+
+# Bot Universe seed (19 tickers, ~70 s) — what the trading bot is allowed
+# to touch:
+#   - Tier-1 ETFs (SPY/QQQ/IWM): index proxies, always tradable
+#   - Tier-2 megacap tech (AAPL/MSFT/AMZN/NVDA/GOOGL/META/AMD/QCOM/MU):
+#     statistical IV mean-reversion confirmed (Castillo & Mira-McWilliams 2026)
+#   - Tier-3 sector ETFs (XLE/XLF/XLK/XLV/EWZ): broad sector exposure
+#   - Macro anchors (GLD/TLT): gold + duration for regime context
+# Source-of-truth: config/tickers.yaml. SPX/XSP intentionally excluded
+# from the seed since Yahoo OHLCV for indices is unreliable; the bot
+# trades them via IBKR chains separately.
+seed-bot-universe:
+	python scripts/ops/seed_database.py --tickers SPY,QQQ,IWM,AAPL,MSFT,AMZN,NVDA,GOOGL,META,AMD,QCOM,MU,XLE,XLF,XLK,XLV,EWZ,GLD,TLT
 
 # Full universe seed — all 280+ curated tickers. Takes several minutes.
 seed-full:
