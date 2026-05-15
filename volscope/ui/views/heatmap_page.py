@@ -24,6 +24,7 @@ ticker-jump selectbox in the controls strip will route to Scope.
 from __future__ import annotations
 
 import math
+from html import escape
 from typing import Optional
 
 import numpy as np
@@ -383,13 +384,42 @@ def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
         ).to_dict()
 
     with st.spinner("Rendering universe treemap …", show_time=False):
-        spec = _cached_treemap_spec(
-            make_cache_key(db),
-            color_metric,
-            tuple(color_range),
-            latest,
+        try:
+            spec = _cached_treemap_spec(
+                make_cache_key(db),
+                color_metric,
+                tuple(color_range),
+                latest,
+            )
+            fig = go.Figure(spec)
+        except Exception as exc:                                # noqa: BLE001
+            render_html(
+                st,
+                f'<div style="color:#ff4466;font-family:{_MONO};font-size:12px;'
+                f'background:{COLORS["surface"]};border:1px solid #ff4466;'
+                f'border-radius:6px;padding:12px;margin:8px 0;">'
+                f'<b>Treemap build failed:</b> {escape(str(exc))}<br>'
+                f'<span style="color:{COLORS["muted"]};font-size:10px;">'
+                f'Run <code>make repair-iv</code> to fix NULL iv_30d rows then '
+                f'reload the page.</span></div>',
+            )
+            return
+
+    # Diagnostic banner: how many rows did the treemap actually plot?
+    # When < 60% of the universe makes it through (NULL iv_30d filter
+    # in _build_treemap_figure) the heatmap looks suspiciously sparse.
+    plotted = int(pd.notna(pd.to_numeric(latest.get("iv_30d"), errors="coerce")).sum())
+    if plotted < int(n_tickers * 0.6):
+        render_html(
+            st,
+            f'<div style="color:{COLORS["amber"]};font-family:{_MONO};font-size:11px;'
+            f'background:{COLORS["surface"]};border-left:3px solid {COLORS["amber"]};'
+            f'padding:8px 12px;margin:4px 0 8px;border-radius:0 4px 4px 0;">'
+            f'⚠ Only {plotted} of {n_tickers} tickers plotted ({n_tickers - plotted} '
+            f'missing iv_30d). Run <code>make repair-iv</code> in your terminal to '
+            f'backfill — or <code>make scrape</code> for fresh chains.</div>',
         )
-        fig = go.Figure(spec)
+
     clicked = st.plotly_chart(
         fig,
         width='stretch',
