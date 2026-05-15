@@ -83,10 +83,13 @@ def compute_pre_er_crowded(
     hist = hist.copy()
     hist["date"] = pd.to_datetime(hist["date"]).dt.date
 
-    # Today's crowded score — uses the latest row + recent context
-    today_row = hist.iloc[-1]
+    # Today's crowded score — uses the latest row + recent context.
+    # Length-check FIRST so a 1-19-row history short-circuits cleanly
+    # without ever computing today_row (avoids wasted iloc on data we
+    # are going to discard anyway).
     if hist.shape[0] < 20:
         return None
+    today_row = hist.iloc[-1]
     today_score = compute_crowded_score(today_row, hist)
     if today_score is None or math.isnan(today_score):
         return None

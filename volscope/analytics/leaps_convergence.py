@@ -422,7 +422,11 @@ def suggest_leaps(
     payoff: list[tuple[float, float, float]] = []
     for level in sorted(set(round(x, 2) for x in ladder_levels if x > 0)):
         intrinsic = max(0.0, level - strike)
-        ret_pct = (intrinsic - premium) / premium * 100.0
+        # premium is computed earlier in this function and should be > 0,
+        # but guard against the pathological zero-premium case (stale chain,
+        # bad solver) — the payoff ladder rendering downstream tolerates
+        # 0.0 cleanly, a ZeroDivisionError would crash the whole LEAPS card.
+        ret_pct = ((intrinsic - premium) / premium * 100.0) if premium > 0 else 0.0
         payoff.append((level, round(intrinsic, 2), round(ret_pct, 1)))
 
     rationale = (

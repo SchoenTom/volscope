@@ -77,15 +77,21 @@ def _check_no_earnings_in_open_positions() -> tuple[bool, str]:
         from volscope.data.database import VolScopeDB
         db = VolScopeDB()
         try:
-            cutoff = (date.today() + timedelta(days=14)).isoformat()
-            rows = db.con.execute(f"""
+            cutoff = date.today() + timedelta(days=14)
+            # Parameterised — even though `cutoff` is internally computed
+            # (not user input), .claude/rules/secrets.md auto-rejects any
+            # f-string SQL on review. Stay clean.
+            rows = db.con.execute(
+                """
                 SELECT bt.underlying, ec.earnings_date
                 FROM bot_trades bt
                 LEFT JOIN earnings_calendar ec USING (ticker)
                 WHERE bt.status NOT IN ('CLOSED','EXPIRED','ABANDONED','ASSIGNED','REJECTED','ROLLED')
-                  AND ec.earnings_date <= DATE '{cutoff}'
+                  AND ec.earnings_date <= ?
                   AND ec.earnings_date >= CURRENT_DATE
-            """).fetchall()
+                """,
+                [cutoff],
+            ).fetchall()
             if rows:
                 return (False, f"open positions with earnings ≤14d: "
                         f"{[r[0] for r in rows]}")

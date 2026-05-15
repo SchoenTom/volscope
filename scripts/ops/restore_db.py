@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 import tempfile
 from datetime import date
@@ -55,8 +56,14 @@ def _count_rows_per_table(conn) -> dict[str, int]:
         "SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'bot_%'"
     ).fetchall()
     for (name,) in rows:
+        # Table identifiers cannot be parameter-bound in standard SQL;
+        # the LIKE filter above + an explicit allow-list regex keep us
+        # safe against catalog-poisoning. Whitelist: lowercase alnum +
+        # underscore, starting with 'bot_'.
+        if not re.fullmatch(r"bot_[a-z0-9_]+", name):
+            continue
         try:
-            cnt = conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+            cnt = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
             out[name] = int(cnt)
         except duckdb.Error:
             pass

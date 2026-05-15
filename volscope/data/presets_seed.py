@@ -30,8 +30,10 @@ def _jd_strike(db) -> int:
     try:
         hist = db.get_ticker_history("JD")
         if hist is not None and not hist.empty and "spot_price" in hist.columns:
-            spot = float(hist["spot_price"].dropna().iloc[-1])
-            return int(round(spot * 1.10))
+            non_null = hist["spot_price"].dropna()
+            if not non_null.empty:
+                spot = float(non_null.iloc[-1])
+                return int(round(spot * 1.10))
     except Exception as exc:
         log.debug("JD spot lookup failed: %s", exc)
     return 35
