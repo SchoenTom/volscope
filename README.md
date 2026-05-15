@@ -13,6 +13,23 @@
 ![Made with uv](https://img.shields.io/badge/made%20with-uv-orange)
 ![Status](https://img.shields.io/badge/status-Phase%202%20scaffold-yellow)
 
+## Quick Start
+
+```bash
+git clone https://github.com/SchoenTom/volscope.git ~/dev/VolScope
+cd ~/dev/VolScope
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && pip install -e .
+cp .env.example .env             # fill in keys before live work
+make quickstart                  # seeds 842-ticker universe + launches UI
+```
+
+`make quickstart` takes ~30-45 min on a cold checkout (yfinance rate-
+limits at 360 req/h). For a faster boot with the 75-ticker trading
+universe, use `make quickstart-bot` instead.
+
+Open <http://localhost:8501>.
+
 ## Three modes, one engine
 
 **1. Research workbench (default).** 17 pages — Scope, Scanner,

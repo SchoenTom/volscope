@@ -41,19 +41,21 @@ class TestQuickstartContract:
         assert "GLD" in s  # commodity
         assert "TLT" in s  # bonds
 
-    def test_makefile_quickstart_target_matches_starter_pack(self):
-        """The `quickstart` Makefile target must pass exactly the same
-        ticker list via --tickers. If one side changes without the other,
-        fail the test so the README and the UI stay truthful."""
+    def test_makefile_seed_starter_target_matches_starter_pack(self):
+        """The `seed-starter` Makefile target (legacy minimal seed path)
+        must pass exactly the _STARTER_PACK ticker list — that's the
+        Discover-welcome-card contract. `quickstart` itself uses the
+        full universe since v0.9.4 to maximise breadth from minute one.
+        """
         makefile_path = Path(__file__).resolve().parent.parent / "Makefile"
         text = makefile_path.read_text()
 
         match = re.search(
-            r"quickstart:.*?seed_database\.py --tickers (\S+)",
+            r"seed-starter:.*?seed_database\.py --tickers (\S+)",
             text,
             re.DOTALL,
         )
-        assert match is not None, "quickstart target in Makefile is missing or malformed"
+        assert match is not None, "seed-starter target in Makefile is missing or malformed"
 
         makefile_tickers = tuple(match.group(1).split(","))
         assert makefile_tickers == _STARTER_PACK, (
@@ -62,11 +64,19 @@ class TestQuickstartContract:
         )
 
     def test_makefile_has_quickstart_target(self):
+        """quickstart must install deps + boot streamlit (directly or
+        via $(MAKE) run). v0.9.4 switched the recipe to use $(MAKE)
+        run instead of a direct `streamlit run` line — the test
+        accepts either form."""
         makefile_path = Path(__file__).resolve().parent.parent / "Makefile"
         text = makefile_path.read_text()
         assert "quickstart:" in text
-        assert "pip install" in text.split("quickstart:")[1].split("\n\n")[0]
-        assert "streamlit run" in text.split("quickstart:")[1].split("\n\n")[0]
+        recipe = text.split("quickstart:")[1].split("\n\n")[0]
+        assert "pip install" in recipe
+        assert ("streamlit run" in recipe) or ("$(MAKE) run" in recipe), (
+            "quickstart recipe must boot Streamlit either directly "
+            "(streamlit run) or via the `run` target ($(MAKE) run)"
+        )
 
     def test_makefile_has_all_advertised_targets(self):
         """README advertises these; if a refactor removes one, break loudly."""
