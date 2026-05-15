@@ -883,8 +883,34 @@ def render_discover_page(db, settings: dict | None = None) -> None:
         cheapest_pool = latest
         n_crisis_blocked = 0
 
+    # v0.9.3 phase-4: vol-indices (^VIX, ^VVIX, ^SKEW, …) are derived
+    # data, not tradable. Saying "VIX is CHEAP" is a category error
+    # — you don't BUY VIX, you buy VXX/UVXY or sell SPX options. Drop
+    # vol-indices from both CHEAPEST and RICHEST pools so the operator
+    # only sees actionable tickers there. They still appear elsewhere
+    # (Heatmap, dedicated VIX Scope view) for context.
+    if "ticker" in latest.columns:
+        from volscope.data.symbol_types import is_vol_index
+        vol_idx_mask = latest["ticker"].astype(str).map(is_vol_index)
+        cheapest_pool = cheapest_pool[
+            ~latest["ticker"].astype(str).map(is_vol_index).reindex(
+                cheapest_pool.index, fill_value=False,
+            ).fillna(False)
+        ]
+        n_vol_index_blocked = int(vol_idx_mask.fillna(False).sum())
+    else:
+        n_vol_index_blocked = 0
+
     cheapest = find_cheapest_vol(cheapest_pool, n=10)
-    richest = find_richest_premium(latest, n=10)
+    # Richest pool also drops vol-indices for the same reason.
+    if "ticker" in latest.columns:
+        from volscope.data.symbol_types import is_vol_index
+        richest_pool = latest[
+            ~latest["ticker"].astype(str).map(is_vol_index).fillna(False)
+        ]
+    else:
+        richest_pool = latest
+    richest = find_richest_premium(richest_pool, n=10)
 
     if n_crisis_blocked > 0:
         render_html(
