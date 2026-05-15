@@ -126,7 +126,10 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
 
     # v0.9.0 — persistent vol-regime header strip.
     from volscope.ui.components.regime_header import render_regime_header
+    from volscope.ui.components.freshness_banner import render_freshness_banner
     render_regime_header(db)
+    # v0.9.3 — NYSE-aware freshness banner (hidden when FRESH).
+    render_freshness_banner(db)
 
     render_html(
         st,

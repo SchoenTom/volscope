@@ -778,9 +778,13 @@ def render_discover_page(db, settings: dict | None = None) -> None:
 
     from volscope.ui.components.auto_refresh import auto_refresh_toggle
     from volscope.ui.components.regime_header import render_regime_header
+    from volscope.ui.components.freshness_banner import render_freshness_banner
 
     # v0.9.0 — persistent vol-regime header strip.
     render_regime_header(db)
+    # v0.9.3 — NYSE-aware freshness banner (hidden when FRESH so the
+    # operator only sees it when data is actually stale).
+    render_freshness_banner(db)
     st.markdown("## ◈ Discover")
     render_html(
         st,
