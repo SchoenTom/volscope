@@ -204,7 +204,7 @@ def _render_intraday_section(st, ticker: str) -> None:
 
     with error_boundary(st, f"Intraday price chart [{tf}]"):
         fig = create_intraday_price_chart(bars, ticker, timeframe=tf)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 
 def _render_history_price_lwc(
@@ -334,6 +334,45 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
         days_to_earnings=days_to_er,
     )
 
+    # Phase-4 — VOL_INDEX / VOL_PRODUCT gating. Vol indices are derived
+    # data (not directly tradable) so the CHEAP/RICH verdict makes no
+    # sense for them. Vol products (VXX/UVXY/SVXY/VIXY) carry structural
+    # contango drag — long holds bleed regardless of spot vol move, so
+    # the operator gets an amber warning before any sizing decision.
+    from volscope.data.symbol_types import is_vol_index, is_vol_product
+    _is_vol_idx = is_vol_index(ticker)
+    _is_vol_prod = is_vol_product(ticker)
+    if _is_vol_idx:
+        render_html(
+            st,
+            f'<div style="background:{COLORS["surface"]};border:1px solid {COLORS["border"]};'
+            f'border-left:3px solid {COLORS["accent"]};border-radius:6px;padding:12px 16px;'
+            f'margin:8px 0 12px;font-family:DM Sans,sans-serif;font-size:12px;">'
+            f'<span style="color:{COLORS["accent"]};font-weight:700;letter-spacing:0.5px;">'
+            f'VOLATILITY INDEX</span>'
+            f'<span style="color:{COLORS["muted"]};margin-left:12px;">'
+            f'Derived data — not directly tradable. CHEAP/RICH verdicts do '
+            f'not apply; use the term-structure + history below for context, '
+            f'or trade exposure via the matching vol product (e.g. VXX for '
+            f'^VIX, UVXY for leveraged term-structure plays).'
+            f'</span></div>',
+        )
+    if _is_vol_prod:
+        render_html(
+            st,
+            f'<div style="background:{COLORS["surface"]};border:1px solid {COLORS["border"]};'
+            f'border-left:3px solid {COLORS["amber"]};border-radius:6px;padding:12px 16px;'
+            f'margin:8px 0 12px;font-family:DM Sans,sans-serif;font-size:12px;">'
+            f'<span style="color:{COLORS["amber"]};font-weight:700;letter-spacing:0.5px;">'
+            f'⚠ STRUCTURAL CONTANGO DRAG</span>'
+            f'<span style="color:{COLORS["muted"]};margin-left:12px;">'
+            f'Long {escape(ticker)} loses value to roll-cost during normal '
+            f'contango regimes regardless of spot-vol direction. Hold horizons '
+            f'beyond ~5 trading days carry a measurable bleed — size and time '
+            f'entries accordingly. Inverse products (SVXY) reverse the sign.'
+            f'</span></div>',
+        )
+
     _render_header(st, db, ticker, latest, history)
     # v0.6.1 — IV quality warning banner (FISV-class single-spike
     # contamination). Renders ABOVE the headline KPIs so the operator
@@ -341,11 +380,13 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
     from volscope.ui.components.iv_quality_banner import (
         render_iv_quality_banner,
     )
-    render_iv_quality_banner(st, latest)
+    if not _is_vol_idx:
+        render_iv_quality_banner(st, latest)
     # 52-week IV verdict — the single most actionable read on this page.
     # Sits directly under the header so the user knows in 1 second whether
-    # to even keep scrolling.
-    render_iv_verdict_hero(history)
+    # to even keep scrolling. Suppressed for vol indices (derived data).
+    if not _is_vol_idx:
+        render_iv_verdict_hero(history)
     render_kpi_row(latest)
     _render_skew_metric(st, latest)
 
@@ -402,7 +443,7 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
         if has_term_structure:
             with error_boundary(st, "IV Term Structure"):
                 st.plotly_chart(
-                    create_term_structure_chart(history), use_container_width=True
+                    create_term_structure_chart(history), width='stretch'
                 )
         else:
             render_html(
@@ -420,17 +461,17 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
         with error_boundary(st, "IV vs HV chart"):
             st.plotly_chart(
                 create_iv_hv_chart(history, ticker, earnings_dates=earnings),
-                use_container_width=True,
+                width='stretch',
             )
         with error_boundary(st, "IV-HV Spread chart"):
             st.plotly_chart(
                 create_spread_chart(history, earnings_dates=earnings),
-                use_container_width=True,
+                width='stretch',
             )
         with error_boundary(st, "IV Percentile chart"):
             st.plotly_chart(
                 create_percentile_chart(history, earnings_dates=earnings),
-                use_container_width=True,
+                width='stretch',
             )
 
     with tab_price:
@@ -438,7 +479,7 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
         _render_intraday_section(st, ticker)
         if has_skew:
             with error_boundary(st, "25Δ Skew chart"):
-                st.plotly_chart(create_skew_chart(history), use_container_width=True)
+                st.plotly_chart(create_skew_chart(history), width='stretch')
         # Inline action: open Pre-Trade for this ticker
         if st.button(
             f"▷ Open Pre-Trade for {ticker}",
@@ -564,16 +605,16 @@ def _render_backtest_section(st, history: pd.DataFrame, ticker: str) -> None:
     # ── Calibration table ───────────────────────────────────────────
     cal = build_calibration_table(result)
     if not cal.empty:
-        st.dataframe(cal, use_container_width=True, hide_index=True)
+        st.dataframe(cal, width='stretch', hide_index=True)
 
     # ── Charts ──────────────────────────────────────────────────────
     rhr = rolling_hit_rate(result.signals_df)
     with error_boundary(st, "Rolling hit rate chart"):
         st.plotly_chart(
-            create_backtest_hit_rate_chart(rhr), use_container_width=True
+            create_backtest_hit_rate_chart(rhr), width='stretch'
         )
     with error_boundary(st, "IV change distribution chart"):
         st.plotly_chart(
             create_backtest_distribution_chart(result.signals_df),
-            use_container_width=True,
+            width='stretch',
         )
