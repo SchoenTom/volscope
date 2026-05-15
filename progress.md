@@ -1,5 +1,49 @@
 # VolScope Progress
 
+## Session 2026-05-15 — v0.9.4 setup-hardening (5 commits)
+
+Operator setup hit a wall on a fresh checkout: zsh `#`-comment parsing
+broke three sequential commands, `~/Downloads/volscope-main` shadowed
+the canonical Desktop repo, `.env` was missing, and Streamlit boot
+logs were drowning in `use_container_width` deprecation warnings and
+yfinance noise. Plus the autonomous-loop priority list had four
+real-but-doable Phase-4 and Phase-8 items still TODO.
+
+Five atomic commits to close that gap:
+
+- `efad913` feat(makefile): wire iCloud warmup + 19-ticker Bot Universe seed
+  - new `make warm` target invokes `scripts/ops/keep_warm.sh`
+  - `make quickstart` now: warm → install → unlock → seed-bot-universe → run
+  - default seed grew from 8 to 19 tickers (tier1+2+3 ETFs + GLD/TLT macro anchors)
+- `fa3993f` fix(data): silence yfinance stderr noise on vol-index fetch
+  - contextlib.redirect_stdout/stderr around `yf.Ticker(sym).history()`
+  - VDAX-NEW.DE delisted message + Deribit DVOL 400 errors no longer leak to operator
+- `c1cb1df` chore(ui): migrate to Streamlit width API (Dec 2025 deprecation)
+  - 95 sed-replacements: `use_container_width=True` → `width='stretch'`, `=False` → `'content'`
+  - 23 files touched, scope_page.py committed separately
+- `4bdb77f` feat(scope): VOL_INDEX banner + VXX contango warning (phase-4 wire)
+  - is_vol_index(ticker) → VOLATILITY INDEX banner replaces CHEAP/RICH verdict
+  - is_vol_product(ticker) → amber STRUCTURAL CONTANGO DRAG banner above content
+  - Inline assert verified is_vol_index/is_vol_product gates on ^VIX, SPY, VXX, UVXY
+- `1250684` docs(launch): scaffold LAUNCH_CHECKLIST + PRE_LAUNCH_REPORT (phase-8)
+  - 50-item operator-signed gate covering CI, hardening, data, secrets,
+    paper track record, IBKR integration, 8 kill-switch paths, regime
+  - PRE_LAUNCH_REPORT: status matrix Phase 0-7 DONE, Phase 8 PARTIAL;
+    recommendation CONDITIONAL GO (paper continuation OK, live NO-GO)
+
+Setup-side fixes outside the repo (no commit):
+- zsh `setopt interactive_comments` appended to ~/.zshrc
+- `.env` created from `.env.example` (operator fills keys manually)
+- `~/Downloads/volscope-main` + .zip removed
+
+Hardening-phase status corrected vs the v0.9.3 memory snapshot:
+Phase 2, 3, 5, 7 were already DONE (memory said partial/outstanding).
+Phase 4 closed in this session. Phase 8 now PARTIAL (docs scaffolded).
+
+Working tree clean post-push. CI in progress (commit `1250684` queued).
+
+---
+
 ## Last Session: 2026-05-15 (v0.9.2 — Options-Lab UX overhaul + 7 N+1 fixes + 3D Greeks)
 
 Continuous bug-hunt-loop pass triggered by the operator's "improve
