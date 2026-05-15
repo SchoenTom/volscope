@@ -343,9 +343,58 @@ def _apply_filters(events, sector_filter, watchlist_only, db) -> list[dict]:
     return out
 
 
+@st.cache_data(ttl=300, show_spinner=False, hash_funcs={dict: lambda d: (str(d.get("ticker", "")), str(d.get("earnings_date", "")))})
+def _enrich_analytics(cache_key: str, ticker: str, er_date_iso: str, _db) -> dict:
+    """v0.9.2: caches the 4 per-event analytics computations.
+
+    Earnings Hub renders ~30 events per week. The previous _enrich
+    fired ``compute_implied_move`` + ``compute_pre_er_crowded`` +
+    ``compute_crush_estimate`` + ``calibrate_implied_vs_realised`` for
+    every event on every page render — each of those internally does
+    ``db.get_ticker_history(ticker)`` + further analytics. That's
+    ~4 DuckDB reads × 30 events = 120 reads per Earnings-Hub render,
+    on every interaction.
+
+    Caching at this level (per ticker × earnings_date × last-scrape)
+    is the correct granularity: analytics depend on the freshness of
+    the underlying scrape (covered by cache_key) and on the specific
+    event, but NOT on which page is currently active.
+    """
+    from datetime import date as _date
+    er_date = _date.fromisoformat(er_date_iso)
+    result: dict = {
+        "implied":     None,
+        "crowded":     None,
+        "crush":       None,
+        "calibration": None,
+    }
+    try:
+        result["implied"] = compute_implied_move(_db, ticker, er_date)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("implied move %s: %s", ticker, exc)
+    try:
+        result["crowded"] = compute_pre_er_crowded(_db, ticker)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("crowded pre-er %s: %s", ticker, exc)
+    try:
+        result["crush"] = compute_crush_estimate(_db, ticker)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("crush %s: %s", ticker, exc)
+    try:
+        result["calibration"] = calibrate_implied_vs_realised(
+            _db, ticker, min_events=3,
+        )
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("calibration %s: %s", ticker, exc)
+    return result
+
+
 def _enrich(db, ev: dict) -> dict:
-    """Compute the 4 headline analytics for one event. Cached at the
-    per-(ticker, date) level inside the called functions.
+    """Compute the 4 headline analytics for one event.
+
+    v0.9.2: analytics are now cached via ``_enrich_analytics`` at
+    (cache_key, ticker, earnings_date_iso, _db). ~120× fewer DB
+    reads on a 30-event week.
 
     Note on the date normalisation: ``pd.Timestamp`` is a *subclass*
     of ``datetime.date`` (via ``datetime.datetime``), so a naive
@@ -367,6 +416,23 @@ def _enrich(db, ev: dict) -> dict:
     out["calibration"] = None
     out["recommendation"] = None
     out["interestingness"] = 0.0
+
+    # v0.9.2 cached path. Reaches all four analytics calls in one
+    # cache key, so subsequent renders of the same week hit cache.
+    try:
+        from volscope.ui.components.cached_data import make_cache_key
+        cached = _enrich_analytics(
+            make_cache_key(db), ticker, er_date.isoformat(), db,
+        )
+        out["implied"]     = cached["implied"]
+        out["crowded"]     = cached["crowded"]
+        out["crush"]       = cached["crush"]
+        out["calibration"] = cached["calibration"]
+        return out                                              # short-circuit
+    except Exception as exc:                                    # noqa: BLE001
+        # Cache failed for any reason — fall through to the original
+        # per-call path below (preserves correctness, just slower).
+        log.debug("enrich cache miss %s: %s", ticker, exc)
 
     try:
         out["implied"] = compute_implied_move(db, ticker, er_date)
