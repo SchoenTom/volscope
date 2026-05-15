@@ -236,11 +236,25 @@ def _render_history_price_lwc(
     if history is None or history.empty:
         return
 
+    # Range selector — default 5y for cycle context; max gives the
+    # full yfinance-available history (typically 20+ years for the
+    # big-cap names). yfinance caches each (ticker, period) pair so
+    # toggling is cheap after first fetch.
+    _range_opts = ["1y", "2y", "5y", "10y", "max"]
+    _range_pick = st.radio(
+        "History range",
+        _range_opts,
+        index=2,
+        horizontal=True,
+        key=f"scope_hist_range_{ticker}",
+        label_visibility="collapsed",
+    )
+
     # daily_vol carries only the close (spot_price). Real candles +
     # volume require a separate OHLCV source — pulled from yfinance
     # via a 1-hour-cached helper. On failure the fallback inside
     # ``price_chart_lwc`` synthesises a flat-OHLC line from history.
-    ohlcv = fetch_daily_ohlcv(ticker, period="5y")
+    ohlcv = fetch_daily_ohlcv(ticker, period=_range_pick)
 
     spec, key = price_chart_lwc(
         history,
@@ -250,7 +264,7 @@ def _render_history_price_lwc(
         with_iv_overlay=True,
         with_regime_shading=False,
         earnings_dates=earnings_dates or [],
-        title=ticker,
+        title=f"{ticker} · {_range_pick.upper()}",
     )
     if not spec:
         return

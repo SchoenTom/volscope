@@ -1604,6 +1604,21 @@ def _render_underlying_context(history: pd.DataFrame, ticker: str) -> None:
         st.info("No price history available.")
         return
 
+    # Range selector — operator picks the lookback. Default 5y so the
+    # cycle-trough / cycle-peak context is visible without an extra
+    # click. Cached fetches inside fetch_daily_ohlcv mean re-selection
+    # is cheap.
+    import streamlit as _st
+    _range_options = ["1y", "2y", "5y", "10y", "max"]
+    _range_pick = _st.radio(
+        "Price-chart lookback",
+        _range_options,
+        index=2,
+        horizontal=True,
+        key=f"opt_lab_range_{ticker}",
+        label_visibility="collapsed",
+    )
+
     # Prefer the TradingView path. Anything that can break in here
     # (yfinance rate limit, missing dep, malformed history) is caught
     # below — we then degrade to the Plotly pro_chart we had before.
@@ -1611,16 +1626,16 @@ def _render_underlying_context(history: pd.DataFrame, ticker: str) -> None:
         from volscope.ui.components.lwc_chart import (
             fetch_daily_ohlcv, price_chart_lwc, render_lwc_safe,
         )
-        ohlcv = fetch_daily_ohlcv(ticker, period="1y")
+        ohlcv = fetch_daily_ohlcv(ticker, period=_range_pick)
         spec, key = price_chart_lwc(
             history,
             ohlcv=ohlcv,
             height=420,
             with_volume=True,
             with_iv_overlay=True,
-            title=f"{ticker} · 1Y · IV30 overlay",
+            title=f"{ticker} · {_range_pick.upper()} · IV30 overlay",
         )
-        if spec and render_lwc_safe(spec, key=f"opt_lab_{key}_{ticker}"):
+        if spec and render_lwc_safe(spec, key=f"opt_lab_{key}_{ticker}_{_range_pick}"):
             return                                              # success path
     except Exception:                                           # noqa: BLE001
         pass
