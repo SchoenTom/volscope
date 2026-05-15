@@ -363,6 +363,31 @@ class VolScopeDB:
         "company_name",
     )
 
+    @staticmethod
+    def _to_py_scalar(v):
+        """Cast numpy/pandas scalars to native Python for DuckDB binding.
+
+        DuckDB's Python client rejects numpy.int64 / numpy.float64 with
+        NotImplementedException: "Unable to transform python value of
+        type 'numpy.int64'". The merge-upsert below re-binds existing-
+        row values pulled from a pandas DataFrame (typical case:
+        total_open_interest / total_call_volume / total_put_volume
+        carry numpy-int from prior scrapes), so without this cast every
+        upsert can fail on a row that has any of those columns.
+        """
+        if v is None:
+            return None
+        if pd.isna(v):
+            return None
+        import numpy as _np
+        if isinstance(v, _np.integer):
+            return int(v)
+        if isinstance(v, _np.floating):
+            return float(v)
+        if isinstance(v, _np.bool_):
+            return bool(v)
+        return v
+
     def upsert_daily(self, ticker: str, date, **kwargs) -> None:
         """
         Merge-upsert a daily_vol row. Fields not passed in kwargs preserve their
@@ -377,10 +402,9 @@ class VolScopeDB:
         merged: dict = {"ticker": ticker, "date": date}
         for col in self._DAILY_FIELDS:
             if col in kwargs and kwargs[col] is not None:
-                merged[col] = kwargs[col]
+                merged[col] = self._to_py_scalar(kwargs[col])
             elif not existing.empty and col in existing.columns:
-                val = existing[col].iloc[0]
-                merged[col] = None if pd.isna(val) else val
+                merged[col] = self._to_py_scalar(existing[col].iloc[0])
             else:
                 merged[col] = None
 
@@ -655,14 +679,32 @@ class VolScopeDB:
     # ------------------------------------------------------------------
 
     def upsert_sector_daily(self, sector: str, date, **kwargs) -> None:
-        """Upsert one sector_daily row. Extra kwargs become column values."""
+        """Merge-upsert one sector_daily row.
+
+        Fields not passed in kwargs preserve their existing value (so a
+        partial aggregation does not wipe yesterday's clean columns).
+        Mirrors upsert_daily's preserve-on-null pattern — without it,
+        a failed flow_score / regime_z calc nulled the row and the
+        Rotation page rendered blanks for that sector.
+        """
         _SECTOR_FIELDS = (
             "median_iv", "median_perc", "median_hv", "mean_pcr",
             "total_oi", "total_vol", "n_tickers", "regime", "regime_z", "flow_score",
         )
+        existing = self.con.execute(
+            "SELECT * FROM sector_daily WHERE sector = ? AND date = ?",
+            [sector, date],
+        ).fetchdf()
+
         row: dict = {"sector": sector, "date": date}
         for col in _SECTOR_FIELDS:
-            row[col] = kwargs.get(col)
+            if col in kwargs and kwargs[col] is not None:
+                row[col] = self._to_py_scalar(kwargs[col])
+            elif not existing.empty and col in existing.columns:
+                row[col] = self._to_py_scalar(existing[col].iloc[0])
+            else:
+                row[col] = None
+
         cols = ", ".join(row.keys())
         placeholders = ", ".join(["?"] * len(row))
         self.con.execute(
