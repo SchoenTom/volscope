@@ -90,8 +90,13 @@ def test_signal_strong_buy_both_cheap():
 
 
 def test_signal_strong_buy_at_boundary():
-    """perc=24.9 AND VRP=0.949 → still strong BUY (just inside thresholds)."""
-    s = compute_signal(24.9, 18.98, 20.0)  # VRP ≈ 0.949
+    """perc=19.9 AND VRP=0.949 → still strong BUY (just inside thresholds).
+
+    PERC_VERY_CHEAP was tightened from 25 → 20 in the iv_thresholds
+    refactor; this test must use a perc value below the current 20
+    boundary to assert the strong-cheap branch.
+    """
+    s = compute_signal(19.9, 18.98, 20.0)  # VRP ≈ 0.949
     assert s.label == "BUY VOL"
     assert s.strong is True
 
@@ -170,8 +175,12 @@ def test_signal_strong_rich_both_expensive():
 
 
 def test_signal_strong_rich_boundary():
-    """perc=75.1 AND VRP=1.051 → just inside RICH thresholds."""
-    s = compute_signal(75.1, 21.02, 20.0)  # VRP ≈ 1.051
+    """perc=80.1 AND VRP=1.051 → just inside RICH thresholds.
+
+    PERC_RICH_STRONG was tightened to 80; the prior 75 boundary
+    landed inside LEAN_RICH territory.
+    """
+    s = compute_signal(80.1, 21.02, 20.0)  # VRP ≈ 1.051
     assert s.label == "RICH"
     assert s.strong is True
 
@@ -364,10 +373,14 @@ def test_market_summary_skips_no_data():
 # ---------------------------------------------------------------------------
 
 def test_pipeline_realistic_scenario():
-    """Simulate 4 positions: 2 cheap, 1 neutral, 1 rich."""
+    """Simulate 4 positions: 2 cheap, 1 neutral, 1 rich.
+
+    Tightened to current iv_thresholds (PERC_VERY_CHEAP=20,
+    PERC_RICH_STRONG=80) — both BUY VOL slots must use perc < 20.
+    """
     positions = [
-        (12.0, 16.0, 20.0),   # perc=12, VRP=0.80 → BUY VOL
-        (20.0, 18.0, 20.0),   # perc=20, VRP=0.90 → BUY VOL
+        (12.0, 16.0, 20.0),   # perc=12, VRP=0.80 → BUY VOL (strong)
+        (15.0, 18.0, 20.0),   # perc=15, VRP=0.90 → BUY VOL (strong)
         (50.0, 20.0, 20.0),   # perc=50, VRP=1.00 → WAIT
         (82.0, 24.0, 20.0),   # perc=82, VRP=1.20 → RICH
     ]
