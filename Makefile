@@ -1,8 +1,8 @@
-.PHONY: setup test run start scrape convergence seed seed-starter seed-full seed-bot-universe quickstart clean verify verify-all sectors \
+.PHONY: setup test run start scrape convergence seed seed-starter seed-full seed-bot-universe seed-broad-universe quickstart clean verify verify-all sectors \
         audit audit-list audit-schema synth maturity loop loop-pick loop-finalize loop-forever pause unpause \
         simulate validate autonomy-status autonomy-pause autonomy-unpause autonomy-test autonomy-logs \
         load-universe load-universe-resume design-lint backtest-leaps \
-        unlock kill-stale fresh warm
+        unlock kill-stale fresh warm repair-iv
 
 # ── Lock hygiene ────────────────────────────────────────────────────────
 # The DuckDB exclusive lock is the single most common reason `make start`
@@ -22,18 +22,26 @@ kill-stale: unlock
 warm:
 	@bash scripts/ops/keep_warm.sh
 
+# ── Data repair ─────────────────────────────────────────────────────
+# Fills iv_30d on rows where daily_scrape wrote NULL (chain fetch
+# failed but row got upserted anyway). Walks back to last non-null
+# iv_30d per ticker, falls back to HV-YZ × VRP proxy if no history.
+# Idempotent — safe to run repeatedly.
+repair-iv:
+	python scripts/ops/repair_null_iv.py
+
 # ── Quick Start ─────────────────────────────────────────────────────
 # One command, zero decisions. Installs deps, releases any stale DB
-# lock, seeds the Bot Universe (19 tickers: cash-settled indices +
-# Tier-2 megacap tech + Tier-3 sector ETFs), launches the UI in
-# headless mode (no stdin block, no telemetry).
-# Total runtime on a fresh checkout: ~90 seconds.
+# lock, seeds the Broad Universe (75 tickers: Bot Universe + S&P-500
+# big-cap representatives + S&P-400 mid-cap names with liquid options),
+# launches the UI in headless mode (no stdin block, no telemetry).
+# Total runtime on a fresh checkout: ~4 minutes.
 quickstart:
 	@bash scripts/ops/keep_warm.sh
 	pip install -q -r requirements.txt
 	pip install -q -e .                                    # makes volscope importable from anywhere
 	@python scripts/ops/release_db_lock.py --force
-	$(MAKE) seed-bot-universe
+	$(MAKE) seed-broad-universe
 	$(MAKE) run
 
 # ── Individual stages ───────────────────────────────────────────────
@@ -100,6 +108,33 @@ seed-starter:
 # trades them via IBKR chains separately.
 seed-bot-universe:
 	python scripts/ops/seed_database.py --tickers SPY,QQQ,IWM,AAPL,MSFT,AMZN,NVDA,GOOGL,META,AMD,QCOM,MU,XLE,XLF,XLK,XLV,EWZ,GLD,TLT
+
+# Broad Universe seed (75 tickers, ~3 min) — Bot Universe + S&P-500
+# Big-Cap representatives across sectors + S&P-400 Mid-Cap names with
+# liquid options. This is what `make quickstart` uses so Discover /
+# Heatmap have meaningful breadth on a fresh checkout.
+#
+#   Big Cap additions (31): financials, healthcare, staples, energy,
+#   industrials, communications, semis — sector-diversified beyond the
+#   Tier-2 megacap-tech list. Includes PYPL so the operator can see the
+#   thesis LEAPS context out of the box.
+#
+#   Mid Cap additions (25): high-beta names with liquid weekly options
+#   — fintech, cloud, security, airlines, materials. Cover the
+#   risk-on / risk-off spectrum that the bot's regime classifier needs.
+#
+# `blocked` tickers from config/tickers.yaml (TSLA / BNTX / MRNA /
+# MSTR / GME) are intentionally OUT — they don't IV-mean-revert.
+seed-broad-universe:
+	python scripts/ops/seed_database.py --tickers \
+SPY,QQQ,IWM,XLE,XLF,XLK,XLV,EWZ,GLD,TLT,\
+AAPL,MSFT,AMZN,NVDA,GOOGL,META,AMD,QCOM,MU,\
+BRK-B,V,JPM,JNJ,WMT,PG,MA,UNH,HD,BAC,\
+XOM,CVX,KO,PEP,ABBV,AVGO,COST,MRK,NFLX,ADBE,\
+CRM,ORCL,PYPL,INTC,IBM,T,VZ,DIS,MCD,NKE,BA,\
+SNAP,ROKU,ABNB,SHOP,PLTR,COIN,HOOD,AFRM,NET,DDOG,\
+SNOW,MDB,CRWD,PANW,ZS,FTNT,OKTA,ANET,DAL,UAL,\
+AAL,F,GE,CAT,DE
 
 # Full universe seed — all 280+ curated tickers. Takes several minutes.
 seed-full:
