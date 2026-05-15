@@ -1,5 +1,51 @@
 # VolScope Progress
 
+## Last Session: 2026-05-15 (v0.9.2 — Options-Lab UX overhaul + 7 N+1 fixes + 3D Greeks)
+
+Continuous bug-hunt-loop pass triggered by the operator's "improve
+furhter, debug, perf — push to its best shape, do not stop" mandate.
+Eight commits, each atomically scoped.
+
+**Options Lab UX overhaul (`51354bf`):**
+- 3D Greek surfaces for Δ, Γ, Θ, ν, **Vanna ∂Δ/∂σ**, **Charm ∂Δ/∂t**,
+  **Volga ∂ν/∂σ** — replaces the 2×2 line-grid with a nested-tabs
+  grid of full Plotly Surfaces. Each surface has its own ↺ Reset-
+  view button (uirevision counter bump).
+- Same ↺ Reset-view button now also on the primary Payoff Surface
+  (operator-specific request: prior v0.9.0 "Reset" only reset the
+  spot-range sliders, NOT the camera).
+- Finanzen.net Quick-Stats row + explicit Sizing summary on
+  Options Lab (Pre-Trade already had the stats since v0.9.1).
+- Cache-key staleness fix: `_cached_scenario_matrix` /
+  `_cached_greeks_curves` / new `_cached_greek_surface` were keyed
+  on (template, spot, iv, dte, contracts, r, q) WITHOUT strike or
+  expiry overrides → changing override silently served stale.
+- Visual cohesion: CONTROLS block wrapped in bordered container
+  with explicit "— CONTROLS —" header; results section divided
+  by a horizontal rule with "— RESULTS · <strategy> · <ticker> —"
+  caption.
+- Contracts cap raised 200 → 100 000, DTE max 900 → 2 500.
+
+**Performance — seven N+1 / iterrows fixes:**
+- `5f2ae65` — Pre-Trade + Strategy Builder caps raised, step=7 → 1.
+- `1fc4421` — LWC `_candles_from_close_only` /  `_line_series` /
+  `_regime_shading`: per-row iterrows → vectorised (~12 ms saved
+  per Scope render).
+- `f893909` — Sidebar `_top_movers_snippet`: 842 DuckDB
+  `get_ticker_history` calls per sidebar rerun → 1 bulk
+  `get_recent_for_tickers` query. ~50× speed-up on the production
+  universe.
+- `4aba12f` — Portfolio equity-curve: comment said "Bulk-fetch"
+  but loop was per-ticker; replaced with real bulk fetch.
+- `fc22746` — Scanner `_company_map`: 842 per-ticker
+  `get_company_name` queries → single indexed SELECT.
+- `e8444b4` — Sidebar / regime-header / heatmap: routed three
+  uncached `db.get_all_latest()` calls through the cached helper.
+
+Version bumped to **0.9.2**.
+
+---
+
 ## Last Session: 2026-05-15 (v0.9.1 — synergy wiring + finanzen.net stats + order history + reset)
 
 Same-day continuation of v0.9.0 driven by operator's
