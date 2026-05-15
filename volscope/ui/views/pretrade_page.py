@@ -377,9 +377,9 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
     # ── Maturity slider ──────────────────────────────────────────────
     dte = st.slider(
         "Days to expiry (primary leg)",
-        min_value=14, max_value=180,
+        min_value=1, max_value=900,
         value=int(chosen.target_dte) if chosen.target_dte > 0 else 60,
-        step=7,
+        step=1,
         help="The Pre-Trade card prices Greeks and P&L at this DTE.",
     )
 
@@ -844,10 +844,12 @@ def _render_comparison_view(
         st.warning("All selected strategies are WAIT — nothing to price.")
         return
 
-    # Shared DTE slider
+    # Shared DTE slider — v0.9.2: removed arbitrary 14-180/step-7 cap
+    # so the operator can compare strategies across short weeklies AND
+    # long LEAPS without jumping in 7-day blocks.
     dte = st.slider(
         "Days to expiry (shared across compared strategies)",
-        min_value=14, max_value=180, step=7,
+        min_value=1, max_value=900, step=1,
         value=int(chosen_recs[0].target_dte) if chosen_recs[0].target_dte > 0 else 60,
         key="pretrade_compare_dte",
     )

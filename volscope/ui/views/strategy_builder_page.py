@@ -185,18 +185,21 @@ def render_strategy_builder_page(db, settings: dict | None = None) -> None:
         )
         return
 
-    # Sizing controls
+    # Sizing controls. v0.9.2: caps raised (200 → 100 000, 900d → 2 500d)
+    # for parity with Options Lab and to remove the arbitrary retail-
+    # only ceiling. Operator-side risk discipline is the actual brake.
     s_col1, s_col2, _ = st.columns([1, 1, 4])
     with s_col1:
         contracts = st.number_input(
             "Contracts",
-            min_value=1, max_value=200, value=1, step=1,
+            min_value=1, max_value=100_000, value=1, step=1,
             key="sb_contracts",
         )
     with s_col2:
         dte_override = st.number_input(
             "DTE",
-            min_value=7, max_value=900, value=int(rec.target_dte), step=7,
+            min_value=1, max_value=2_500,
+            value=int(rec.target_dte), step=1,
             key="sb_dte",
             help="Days to expiry for the primary leg.",
         )
