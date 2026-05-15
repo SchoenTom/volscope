@@ -186,6 +186,31 @@ def process_ticker(db: VolScopeDB, ticker: str, today: date) -> bool:
                 )
                 iv_30 = None
 
+    # Fallback chain when today's scrape produced no usable iv_30d.
+    # Without this, transient chain-fetch failures (Yahoo 404, sanity-
+    # check rejection, missing expiries) overwrite yesterday's good value
+    # with NULL — leaving the latest row HV-only and corrupting Heatmap
+    # / Scope / IV-rank displays for that ticker until the next clean
+    # scrape. Order: prior IV (most truthful), HV-YZ × VRP proxy
+    # (continuity), HV-CC × VRP proxy (last resort).
+    iv_30_source = "chain"
+    if iv_30 is None:
+        prev_iv = _previous_iv(db, ticker)
+        if prev_iv is not None:
+            iv_30 = prev_iv
+            iv_30_source = "prior-day"
+            log.info("Fallback: previous iv_30d=%.2f for %s (chain failed)", iv_30, ticker)
+        else:
+            hv_yz_now = hv_block.get("hv_yz_20d")
+            if hv_yz_now is not None:
+                iv_30 = hv_yz_now * 1.12  # matches ticker_resolver._SEED_VRP_MULT
+                iv_30_source = "hv-yz-proxy"
+                log.info("Fallback: hv-yz proxy iv_30d=%.2f for %s", iv_30, ticker)
+            elif hv_20 is not None:
+                iv_30 = hv_20 * 1.12
+                iv_30_source = "hv-cc-proxy"
+                log.info("Fallback: hv-cc proxy iv_30d=%.2f for %s", iv_30, ticker)
+
     iv_history = _iv_history_from_db(db, ticker)
     if iv_30 is not None:
         iv_history = (iv_history + [iv_30])[-DEFAULT_RANK_LOOKBACK:]
