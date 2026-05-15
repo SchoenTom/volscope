@@ -24,12 +24,19 @@ def _simulate_ohlc(n: int, sigma_ann: float, drift_ann: float = 0.0,
                     seed: int = 42) -> pd.DataFrame:
     """Geometric-Brownian-motion daily OHLC simulator.
 
-    Generates open/high/low/close from a continuous-path approximation
-    (5 intraday steps per day → take min/max/last).
+    Generates open/high/low/close from a continuous-path approximation.
+
+    n_intra = 78 (5-minute bars across a 6.5h US session). The Yang-Zhang
+    estimator's Rogers-Satchell intraday component is sensitive to the
+    discretisation of the daily range; a coarse 5-step path systematically
+    under-estimates the true high-low span (the bridge max of a Brownian
+    path between 6 sample points is much smaller than between 79 points).
+    78 was empirically chosen so YZ recovers the true sigma within 5 SE
+    of the n=1260 (5y) MC sample.
     """
     rng = np.random.default_rng(seed)
     dt = 1.0 / 252.0
-    n_intra = 5
+    n_intra = 78
     dt_intra = dt / n_intra
     sigma_intra = sigma_ann * np.sqrt(dt_intra)
     mu_intra = (drift_ann - 0.5 * sigma_ann ** 2) * dt_intra
