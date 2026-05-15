@@ -22,13 +22,25 @@ from volscope.analytics.historical_vol import (  # noqa: E402
     hv_yang_zhang,
 )
 from volscope.analytics.vol_metrics import iv_percentile, iv_rank  # noqa: E402
-from volscope.config import DEFAULT_HV_LONG, DEFAULT_HV_SHORT, DEFAULT_RANK_LOOKBACK  # noqa: E402
+from volscope.config import (  # noqa: E402
+    DEFAULT_HV_LONG,
+    DEFAULT_HV_MATCHED,
+    DEFAULT_HV_SHORT,
+    DEFAULT_RANK_LOOKBACK,
+)
 from volscope.data.database import VolScopeDB  # noqa: E402
 from volscope.data.price_fetcher import fetch_ohlcv  # noqa: E402
 from volscope.data.ticker_universe import all_tickers, sector_of  # noqa: E402
 
 log = logging.getLogger("volscope.seed")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+# Variance Risk Premium multiplier — matches ticker_resolver._SEED_VRP_MULT.
+# IV proxy = Yang-Zhang HV × 1.12; produces a series that visibly differs
+# from the close-to-close HV baseline so the Scope spread chart shows
+# real signal instead of a flat line at zero. Real iv_30d from
+# daily_scrape.py OVERWRITES this proxy when the scraper runs.
+_SEED_VRP_MULT: float = 1.12
 
 
 def seed_ticker(db: VolScopeDB, ticker: str, period: str = "2y") -> int:
@@ -38,12 +50,19 @@ def seed_ticker(db: VolScopeDB, ticker: str, period: str = "2y") -> int:
         return 0
 
     close = df["Close"]
-    hv_s = hv_close_to_close(close, DEFAULT_HV_SHORT)
-    hv_l = hv_close_to_close(close, DEFAULT_HV_LONG)
+    hv_cc_s = hv_close_to_close(close, DEFAULT_HV_SHORT)
+    hv_cc_l = hv_close_to_close(close, DEFAULT_HV_LONG)
     try:
-        hv_yz = hv_yang_zhang(df["Open"], df["High"], df["Low"], df["Close"], DEFAULT_HV_SHORT)
+        hv_yz_s = hv_yang_zhang(df["Open"], df["High"], df["Low"], df["Close"], DEFAULT_HV_SHORT)
     except Exception:
-        hv_yz = pd.Series(index=df.index, dtype=float)
+        hv_yz_s = pd.Series(index=df.index, dtype=float)
+    try:
+        hv_yz_m = hv_yang_zhang(df["Open"], df["High"], df["Low"], df["Close"], DEFAULT_HV_MATCHED)
+    except Exception:
+        hv_yz_m = pd.Series(index=df.index, dtype=float)
+
+    # IV proxy series — YZ × VRP, NOT CC. CC stays as the hv_20d baseline.
+    iv_proxy_series = hv_yz_s * _SEED_VRP_MULT
 
     sector = sector_of(ticker)
     rows = 0
@@ -51,19 +70,49 @@ def seed_ticker(db: VolScopeDB, ticker: str, period: str = "2y") -> int:
         if i < DEFAULT_HV_LONG:
             continue
         d = idx.date() if hasattr(idx, "date") else idx
-        iv_proxy = float(hv_s.iloc[i]) if pd.notna(hv_s.iloc[i]) else None
-        history = hv_s.iloc[max(0, i - DEFAULT_RANK_LOOKBACK) : i].dropna()
+
+        hv_val = float(hv_cc_s.iloc[i]) if pd.notna(hv_cc_s.iloc[i]) else None
+        iv_val = (
+            float(iv_proxy_series.iloc[i])
+            if pd.notna(iv_proxy_series.iloc[i])
+            else None
+        )
+        # Fallback to scaled CC when YZ has no value yet (first window / bad OHLC)
+        if iv_val is None and hv_val is not None:
+            iv_val = hv_val * _SEED_VRP_MULT
+
+        rank_history = iv_proxy_series.iloc[max(0, i - DEFAULT_RANK_LOOKBACK) : i].dropna()
+
+        spread = None
+        if iv_val is not None and hv_val is not None:
+            spread = iv_val - hv_val
+
+        hv_yz_30 = float(hv_yz_m.iloc[i]) if pd.notna(hv_yz_m.iloc[i]) else None
+        spread_matched = None
+        if iv_val is not None and hv_yz_30 is not None:
+            spread_matched = iv_val - hv_yz_30
+
         db.upsert_daily(
             ticker,
             d,
             spot_price=float(close.iloc[i]),
-            iv_30d=iv_proxy,
-            hv_20d=iv_proxy,
-            hv_60d=float(hv_l.iloc[i]) if pd.notna(hv_l.iloc[i]) else None,
-            hv_yz_20d=float(hv_yz.iloc[i]) if pd.notna(hv_yz.iloc[i]) else None,
-            iv_rank=iv_rank(iv_proxy, history.tolist()) if iv_proxy is not None else None,
-            iv_percentile=iv_percentile(iv_proxy, history.tolist()) if iv_proxy is not None else None,
-            iv_hv_spread=0.0 if iv_proxy is not None else None,
+            iv_30d=iv_val,
+            hv_20d=hv_val,
+            hv_60d=float(hv_cc_l.iloc[i]) if pd.notna(hv_cc_l.iloc[i]) else None,
+            hv_yz_20d=float(hv_yz_s.iloc[i]) if pd.notna(hv_yz_s.iloc[i]) else None,
+            hv_yz_30d=hv_yz_30,
+            iv_rank=(
+                iv_rank(iv_val, rank_history.tolist())
+                if iv_val is not None and not rank_history.empty
+                else None
+            ),
+            iv_percentile=(
+                iv_percentile(iv_val, rank_history.tolist())
+                if iv_val is not None and not rank_history.empty
+                else None
+            ),
+            iv_hv_spread=spread,
+            iv_hv_spread_matched=spread_matched,
             sector=sector,
         )
         rows += 1
