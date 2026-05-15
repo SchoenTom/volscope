@@ -688,14 +688,21 @@ def _render_performance_section(st_module, db: VolScopeDB, positions_df: pd.Data
     import plotly.graph_objects as go
     from volscope.ui.styles.theme import rgba
 
-    # Bulk-fetch history per ticker
+    # v0.9.2 — actually bulk-fetch (the prior implementation was a
+    # per-ticker loop despite the comment, which meant 1 DuckDB call
+    # per position-ticker on every Portfolio render). Two years of
+    # daily history is enough for every entry-date in the live
+    # bot_trades + positions corpus.
     tickers = sorted({str(t) for t in positions_df.get("ticker", []) if pd.notna(t)})
     history_by_ticker: dict[str, pd.DataFrame] = {}
-    for t in tickers:
+    if tickers:
         try:
-            history_by_ticker[t] = db.get_ticker_history(t)
-        except Exception:
-            history_by_ticker[t] = pd.DataFrame()
+            history_by_ticker = db.get_recent_for_tickers(tickers, lookback_days=730)
+        except Exception:                                      # noqa: BLE001
+            history_by_ticker = {}
+    # Backfill empty entries so the downstream code never KeyErrors.
+    for t in tickers:
+        history_by_ticker.setdefault(t, pd.DataFrame())
 
     perf = compute_portfolio_performance(positions_df, history_by_ticker)
     if perf.equity_curve.empty:
