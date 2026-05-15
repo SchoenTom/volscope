@@ -269,50 +269,120 @@ CUSTOM_CSS = f"""
         background: transparent !important;
     }}
     /* Floating "open sidebar" button (visible when sidebar is
-       collapsed) — pinned top-left so it is never clipped regardless
-       of where Streamlit currently mounts it in the DOM. */
+       collapsed). v0.9.4 — moved from top-left to a more discreet
+       position on the LEFT edge, vertically centered. Operator
+       feedback: the top-left spot conflicted with the ghost
+       "keyboard_double_arrow_right" text from the Material Symbols
+       font when the CDN was slow. We now render a clean glyph via
+       ::before regardless of font load state, and the element sits
+       out of the headline-stats area. */
     [data-testid="collapsedControl"],
     [data-testid="stSidebarCollapsedControl"] {{
         position: fixed !important;
-        top: 8px !important;
-        left: 8px !important;
+        top: 50% !important;
+        left: 0 !important;
+        transform: translateY(-50%) !important;
         display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         visibility: visible !important;
-        opacity: 1 !important;
+        opacity: 0.85 !important;
         z-index: 9999 !important;
         background: {COLORS['surface']} !important;
         border: 1px solid {COLORS['border']} !important;
-        border-radius: 6px !important;
-        padding: 6px 8px !important;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+        border-left: none !important;
+        border-radius: 0 6px 6px 0 !important;
+        padding: 10px 6px !important;
+        width: 24px !important;
+        height: 36px !important;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.35) !important;
         pointer-events: auto !important;
+        cursor: pointer !important;
+        /* Kill ALL inner text — the Material-Symbols ligature, any
+           <span> the platform inserts, etc. We replace it with a
+           single CSS chevron via ::after on the container. */
+        font-size: 0 !important;
+        color: transparent !important;
+    }}
+    [data-testid="collapsedControl"] *,
+    [data-testid="stSidebarCollapsedControl"] * {{
+        font-size: 0 !important;
+        color: transparent !important;
+        line-height: 0 !important;
+    }}
+    [data-testid="collapsedControl"]::after,
+    [data-testid="stSidebarCollapsedControl"]::after {{
+        content: "›";
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 18px !important;
+        color: {COLORS['accent']} !important;
+        line-height: 1 !important;
+        font-weight: 700 !important;
     }}
     [data-testid="collapsedControl"]:hover,
     [data-testid="stSidebarCollapsedControl"]:hover {{
         border-color: {COLORS['accent']} !important;
+        opacity: 1 !important;
     }}
+    /* In case the SVG ever does render, keep it clean — but the
+       text-nuke above takes precedence for the broken-CDN case. */
     [data-testid="collapsedControl"] svg,
     [data-testid="stSidebarCollapsedControl"] svg {{
-        color: {COLORS['accent']} !important;
-        fill: {COLORS['accent']} !important;
-        width: 16px !important;
-        height: 16px !important;
+        display: none !important;
     }}
-    /* Sidebar collapse chevron (the one inside the open sidebar) —
-       make it bigger + brighter so operators see it before clicking. */
+    /* Sidebar collapse chevron (the one inside the open sidebar).
+       Same text-nuke + ::after replacement strategy as the floating
+       open-button so a slow Material-Symbols CDN never leaks the raw
+       "keyboard_double_arrow_left" ligature text. */
     [data-testid="stSidebarCollapseArrow"],
     [data-testid="stSidebarCollapseButton"],
     button[kind="header"] {{
         display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         visibility: visible !important;
         opacity: 1 !important;
+        position: relative !important;
+        font-size: 0 !important;
+        color: transparent !important;
+    }}
+    [data-testid="stSidebarCollapseArrow"] *,
+    [data-testid="stSidebarCollapseButton"] *,
+    button[kind="header"] * {{
+        font-size: 0 !important;
+        color: transparent !important;
+        line-height: 0 !important;
+    }}
+    [data-testid="stSidebarCollapseArrow"]::after,
+    [data-testid="stSidebarCollapseButton"]::after,
+    button[kind="header"]::after {{
+        content: "‹";
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 18px !important;
         color: {COLORS['accent']} !important;
+        line-height: 1 !important;
+        font-weight: 700 !important;
+    }}
+    /* If the SVG renders, prefer it over the ::after fallback by
+       hiding the fallback when an svg child exists. */
+    [data-testid="stSidebarCollapseArrow"]:has(svg)::after,
+    [data-testid="stSidebarCollapseButton"]:has(svg)::after,
+    button[kind="header"]:has(svg)::after {{
+        content: none !important;
+    }}
+    [data-testid="stSidebarCollapseArrow"] svg,
+    [data-testid="stSidebarCollapseButton"] svg,
+    button[kind="header"] svg {{
+        color: {COLORS['accent']} !important;
+        fill: {COLORS['accent']} !important;
+        width: 18px !important;
+        height: 18px !important;
+        opacity: 1 !important;
     }}
     [data-testid="stSidebarCollapseArrow"]:hover,
     [data-testid="stSidebarCollapseButton"]:hover,
     button[kind="header"]:hover {{
-        color: {COLORS['accent']} !important;
-        background: rgba(0, 212, 170, 0.08) !important;
+        background: rgba(0, 212, 170, 0.12) !important;
     }}
 
     /* ── IBKR-Density Layout ────────────────────────────────────────────
