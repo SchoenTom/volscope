@@ -127,10 +127,20 @@ def _iv_cap_for(ticker: str, sector: str | None) -> float:
 
 def _previous_iv(db: VolScopeDB, ticker: str) -> float | None:
     """Most recent non-null iv_30d for this ticker, or None."""
+    return _previous_value(db, ticker, "iv_30d")
+
+
+def _previous_value(db: VolScopeDB, ticker: str, column: str) -> float | None:
+    """Most recent non-null value in <column> for this ticker, or None.
+
+    Used by the per-field NULL-fallback so transient chain-fetch
+    failures cannot wipe out yesterday's iv_60d / iv_90d / iv_180d /
+    iv_skew_25d / put_call_ratio with NULL.
+    """
     hist = db.get_ticker_history(ticker)
-    if hist.empty or "iv_30d" not in hist.columns:
+    if hist.empty or column not in hist.columns:
         return None
-    non_null = hist["iv_30d"].dropna()
+    non_null = hist[column].dropna()
     if non_null.empty:
         return None
     try:
@@ -221,20 +231,37 @@ def process_ticker(db: VolScopeDB, ticker: str, today: date) -> bool:
     spread_info = iv_hv_spread(iv_30, hv_20) if iv_30 is not None and hv_20 is not None else {}
     spread = spread_info.get("spread")
 
+    # Per-field NULL-fallback for term-structure + sentiment columns.
+    # Same pattern as iv_30d: a chain-fetch failure (Yahoo 404, missing
+    # expiry, sanity-rejected solver result) should not overwrite a
+    # clean prior-day value with NULL. Unlike iv_30d we do NOT
+    # synthesise from HV — these columns are derived from the chain
+    # itself, so there is no sane proxy; leaving the prior-day value
+    # in place keeps the term-structure chart continuous.
+    iv_60d = snap.get("iv_60d") or _previous_value(db, ticker, "iv_60d")
+    iv_90d = snap.get("iv_90d") or _previous_value(db, ticker, "iv_90d")
+    iv_180d = snap.get("iv_180d") or _previous_value(db, ticker, "iv_180d")
+    iv_skew_25d = snap.get("iv_skew_25d")
+    if iv_skew_25d is None:
+        iv_skew_25d = _previous_value(db, ticker, "iv_skew_25d")
+    put_call_ratio = snap.get("put_call_ratio")
+    if put_call_ratio is None:
+        put_call_ratio = _previous_value(db, ticker, "put_call_ratio")
+
     row = {
         "spot_price": snap.get("spot_price"),
         "iv_30d": iv_30,
-        "iv_60d": snap.get("iv_60d"),
-        "iv_90d": snap.get("iv_90d"),
-        "iv_180d": snap.get("iv_180d"),
-        "iv_skew_25d": snap.get("iv_skew_25d"),
+        "iv_60d": iv_60d,
+        "iv_90d": iv_90d,
+        "iv_180d": iv_180d,
+        "iv_skew_25d": iv_skew_25d,
         "hv_20d": hv_20,
         "hv_60d": hv_block.get("hv_60d"),
         "hv_yz_20d": hv_block.get("hv_yz_20d"),
         "iv_rank": rank,
         "iv_percentile": pct,
         "iv_hv_spread": spread,
-        "put_call_ratio": snap.get("put_call_ratio"),
+        "put_call_ratio": put_call_ratio,
         "total_call_volume": snap.get("total_call_volume"),
         "total_put_volume": snap.get("total_put_volume"),
         "total_open_interest": snap.get("total_open_interest"),
