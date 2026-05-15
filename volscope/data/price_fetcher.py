@@ -14,6 +14,10 @@ def fetch_ohlcv(ticker: str, period: str = "2y") -> pd.DataFrame:
     """
     Fetch OHLCV data for `ticker` over `period`. Always returns a DataFrame with
     columns Open/High/Low/Close/Volume, empty on failure.
+
+    Uses the safe_history wrapper which enforces a 12-second wall-clock
+    timeout — without it a slow Yahoo response can hang the caller
+    indefinitely (yfinance 1.3 has no built-in timeout).
     """
     try:
         import yfinance as yf
@@ -21,13 +25,10 @@ def fetch_ohlcv(ticker: str, period: str = "2y") -> pd.DataFrame:
         log.error("yfinance import failed: %s", exc)
         return pd.DataFrame(columns=_EMPTY_COLS)
 
-    try:
-        # auto_adjust=True folds splits and dividends into prices so close-to-close
-        # log-returns do not contain fake ex-day jumps that would inflate HV.
-        data = yf.Ticker(ticker).history(period=period, auto_adjust=True)
-    except Exception as exc:
-        log.warning("yfinance history failed for %s: %s", ticker, exc)
-        return pd.DataFrame(columns=_EMPTY_COLS)
+    from volscope.data.yfinance_safe import safe_history
+    # auto_adjust=True folds splits and dividends into prices so close-to-close
+    # log-returns do not contain fake ex-day jumps that would inflate HV.
+    data = safe_history(yf.Ticker(ticker), period=period, auto_adjust=True)
 
     if data is None or data.empty:
         return pd.DataFrame(columns=_EMPTY_COLS)

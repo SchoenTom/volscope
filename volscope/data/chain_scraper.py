@@ -70,10 +70,16 @@ def fetch_chain(ticker: str, *, max_expiries: int | None = None) -> list[ChainRo
         expiries = list(tk.options or [])
         if max_expiries is not None:
             expiries = expiries[:max_expiries]
+        from volscope.data.yfinance_safe import safe_option_chain
         for exp_str in expiries:
             try:
                 exp = pd.Timestamp(exp_str)
-                chain = tk.option_chain(exp_str)
+                # 12 s per-expiry budget; without it a single slow
+                # expiry hangs the whole chain fetch and 50+ expiries
+                # for SPY can stall daily_scrape for 10+ minutes.
+                chain = safe_option_chain(tk, exp_str, timeout=12.0)
+                if chain is None:
+                    continue
                 for df, right in ((chain.calls, "C"), (chain.puts, "P")):
                     if df is None or df.empty:
                         continue
