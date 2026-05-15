@@ -502,8 +502,14 @@ def render_rotation_page(db: VolScopeDB, settings: dict) -> None:
     sector_hist = pd.DataFrame()
     try:
         sector_hist = db.get_sector_history()
-    except Exception:
-        pass
+    except Exception as exc:                                        # noqa: BLE001
+        # Falls back to direct daily_vol query below; log so the
+        # operator can tell the difference between "sector_daily table
+        # never populated" (normal on fresh DB) and "DB corruption".
+        import logging as _lg
+        _lg.getLogger("volscope.ui.rotation").warning(
+            "get_sector_history() failed; falling back to direct query: %s", exc,
+        )
 
     if sector_hist.empty:
         try:

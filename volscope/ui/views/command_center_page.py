@@ -839,8 +839,18 @@ def _render_alerts_expander(
                                 message=f.message,
                             )
                             dispatch_alert(f)
-                        except Exception:
-                            pass
+                        except Exception as _alert_exc:                # noqa: BLE001
+                            # Telegram down, malformed rule, persistence
+                            # error — operator must know a real alert
+                            # didn't fire. Log loud (warning level), do
+                            # NOT crash the page.
+                            import logging as _lg
+                            _lg.getLogger("volscope.ui.command").warning(
+                                "dispatch_alert failed for ticker=%s msg=%s: %s",
+                                getattr(f, "ticker", "?"),
+                                str(getattr(f, "message", ""))[:80],
+                                _alert_exc,
+                            )
 
         st.write("")
 

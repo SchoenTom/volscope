@@ -261,8 +261,11 @@ def render_flow_page(db: VolScopeDB, settings: dict) -> None:
     sector_hist = pd.DataFrame()
     try:
         sector_hist = db.get_sector_history()
-    except Exception:
-        pass
+    except Exception as exc:                                        # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.flow").warning(
+            "get_sector_history() failed; falling back to direct query: %s", exc,
+        )
 
     if sector_hist.empty:
         try:
