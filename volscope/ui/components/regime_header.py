@@ -76,8 +76,14 @@ def render_regime_header(db: VolScopeDB) -> None:
     Failures are silent — the bar simply renders empty hyphens rather
     than crash the page header.
     """
+    # v0.9.2 perf: route through the cached helper so the 32-px
+    # header strip on Command / Discover / Scope / Pre-Trade / Bot
+    # doesn't refetch the full universe snapshot on every page rerun.
     try:
-        latest = db.get_all_latest()
+        from volscope.ui.components.cached_data import (
+            get_all_latest_cached, make_cache_key,
+        )
+        latest = get_all_latest_cached(make_cache_key(db), db)
     except Exception:                                          # noqa: BLE001
         latest = pd.DataFrame()
 

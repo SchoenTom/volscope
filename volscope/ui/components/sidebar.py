@@ -494,9 +494,16 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
                 page = p
 
     # ── Page-aware context block ────────────────────────────────────
+    # v0.9.2 perf: cache via the existing get_all_latest_cached
+    # helper so the 842-row snapshot isn't refetched on every nav-
+    # button click. 60-second TTL — fresh scrape invalidates via
+    # the make_cache_key(db) date string.
     try:
-        latest = db.get_all_latest()
-    except Exception:
+        from volscope.ui.components.cached_data import (
+            get_all_latest_cached, make_cache_key,
+        )
+        latest = get_all_latest_cached(make_cache_key(db), db)
+    except Exception:                                          # noqa: BLE001
         latest = pd.DataFrame()
     _render_page_context(st, page, ticker, db, latest)
 
