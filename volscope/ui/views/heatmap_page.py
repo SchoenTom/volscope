@@ -212,14 +212,41 @@ def _build_treemap_figure(
         cmid = None
         colorbar_title = "IV Percentile"
 
+    # Explicit sector nodes — Plotly emits a "Multiple implied roots"
+    # warning if we only pass ticker rows with parent=sector_name (the
+    # sectors themselves get implicitly created and Plotly can't decide
+    # which is the chart root). Building the hierarchy explicitly:
+    #   - sector rows: label=sector, parent="" (root), value=sum of
+    #     children, color=median percentile of the sector
+    #   - ticker rows: label=ticker, parent=sector
+    sector_groups = working.groupby("sector", sort=False)
+    sector_labels = list(sector_groups.groups.keys())
+    sector_values = [float(g["_size"].sum()) for _, g in sector_groups]
+    sector_colors = [float(g["_color"].median()) for _, g in sector_groups]
+    sector_parents = [""] * len(sector_labels)
+    sector_hover = [
+        f"<b>{s}</b><br>{len(g)} tickers<br>"
+        f"OI: {int(g['_size'].sum()):,}<br>"
+        f"Median {colorbar_title}: {g['_color'].median():.1f}"
+        for s, g in sector_groups
+    ]
+    sector_text = sector_labels
+
+    labels   = sector_labels                  + working["ticker"].tolist()
+    parents  = sector_parents                 + working["sector"].tolist()
+    values   = sector_values                  + working["_size"].tolist()
+    colors   = sector_colors                  + working["_color"].tolist()
+    texts    = sector_text                    + working["ticker"].tolist()
+    hovers   = sector_hover                   + working["_hover"].tolist()
+
     fig = go.Figure(
         go.Treemap(
-            labels=working["ticker"].tolist(),
-            parents=working["sector"].tolist(),
-            values=working["_size"].tolist(),
+            labels=labels,
+            parents=parents,
+            values=values,
             branchvalues="total",
             marker=dict(
-                colors=working["_color"].tolist(),
+                colors=colors,
                 colorscale=colorscale,
                 cmin=color_range[0],
                 cmax=color_range[1],
@@ -237,8 +264,8 @@ def _build_treemap_figure(
                     tickfont=dict(family=_MONO, size=9, color=COLORS["muted"]),
                 ),
             ),
-            text=working["ticker"].tolist(),
-            customdata=working["_hover"].tolist(),
+            text=texts,
+            customdata=hovers,
             hovertemplate="%{customdata}<extra></extra>",
             textfont=dict(family=_MONO, size=11, color="#0a0b14"),
             tiling=dict(packing="squarify", pad=2),
