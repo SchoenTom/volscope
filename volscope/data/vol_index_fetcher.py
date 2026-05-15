@@ -85,6 +85,13 @@ def fetch_vol_index_history_with_source(
                     return s, sym
         except Exception as exc:
             log.debug("fetch_vol_index_history(%s) failed: %s", sym, exc)
+    # All symbols in the fallback chain failed — warn so the operator
+    # knows why a vol-index tile renders empty. Debug-per-symbol stays
+    # quiet because the chain expects some failures.
+    log.warning(
+        "fetch_vol_index_history: all symbols failed (%s) — tile will be empty",
+        ", ".join(symbols),
+    )
     return pd.Series(dtype=float), ""
 
 

@@ -458,17 +458,27 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     st.session_state["vs_last_valid_page"] = current_page
 
     # Live alert counter — cached for 60 s so each rerun is cheap.
+    # Failures are logged (not silenced) so an operator-visible "0
+    # alerts" doesn't mask a broken scanner (DB lock / bad query / etc).
     @st.cache_data(ttl=60, show_spinner=False)
     def _cached_alert_count(_db_marker: str) -> int:
         try:
             from volscope.analytics.alerts_scanner import scan_alerts
             return len(scan_alerts(db))
-        except Exception:
+        except Exception as exc:                                # noqa: BLE001
+            import logging as _lg
+            _lg.getLogger("volscope.ui.sidebar").warning(
+                "scan_alerts failed; alert count rendered as 0: %s", exc,
+            )
             return 0
 
     try:
         _alert_n = _cached_alert_count(str(getattr(db, "path", "default")))
-    except Exception:
+    except Exception as exc:                                    # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.sidebar").warning(
+            "alert-count cache call failed: %s", exc,
+        )
         _alert_n = 0
 
     page = current_page
