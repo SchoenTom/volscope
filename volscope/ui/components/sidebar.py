@@ -43,26 +43,34 @@ def _regime_label(latest: pd.DataFrame) -> tuple[str, str]:
 
 
 def _top_movers_snippet(db, latest: pd.DataFrame, n: int = 3) -> list[tuple[str, float]]:
-    """Return up to `n` (ticker, abs_iv_change) tuples for the biggest movers."""
+    """Return up to `n` (ticker, abs_iv_change) tuples for the biggest movers.
+
+    v0.9.2 fix: the previous implementation called
+    ``db.get_ticker_history(t)`` once per ticker — at 842 tickers
+    in the universe that's 842 separate DuckDB queries on every
+    sidebar rerun. Now uses the existing ``get_recent_for_tickers``
+    bulk-fetch with ``lookback_days=2`` → a single query that
+    returns all the rows we need. ~50× faster on the production
+    universe.
+    """
     if latest is None or latest.empty or "ticker" not in latest.columns:
         return []
+    tickers = [str(t) for t in latest["ticker"].dropna().tolist()]
+    if not tickers:
+        return []
+    try:
+        bulk = db.get_recent_for_tickers(tickers, lookback_days=2)
+    except Exception:                                          # noqa: BLE001
+        return []
     out: list[tuple[str, float]] = []
-    for _, row in latest.iterrows():
-        t = row.get("ticker")
-        if t is None:
+    for t, hist in bulk.items():
+        if hist is None or hist.shape[0] < 2 or "iv_30d" not in hist.columns:
             continue
-        try:
-            hist = db.get_ticker_history(t).tail(2)
-        except Exception:
-            continue
-        if hist.shape[0] < 2 or "iv_30d" not in hist.columns:
-            continue
-        iv_now = hist["iv_30d"].iloc[-1]
+        iv_now  = hist["iv_30d"].iloc[-1]
         iv_prev = hist["iv_30d"].iloc[-2]
         if pd.isna(iv_now) or pd.isna(iv_prev):
             continue
-        change = float(iv_now) - float(iv_prev)
-        out.append((str(t), change))
+        out.append((t, float(iv_now) - float(iv_prev)))
     out.sort(key=lambda p: abs(p[1]), reverse=True)
     return out[:n]
 
