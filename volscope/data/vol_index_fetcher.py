@@ -67,10 +67,17 @@ def fetch_vol_index_history_with_source(
         log.warning("yfinance import failed: %s", exc)
         return pd.Series(dtype=float), ""
 
+    # yfinance prints "$SYM: possibly delisted" + raw HTTP errors directly
+    # to stdout/stderr on failure. The fallback chain handles failures
+    # cleanly, so we silence the noise.
+    import contextlib
+    import io
+
     symbols = [symbol] if isinstance(symbol, str) else list(symbol)
     for sym in symbols:
         try:
-            hist = yf.Ticker(sym).history(period=period, auto_adjust=True)
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                hist = yf.Ticker(sym).history(period=period, auto_adjust=True)
             if hist is not None and not hist.empty and "Close" in hist.columns:
                 s = hist["Close"].dropna()
                 if not s.empty:
