@@ -58,20 +58,28 @@ def _signed_dollar(v: float, *, decimals: int = 0) -> str:
 # the user drags the IV slider only slightly. Each helper returns a
 # plain numpy ndarray; the view layer wraps it into a Plotly trace.
 
+# v0.9.2 cache-key fix: ``override_strike`` and ``override_expiry``
+# were missing from the cache signature, so changing the operator's
+# strike override didn't bust the cache and the Scenario Matrix /
+# Greeks Surface kept serving stale results. Both are now first-
+# class cache-key inputs. ``override_expiry_iso`` is the canonical
+# ISO string (date objects are not hashable by Streamlit's cache).
+
 @st.cache_data(show_spinner=False, ttl=600)
 def _cached_scenario_matrix(
     template_name: str, spot: float, iv: float, dte: int, contracts: int,
     r: float, q: float,
+    override_strike: float | None = None,
+    override_expiry_iso: str | None = None,
 ) -> np.ndarray:
-    """Build the spot×IV scenario heatmap once per parameter combo.
-
-    The 9×5 = 45 cells each cost a net_premium recompute (~0.18 ms
-    apiece). Caching turns slider-drag latency from ~10 ms → 0 ms after
-    the first slide.
-    """
+    """Build the spot×IV scenario heatmap once per parameter combo."""
     template = TEMPLATES[template_name]
+    from datetime import date as _date
+    exp_obj = _date.fromisoformat(override_expiry_iso) if override_expiry_iso else None
     mat = template.materialize(
         ticker="_cache", spot=spot, iv_pct=iv, dte=dte, contracts=contracts,
+        override_strike=override_strike,
+        override_expiry=exp_obj,
     )
     T = max(1, dte) / 365.0
     z = np.zeros((len(_SCENARIO_SPOT_SHIFTS), len(_SCENARIO_IV_SHIFTS)))
@@ -88,6 +96,8 @@ def _cached_scenario_matrix(
 def _cached_greeks_curves(
     template_name: str, spot: float, iv: float, dte: int, contracts: int,
     r: float, q: float, n_points: int = 60,
+    override_strike: float | None = None,
+    override_expiry_iso: str | None = None,
 ) -> dict[str, list[float]]:
     """Pre-compute the four greeks curves for the Surface tab.
 
@@ -97,8 +107,12 @@ def _cached_greeks_curves(
     payload is JSON-serialisable.
     """
     template = TEMPLATES[template_name]
+    from datetime import date as _date
+    exp_obj = _date.fromisoformat(override_expiry_iso) if override_expiry_iso else None
     mat = template.materialize(
         ticker="_cache", spot=spot, iv_pct=iv, dte=dte, contracts=contracts,
+        override_strike=override_strike,
+        override_expiry=exp_obj,
     )
     S = np.linspace(spot * 0.7, spot * 1.3, n_points)
     T = max(1, dte) / 365.0
@@ -124,11 +138,29 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
     from volscope.ui.components.data_freshness_bar import render_data_freshness_bar
     render_data_freshness_bar(db, compact=True)
 
-    # ── Quick-start tiles (OptionStrat / Unusual Whales style) ──────
-    _render_quickstart_tiles()
+    # ── CONTROLS BLOCK (v0.9.2 visual cohesion) ─────────────────────
+    # Operator feedback: "der obere Teil gehört irgendwie nicht zum
+    # unteren". Group all the input widgets (quick-start tiles,
+    # expiry picker, builder strip, plot-range expander) inside one
+    # bordered container so they visually read as the "controls"
+    # half of the page. The results section below (payoff, metrics,
+    # tabs) is separated by an explicit horizontal divider with a
+    # "RESULTS" caption so the user always knows which half of the
+    # page they're editing.
+    render_html(
+        st,
+        f'<div style="margin:6px 0 4px 0;'
+        f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        f'color:{COLORS["muted"]};letter-spacing:0.04em;font-weight:600;'
+        f'text-transform:uppercase;">— CONTROLS —</div>',
+    )
 
-    # ── Builder strip ───────────────────────────────────────────────
-    cfg = _render_builder_strip(db)
+    with st.container(border=True):
+        # ── Quick-start tiles ──
+        _render_quickstart_tiles()
+        # ── Builder strip ──
+        cfg = _render_builder_strip(db)
+
     if cfg is None:
         return
     ticker = cfg["ticker"]
@@ -155,6 +187,17 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
     except Exception as exc:
         st.error(f"Could not materialise legs: {exc}")
         return
+
+    # ── RESULTS divider (v0.9.2 visual cohesion) ─────────────────────
+    render_html(
+        st,
+        f'<div style="margin:18px 0 8px 0;padding-top:14px;'
+        f'border-top:1px solid {COLORS["border"]};'
+        f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
+        f'color:{COLORS["muted"]};letter-spacing:0.04em;font-weight:600;'
+        f'text-transform:uppercase;">— RESULTS · {template_name} · {ticker} ·'
+        f' {contracts:,} contracts · {dte}d DTE —</div>',
+    )
 
     # ── Spot-range sliders (v0.9.0) ─────────────────────────────────
     # Operator wanted absolute control over the x-axis: default 60%-
@@ -693,13 +736,22 @@ def _render_builder_strip(db) -> Optional[dict]:
             help="Pick one of the Quick-Start tiles above for sane defaults.",
         )
     with c3:
+        # v0.9.2: cap raised from 200 to 100 000 — the prior limit was
+        # an arbitrary "retail trader" bound. Hedge-fund-sized sizes
+        # are now legal at the engine level; operator's own sizing
+        # discipline (Kelly fraction in risk-thresholds.yaml) is the
+        # actual brake.
         contracts = st.number_input(
-            "Contracts", min_value=1, max_value=200, value=1, step=1, key="ol_ctr",
+            "Contracts", min_value=1, max_value=100_000,
+            value=1, step=1, key="ol_ctr",
             help="Multiplier applied to every leg. 1 contract = 100 shares of underlying.",
         )
     with c4:
+        # v0.9.2: DTE max raised from 900 to 2 500 (≈ 7 years) so
+        # LEAPS up to the longest-dated published series fit.
         dte = st.number_input(
-            "DTE", min_value=7, max_value=900, value=60, step=7, key="ol_dte",
+            "DTE", min_value=1, max_value=2_500,
+            value=60, step=1, key="ol_dte",
             help=tooltip("DTE") or "Days to Expiration.",
         )
 
@@ -931,6 +983,27 @@ def _render_payoff_surface(
                  "the payoff surface.")
         return
 
+    # v0.9.2 — Camera-position reset.
+    # Plotly's 3D scene keeps the user's camera (rotation/zoom) across
+    # reruns via the ``uirevision`` mechanism: same uirevision string
+    # → camera preserved. Mutating the string forces a reset to the
+    # default camera. The "↺ Reset view" button bumps a counter in
+    # session_state which we mix into uirevision so the next render
+    # has a fresh revision.
+    rev_col, _ = st.columns([1, 7])
+    with rev_col:
+        if st.button(
+            "↺ Reset view",
+            key="ol_payoff_surface_view_reset",
+            use_container_width=True,
+            help="Snap the 3D camera back to the default angle.",
+        ):
+            st.session_state["ol_payoff_surface_view_rev"] = (
+                int(st.session_state.get("ol_payoff_surface_view_rev", 0)) + 1
+            )
+            st.rerun()
+    _view_rev = int(st.session_state.get("ol_payoff_surface_view_rev", 0))
+
     S = np.linspace(spot * spot_low_mult, spot * spot_high_mult, n_spot)
     # Time axis: 0 days remaining = expiry; ``dte`` = today.
     # Render in days-from-today rather than days-to-expiry so the
@@ -1057,6 +1130,11 @@ def _render_payoff_surface(
             camera=dict(eye=dict(x=1.7, y=1.7, z=0.9)),
             aspectratio=dict(x=1.4, y=1.0, z=0.7),
         ),
+        # Mix the operator-controlled revision counter into uirevision
+        # so the "↺ Reset view" button cleanly invalidates the saved
+        # camera. Same uirevision across renders ⇒ Plotly preserves
+        # the user's rotation/zoom; new uirevision ⇒ camera resets.
+        uirevision=f"payoff_surface_rev_{_view_rev}",
         height=520,
         margin=dict(l=0, r=0, t=44, b=0),
     )
@@ -1105,62 +1183,253 @@ def _render_metrics_row(mat, spot, iv, r, q, dte):
     ]
     render_html(st, '<div class="volscope-ibkr-row">' + "".join(greek_cells) + "</div>")
 
+    # v0.9.2: Finanzen.net-style quick-stats row + sizing display.
+    # Was operator-requested on Pre-Trade earlier; same operator now
+    # asked why the strip wasn't on Options-Lab too.
+    try:
+        from volscope.analytics.option_metrics import compute_all
+        # Pick the first leg as the "reference leg" for the quick-stats
+        # — multi-leg structures have meaningful Aufgeld / Hebel only
+        # at the per-leg level. The strip carries a small "leg N of M"
+        # caption so the operator knows which leg is being reported.
+        if mat.legs:
+            leg0 = mat.legs[0]
+            leg_premium = float(getattr(leg0, "entry_premium", 0.0) or 0.0)
+            leg_strike  = float(leg0.strike)
+            opt_type    = "call" if str(leg0.option_type).lower().startswith("c") else "put"
+            qs = compute_all(
+                spot=float(spot), strike=leg_strike, premium=leg_premium,
+                option_type=opt_type, delta=float(g["delta"]), dte=int(dte),
+                ratio=100.0,
+            )
+            qs_cells = [
+                _ibkr_cell("AUFGELD",      f"{qs.aufgeld:+.2f}%"),
+                _ibkr_cell("AUFGELD P.A.", f"{qs.aufgeld_pa:+.1f}%"),
+                _ibkr_cell("HEBEL",        f"{qs.leverage:,.1f}×"),
+                _ibkr_cell("OMEGA",        f"{qs.omega:,.2f}"),
+                _ibkr_cell("BREAK-EVEN",   f"${qs.break_even:,.2f}"),
+                _ibkr_cell("BE MOVE",      f"{qs.break_even_pct:+.2f}%"),
+            ]
+            render_html(
+                st,
+                '<div class="volscope-ibkr-row">' + "".join(qs_cells) + "</div>"
+                + f'<div style="font-family:JetBrains Mono,monospace;'
+                f'font-size:9px;color:{COLORS["muted"]};margin:2px 0 6px 4px;">'
+                f'Reference leg 1 of {len(mat.legs)} · '
+                f'{opt_type.upper()} K=${leg_strike:,.2f} · '
+                f'premium ${leg_premium:.2f}'
+                f'</div>'
+            )
+    except Exception:                                          # noqa: BLE001
+        pass
+
+    # Sizing summary — explicit anteilsberechnung the operator asked
+    # to be made clearer. Capital at risk = |net| × contracts × 100
+    # (for long structures with positive net debit, that's the full
+    # premium; for short structures the BPR / margin is the broker's
+    # answer, but the BSM-net is a reasonable proxy in paper-mode).
+    try:
+        n_contracts = int(mat.legs[0].contracts) if mat.legs else 1
+        capital_at_risk = abs(net) * n_contracts * 100.0
+        notional_value  = float(spot) * n_contracts * 100.0
+        sizing_cells = [
+            _ibkr_cell("CONTRACTS",       f"{n_contracts:,}"),
+            _ibkr_cell("CAPITAL @ RISK",  f"${capital_at_risk:,.0f}"),
+            _ibkr_cell("NOTIONAL",        f"${notional_value:,.0f}"),
+            _ibkr_cell("LEVERAGE (NOTIONAL/RISK)",
+                       f"{(notional_value / max(1.0, capital_at_risk)):,.1f}×"),
+        ]
+        render_html(
+            st,
+            '<div class="volscope-ibkr-row">' + "".join(sizing_cells) + "</div>",
+        )
+    except Exception:                                          # noqa: BLE001
+        pass
+
 
 # ── Tabs ───────────────────────────────────────────────────────────
 
-def _render_greeks_surface(mat, spot, iv, r, q, dte):
-    """2×2 grid: Δ Γ Θ ν vs. underlying.
+@st.cache_data(show_spinner=False, ttl=600)
+def _cached_greek_surface(
+    template_name: str,
+    greek_name: str,
+    spot: float, iv: float, dte: int, contracts: int,
+    r: float, q: float,
+    override_strike: float | None,
+    override_expiry_iso: str | None,
+    *,
+    spot_low: float = 0.70,
+    spot_high: float = 1.30,
+    n_spot: int = 40,
+    n_time: int = 24,
+) -> np.ndarray:
+    """Compute a single Greek over (spot, days_remaining) as a 2-D array.
 
-    Greeks curves cached on (template, spot, iv, dte, contracts, r, q)
-    so slider-dragging the IV doesn't re-evaluate 240 scalar BSM calls.
+    Used by every 3-D Greek-surface render. Cache is keyed on the
+    full materialise-input set INCLUDING strike/expiry overrides
+    (the same staleness fix as the 2-D curves cache).
     """
-    from plotly.subplots import make_subplots
-
-    cached = _cached_greeks_curves(
-        mat.template_name, float(spot), float(iv), int(dte),
-        int(mat.legs[0].contracts), float(r), float(q),
+    template = TEMPLATES[template_name]
+    from datetime import date as _date
+    exp_obj = _date.fromisoformat(override_expiry_iso) if override_expiry_iso else None
+    mat = template.materialize(
+        ticker="_cache", spot=spot, iv_pct=iv, dte=dte, contracts=contracts,
+        override_strike=override_strike, override_expiry=exp_obj,
     )
-    S = cached["S"]
+    S = np.linspace(spot * spot_low, spot * spot_high, n_spot)
+    days_remaining = np.linspace(max(1, dte), 0.5, n_time)
+    Z = np.zeros((n_time, n_spot))
+    for i, dr in enumerate(days_remaining):
+        T_i = max(1e-4, float(dr) / 365.0)
+        for j, s in enumerate(S):
+            try:
+                Z[i, j] = mat.greeks(float(s), iv=iv, r=r, q=q, T=T_i)[greek_name]
+            except (KeyError, Exception):                      # noqa: BLE001
+                Z[i, j] = 0.0
+    return Z
 
-    fig = make_subplots(rows=2, cols=2, subplot_titles=(
-        "Δ Delta", "Γ Gamma", "Θ Theta / day", "ν Vega / 1 % IV",
-    ), vertical_spacing=0.12, horizontal_spacing=0.10)
 
-    plots = [
-        (1, 1, "delta",         "Delta"),
-        (1, 2, "gamma",         "Gamma"),
-        (2, 1, "theta_per_day", "Theta/day ($)"),
-        (2, 2, "vega_per_1pct", "Vega/1% ($)"),
-    ]
-    for row, col, key, _label in plots:
-        fig.add_trace(go.Scatter(
-            x=S, y=cached[key + "_today"],
-            line=dict(color=COLORS["candle_up"], width=2),
-            name="today", showlegend=(row == 1 and col == 1),
-        ), row=row, col=col)
-        fig.add_trace(go.Scatter(
-            x=S, y=cached[key + "_half"],
-            line=dict(color=COLORS["accent2"], width=1.5, dash="dash"),
-            name="50% DTE", showlegend=(row == 1 and col == 1),
-        ), row=row, col=col)
-        fig.add_vline(x=spot, line=dict(color=COLORS["label"], width=1, dash="dot"),
-                      row=row, col=col)
+def _render_one_greek_surface(
+    mat, spot, iv, r, q, dte,
+    *,
+    greek_name: str,
+    title: str,
+    colorscale: list[list],
+    cmid: float | None = 0.0,
+    hover_unit: str = "",
+    height: int = 420,
+    surface_key: str,
+) -> None:
+    """Render a single 3-D Greek surface (spot × DTE → greek)."""
+    _override_strike = float(mat.legs[0].strike) if mat.legs else None
+    _override_expiry = (
+        mat.legs[0].expiry.isoformat() if mat.legs and mat.legs[0].expiry else None
+    )
+    Z = _cached_greek_surface(
+        mat.template_name, greek_name,
+        float(spot), float(iv), int(dte),
+        int(mat.legs[0].contracts) if mat.legs else 1,
+        float(r), float(q),
+        override_strike=_override_strike,
+        override_expiry_iso=_override_expiry,
+    )
+    S = np.linspace(spot * 0.70, spot * 1.30, Z.shape[1])
+    days_remaining = np.linspace(max(1, dte), 0.5, Z.shape[0])
+
+    _view_rev = int(st.session_state.get(f"ol_{surface_key}_view_rev", 0))
+
+    fig = go.Figure(data=[go.Surface(
+        x=S, y=days_remaining, z=Z,
+        colorscale=colorscale,
+        cmid=cmid,
+        contours_z=dict(show=True, usecolormap=True, project_z=True),
+        colorbar=dict(
+            title=dict(text=title,
+                        font=dict(family=_MONO, size=10, color=COLORS["muted"])),
+            thickness=8, len=0.5,
+            tickfont=dict(family=_MONO, size=9, color=COLORS["muted"]),
+        ),
+        opacity=0.92,
+        hovertemplate=(
+            "Spot: $%{x:,.2f}<br>"
+            "Days remaining: %{y:.0f}<br>"
+            f"{title}: %{{z:+.4f}}{hover_unit}<extra></extra>"
+        ),
+    )])
     fig.update_layout(
-        height=480,
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family=_MONO, color=COLORS["text"], size=10),
-        margin=dict(l=12, r=24, t=46, b=20),
-        legend=dict(orientation="h", yanchor="bottom", y=1.04, xanchor="left", x=0,
-                    bgcolor="rgba(0,0,0,0)",
-                    font=dict(family="DM Sans", size=9, color=COLORS["muted"])),
-        hovermode="x unified",
+        title=dict(
+            text=f"{title} surface · {mat.template_name}",
+            font=dict(color=COLORS["label"], size=11, family="DM Sans"),
+            x=0.0, xanchor="left", y=0.97,
+        ),
+        paper_bgcolor=COLORS["bg"],
+        scene=dict(
+            xaxis=dict(title="Spot", backgroundcolor=COLORS["bg"],
+                        gridcolor=COLORS["border"],
+                        tickfont=dict(family=_MONO, size=9, color=COLORS["text"]),
+                        tickformat="$,.0f"),
+            yaxis=dict(title="Days remaining", backgroundcolor=COLORS["bg"],
+                        gridcolor=COLORS["border"],
+                        tickfont=dict(family=_MONO, size=9, color=COLORS["text"])),
+            zaxis=dict(title=title, backgroundcolor=COLORS["bg"],
+                        gridcolor=COLORS["border"],
+                        tickfont=dict(family=_MONO, size=9, color=COLORS["text"])),
+            camera=dict(eye=dict(x=1.7, y=1.7, z=0.9)),
+            aspectratio=dict(x=1.4, y=1.0, z=0.7),
+        ),
+        uirevision=f"{surface_key}_rev_{_view_rev}",
+        height=height,
+        margin=dict(l=0, r=0, t=36, b=0),
     )
-    fig.update_xaxes(gridcolor="rgba(255,255,255,0.03)",
-                     tickfont=dict(family=_MONO, size=9, color=COLORS["label"]),
-                     tickformat="$,.0f")
-    fig.update_yaxes(gridcolor="rgba(255,255,255,0.03)",
-                     tickfont=dict(family=_MONO, size=9, color=COLORS["label"]))
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, use_container_width=True,
+                     config={"displayModeBar": False})
+
+
+def _render_greeks_surface(mat, spot, iv, r, q, dte):
+    """v0.9.2 — Greeks rendered as a sub-tab grid of 3-D surfaces.
+
+    Each Greek is its own surface over (spot, days_remaining):
+
+      • Δ Delta   — directional sensitivity (-1..+1 for vanilla)
+      • Γ Gamma   — Δ-of-Δ: the curvature "gamma wall" around strike
+      • Θ Theta   — time decay ($/day)
+      • ν Vega    — IV sensitivity ($/1 % IV move)
+      • Vanna     — ∂Δ/∂σ — cross-sensitivity of delta to IV moves
+      • Charm     — ∂Δ/∂t — pin-risk near expiry (Delta drift through time)
+      • Volga     — ∂Vega/∂σ — convexity of vega (vol-of-vol exposure)
+
+    Each surface has a per-surface "↺ Reset view" button that
+    invalidates the operator's stored camera (rotation/zoom) and
+    snaps back to the default angle.
+    """
+    sub_tabs = st.tabs([
+        "Δ Delta", "Γ Gamma", "Θ Theta", "ν Vega",
+        "Vanna ∂Δ/∂σ", "Charm ∂Δ/∂t", "Volga ∂ν/∂σ",
+    ])
+
+    surfaces = [
+        ("delta",          "Delta",  [[0, COLORS["candle_down"]], [0.5, COLORS["bg"]], [1, COLORS["candle_up"]]], 0.0,  ""),
+        ("gamma",          "Gamma",  [[0, COLORS["bg"]],          [0.5, COLORS["accent2"]], [1, COLORS["accent"]]], None, ""),
+        ("theta_per_day",  "Theta/day", [[0, COLORS["candle_down"]], [0.5, COLORS["bg"]], [1, COLORS["candle_up"]]], 0.0, " $/day"),
+        ("vega_per_1pct",  "Vega/1%",[[0, COLORS["bg"]],          [0.5, COLORS["accent2"]], [1, COLORS["accent"]]], None, " $/1%IV"),
+        ("vanna",          "Vanna",  [[0, COLORS["candle_down"]], [0.5, COLORS["bg"]], [1, COLORS["candle_up"]]], 0.0,  ""),
+        ("charm",          "Charm",  [[0, COLORS["candle_down"]], [0.5, COLORS["bg"]], [1, COLORS["candle_up"]]], 0.0,  ""),
+        ("volga",          "Volga",  [[0, COLORS["bg"]],          [0.5, COLORS["accent2"]], [1, COLORS["accent"]]], None, ""),
+    ]
+
+    for tab, (key, label, cscale, cmid, unit) in zip(sub_tabs, surfaces):
+        with tab:
+            # Reset-view button per surface (camera-rotation memory is
+            # per-uirevision).
+            rev_col, _ = st.columns([1, 7])
+            with rev_col:
+                if st.button(
+                    "↺ Reset view",
+                    key=f"ol_greek_{key}_reset",
+                    use_container_width=True,
+                    help="Snap the 3D camera back to the default angle.",
+                ):
+                    st.session_state[f"ol_greek_{key}_view_rev"] = (
+                        int(st.session_state.get(f"ol_greek_{key}_view_rev", 0)) + 1
+                    )
+                    st.rerun()
+            try:
+                _render_one_greek_surface(
+                    mat, spot, iv, r, q, dte,
+                    greek_name=key, title=label,
+                    colorscale=cscale, cmid=cmid,
+                    hover_unit=unit,
+                    surface_key=f"greek_{key}",
+                )
+            except Exception as exc:                           # noqa: BLE001
+                # The materialised template may not expose all
+                # second-order greeks (Vanna/Charm/Volga are recent
+                # additions). Show a friendly message rather than
+                # crashing the whole tab.
+                st.info(
+                    f"This template does not yet expose **{label}** — "
+                    f"skip. Detail: {type(exc).__name__}: {exc}",
+                )
 
 
 def _render_scenario_matrix(mat, spot, iv, r, q, dte):
@@ -1169,9 +1438,15 @@ def _render_scenario_matrix(mat, spot, iv, r, q, dte):
     Heavy computation lives in ``_cached_scenario_matrix`` so the
     slider-drag UX is instant after the first frame.
     """
+    _override_strike = float(mat.legs[0].strike) if mat.legs else None
+    _override_expiry = (
+        mat.legs[0].expiry.isoformat() if mat.legs and mat.legs[0].expiry else None
+    )
     z = _cached_scenario_matrix(
         mat.template_name, float(spot), float(iv), int(dte),
         int(mat.legs[0].contracts), float(r), float(q),
+        override_strike=_override_strike,
+        override_expiry_iso=_override_expiry,
     )
     rows, cols = z.shape
 
