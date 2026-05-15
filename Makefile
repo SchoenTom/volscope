@@ -1,4 +1,4 @@
-.PHONY: setup test run start scrape convergence seed seed-starter seed-full seed-bot-universe seed-broad-universe quickstart clean verify verify-all sectors \
+.PHONY: setup test run start scrape convergence seed seed-starter seed-full seed-bot-universe seed-broad-universe quickstart quickstart-bot clean verify verify-all sectors \
         audit audit-list audit-schema synth maturity loop loop-pick loop-finalize loop-forever pause unpause \
         simulate validate autonomy-status autonomy-pause autonomy-unpause autonomy-test autonomy-logs \
         load-universe load-universe-resume design-lint backtest-leaps \
@@ -32,14 +32,26 @@ repair-iv:
 
 # ── Quick Start ─────────────────────────────────────────────────────
 # One command, zero decisions. Installs deps, releases any stale DB
-# lock, seeds the Broad Universe (75 tickers: Bot Universe + S&P-500
-# big-cap representatives + S&P-400 mid-cap names with liquid options),
+# lock, seeds the FULL UNIVERSE (842 tickers across all sectors so
+# Discover / Heatmap / Rotation have maximum breadth from minute one),
 # launches the UI in headless mode (no stdin block, no telemetry).
-# Total runtime on a fresh checkout: ~4 minutes.
+# Total runtime on a fresh checkout: ~30-45 minutes (yfinance rate-
+# limit at 360 req/hour bounds this; the seeder retries failed
+# tickers automatically). For a faster setup with the trading-only
+# universe (75 tickers, ~4 min): `make quickstart-bot` instead.
 quickstart:
 	@bash scripts/ops/keep_warm.sh
 	pip install -q -r requirements.txt
 	pip install -q -e .                                    # makes volscope importable from anywhere
+	@python scripts/ops/release_db_lock.py --force
+	$(MAKE) seed-full
+	$(MAKE) run
+
+# Faster alternative for when 30+ min is too much — Bot Universe only.
+quickstart-bot:
+	@bash scripts/ops/keep_warm.sh
+	pip install -q -r requirements.txt
+	pip install -q -e .
 	@python scripts/ops/release_db_lock.py --force
 	$(MAKE) seed-broad-universe
 	$(MAKE) run
