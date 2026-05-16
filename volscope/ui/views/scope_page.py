@@ -351,6 +351,20 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
         days_to_earnings=days_to_er,
     )
 
+    # v0.9.8 Phase D — cross-tool awareness cards. Renders zero or
+    # more of: open positions / upcoming earnings / discover history
+    # for this ticker. Renders nothing if none of the three apply.
+    try:
+        from volscope.ui.components.scope_context_cards import (
+            render_scope_context_cards,
+        )
+        render_scope_context_cards(st, db, ticker)
+    except Exception as _ctx_exc:                                  # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.scope").debug(
+            "context-cards failed: %s", _ctx_exc,
+        )
+
     # Phase-4 — VOL_INDEX / VOL_PRODUCT gating. Vol indices are derived
     # data (not directly tradable) so the CHEAP/RICH verdict makes no
     # sense for them. Vol products (VXX/UVXY/SVXY/VIXY) carry structural
