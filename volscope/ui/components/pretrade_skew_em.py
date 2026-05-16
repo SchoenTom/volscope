@@ -15,8 +15,14 @@ from volscope.analytics.front_back_iv import (
     FrontBackDecomposition, decompose_front_back_iv,
 )
 from volscope.analytics.oi_heatmap import OIHeatmapResult, compute_oi_heatmap
+from volscope.ui.components.glossary import glossary
 from volscope.ui.components.html_utils import render_html
 from volscope.ui.styles.theme import COLORS, rgba
+
+
+def _esc_attr(s: str) -> str:
+    """HTML-attribute-safe (just escape the double-quote that ends title=)."""
+    return (s or "").replace('"', "'")
 
 
 def render_skew_em_block(
@@ -33,26 +39,31 @@ def render_skew_em_block(
     asym = em.asymmetry_ratio()
     asym_str = f"{asym:.2f}×" if asym else "n/a"
 
+    # Tooltips via title= attribute on each cell — all wording sourced
+    # from glossary.py (master plan §3 Stream A).
+    tt_skew     = _esc_attr(glossary("iv_skew_25d"))
+    tt_em_skew  = _esc_attr(glossary("expected_move_skew_adjusted"))
+    tt_em_naive = _esc_attr(glossary("expected_move"))
     render_html(
         st,
         f'<div style="background:{COLORS["surface"]};border:1px solid {COLORS["border"]};'
         f'border-left:3px solid {skew_color};border-radius:6px;padding:14px 18px;'
-        f'margin:10px 0;font-family:DM Sans,sans-serif;">'
+        f'margin:10px 0;font-family:DM Sans,sans-serif;" title="{tt_em_skew}">'
         f'<div style="color:{skew_color};font-weight:700;letter-spacing:0.5px;'
         f'font-size:12px;margin-bottom:6px;">SKEW-ADJUSTED EXPECTED MOVE · '
         f'{ticker} · {dte_days}d</div>'
         f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;'
         f'font-family:JetBrains Mono,monospace;font-size:12px;'
         f'color:{COLORS["text"]};">'
-        f'<div><span style="color:{COLORS["muted"]};">25Δ Skew</span><br>'
+        f'<div title="{tt_skew}"><span style="color:{COLORS["muted"]};">25Δ Skew</span><br>'
         f'<b>{em.skew_25d:+.1f} vol-pts</b></div>'
-        f'<div><span style="color:{COLORS["muted"]};">Upside (25Δ Call)</span><br>'
+        f'<div title="{tt_em_skew}"><span style="color:{COLORS["muted"]};">Upside (25Δ Call)</span><br>'
         f'<b style="color:{COLORS["accent"]};">+{em.upside_pct:.2f}% · ${em.em_dollar_up:.2f}</b></div>'
-        f'<div><span style="color:{COLORS["muted"]};">Downside (25Δ Put)</span><br>'
+        f'<div title="{tt_em_skew}"><span style="color:{COLORS["muted"]};">Downside (25Δ Put)</span><br>'
         f'<b style="color:{COLORS["warn"]};">-{em.downside_pct:.2f}% · ${em.em_dollar_down:.2f}</b></div>'
         f'</div>'
         f'<div style="color:{COLORS["muted"]};font-size:11px;margin-top:8px;'
-        f'font-family:JetBrains Mono,monospace;">'
+        f'font-family:JetBrains Mono,monospace;" title="{tt_em_naive}">'
         f'Naive symmetric EM: ±{em.em_symmetric_pct:.2f}%   '
         f'   asymmetry: {asym_str}   '
         f'   {"put-skewed → downside richer" if em.is_put_skewed() else "balanced / call-skewed"}'
@@ -84,23 +95,26 @@ def render_front_back_block(
     event_iv_str = (
         f"{decomp.event_premium_iv:.0f}%" if decomp.event_premium_iv else "n/a"
     )
+    tt_front = _esc_attr(glossary("iv_30d"))
+    tt_back  = _esc_attr(glossary("iv_90d"))
+    tt_event = _esc_attr(glossary("event_premium_iv"))
     render_html(
         st,
         f'<div style="background:{COLORS["surface"]};border:1px solid {COLORS["border"]};'
         f'border-left:3px solid {edge_color};border-radius:6px;padding:14px 18px;'
-        f'margin:10px 0;font-family:DM Sans,sans-serif;">'
+        f'margin:10px 0;font-family:DM Sans,sans-serif;" title="{tt_event}">'
         f'<div style="color:{edge_color};font-weight:700;letter-spacing:0.5px;'
         f'font-size:12px;margin-bottom:6px;">FRONT vs BACK IV · {ticker}</div>'
         f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:18px;'
         f'font-family:JetBrains Mono,monospace;font-size:12px;'
         f'color:{COLORS["text"]};">'
-        f'<div><span style="color:{COLORS["muted"]};">Front ({decomp.front_dte}d)</span><br>'
+        f'<div title="{tt_front}"><span style="color:{COLORS["muted"]};">Front ({decomp.front_dte}d)</span><br>'
         f'<b>{decomp.front_iv:.0f}%</b></div>'
-        f'<div><span style="color:{COLORS["muted"]};">Back ({decomp.back_dte}d)</span><br>'
+        f'<div title="{tt_back}"><span style="color:{COLORS["muted"]};">Back ({decomp.back_dte}d)</span><br>'
         f'<b>{decomp.back_iv:.0f}%</b></div>'
         f'<div><span style="color:{COLORS["muted"]};">Raw spread</span><br>'
         f'<b style="color:{edge_color};">{decomp.raw_spread:+.0f} vol-pts</b></div>'
-        f'<div><span style="color:{COLORS["muted"]};">Isolated event-IV</span><br>'
+        f'<div title="{tt_event}"><span style="color:{COLORS["muted"]};">Isolated event-IV</span><br>'
         f'<b style="color:{edge_color};">{event_iv_str}</b></div>'
         f'</div>'
         f'<div style="color:{COLORS["muted"]};font-size:11px;margin-top:8px;line-height:1.5;">'
@@ -170,13 +184,16 @@ def render_oi_heatmap_block(
         xaxis=dict(title="Strike", color=COLORS.get("muted", "#8a8f9e"), gridcolor=COLORS.get("border", "#2a2d3e")),
         yaxis=dict(title="Open Interest", color=COLORS.get("muted", "#8a8f9e"), gridcolor=COLORS.get("border", "#2a2d3e")),
     )
+    tt_oi   = _esc_attr(glossary("total_open_interest"))
+    tt_pcr  = _esc_attr(glossary("put_call_ratio"))
+    tt_pain = _esc_attr(glossary("max_pain"))
     render_html(
         st,
         f'<div style="color:{COLORS["accent2"] if "accent2" in COLORS else COLORS["accent"]};'
         f'font-weight:700;letter-spacing:0.5px;font-size:12px;margin:14px 0 4px;'
-        f'font-family:DM Sans,sans-serif;">OI HEATMAP · {ticker}</div>'
+        f'font-family:DM Sans,sans-serif;" title="{tt_oi}">OI HEATMAP · {ticker}</div>'
         f'<div style="color:{COLORS["muted"]};font-size:11px;'
-        f'font-family:JetBrains Mono,monospace;margin-bottom:4px;">'
+        f'font-family:JetBrains Mono,monospace;margin-bottom:4px;" title="{tt_pcr}">'
         f'Total Call OI: {result.total_call_oi:,}   '
         f'· Total Put OI: {result.total_put_oi:,}   '
         f'· PCR: {result.overall_pcr:.2f}   '
