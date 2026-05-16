@@ -19,6 +19,115 @@ from volscope.ui.components.html_utils import render_html
 from volscope.ui.components.metric_components import freshness_badge
 
 
+# ── Alarm-picker icons (Information Scent — one glyph per alarm type) ─
+_ALARM_ICONS: dict[str, str] = {
+    "regime_change":     "≈",
+    "iv_pct_high":       "⬆",
+    "iv_pct_low":        "⬇",
+    "iv_rank_high":      "▲",
+    "iv_rank_low":       "▼",
+    "earnings_imminent": "📅",
+    "price_move_1d":     "⚡",
+}
+
+
+def _render_alarm_picker_for_watchlist(st, db, wl) -> None:
+    """Compact per-watchlist alarm-type picker.
+
+    Profi-UX patterns (master plan §6 + §13.7):
+      - Progressive disclosure: hidden behind a "🔔 Alarms (N)" sub-expander
+      - Information scent: each row has icon + label + threshold preview
+      - Affordances: toggle uses st.checkbox (native pressable)
+      - Consistent mental model: green icons for "cheap" alarms (low),
+        red for "rich" alarms (high)
+      - Sensible defaults: pre-set thresholds, no config required to use
+      - Success feedback: toast on save
+      - Empty state: "No alarms enabled — pick below" instead of blank panel
+    """
+    from volscope.persistence.watchlists import (
+        ALARM_TYPES, create_watchlist,
+    )
+
+    n_enabled = len(wl.alarm_types)
+    label = f"🔔 Alarms ({n_enabled})" if n_enabled else "🔔 Alarms — none yet"
+
+    with st.expander(label, expanded=False):
+        if n_enabled == 0:
+            st.caption(
+                "Pick which signals should ping you via Telegram + macOS desktop. "
+                "Sensible defaults — just tick the boxes."
+            )
+        with st.form(key=f"wl_alarms_{wl.name}", border=False, clear_on_submit=False):
+            # Toggle each alarm type. Threshold inputs only show when toggle is ON.
+            new_alarm_types: list[str] = []
+            new_thresholds: dict = dict(wl.alarm_thresholds or {})
+
+            for key, meta in ALARM_TYPES.items():
+                icon = _ALARM_ICONS.get(key, "•")
+                checked = key in wl.alarm_types
+                col_toggle, col_threshold = st.columns([3, 2])
+                with col_toggle:
+                    is_on = st.checkbox(
+                        f"{icon}  {meta['label']}",
+                        value=checked,
+                        key=f"wl_alarm_{wl.name}_{key}",
+                        help=meta["help"],
+                    )
+                with col_threshold:
+                    # Progressive disclosure — only show threshold input
+                    # when the alarm is enabled. Numeric only when a
+                    # threshold_key exists (regime_change has none).
+                    tkey = meta.get("threshold_key")
+                    if is_on and tkey is not None:
+                        default_val = wl.alarm_thresholds.get(tkey, meta["default"])
+                        try:
+                            default_val_num = float(default_val)
+                        except Exception:
+                            default_val_num = float(meta["default"])
+                        # earnings_imminent uses int days; everything else float
+                        is_days = "days" in tkey
+                        val = st.number_input(
+                            "Threshold",
+                            min_value=0.0,
+                            max_value=365.0 if is_days else 200.0,
+                            value=default_val_num,
+                            step=1.0 if is_days else 0.5,
+                            key=f"wl_thr_{wl.name}_{key}",
+                            label_visibility="collapsed",
+                            help=f"Threshold for {meta['label']}",
+                        )
+                        new_thresholds[tkey] = (
+                            int(val) if is_days else float(val)
+                        )
+                if is_on:
+                    new_alarm_types.append(key)
+
+            saved = st.form_submit_button(
+                "✓ Save alarms" if new_alarm_types else "Save (no alarms enabled)",
+                width='stretch',
+                type="primary" if new_alarm_types else "secondary",
+                help="Save the alarm configuration for this watchlist",
+            )
+            if saved:
+                try:
+                    create_watchlist(
+                        db, wl.name,
+                        regime_alarms="regime_change" in new_alarm_types,
+                        alarm_types=new_alarm_types,
+                        alarm_thresholds=new_thresholds,
+                    )
+                    try:
+                        st.toast(
+                            f"✓ {wl.name}: {len(new_alarm_types)} alarm(s) saved",
+                            icon="🔔",
+                        )
+                    except Exception:
+                        pass
+                    st.rerun()
+                except Exception as exc:                           # noqa: BLE001
+                    st.error(f"Save failed: {exc}")
+
+
 def _render_user_watchlists(st, db) -> None:
     """Sidebar widget: list/create/manage TradingView-style watchlists.
 
@@ -102,6 +211,9 @@ def _render_user_watchlists(st, db) -> None:
                                     st.rerun()
                                 except Exception as exc:
                                     st.error(f"Remove failed: {exc}")
+
+                # ── v0.9.8 — Alarm-Picker per watchlist ────────────
+                _render_alarm_picker_for_watchlist(st, db, wl)
 
                 # Inline add-ticker form, scoped per watchlist
                 with st.form(key=f"wl_add_{wl.name}", border=False):
