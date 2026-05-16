@@ -141,6 +141,14 @@ def render_phase_header(
         f'{ticker_badge}'
         f'</div>',
     )
+    # v0.9.8 Phase B — breadcrumb under the strip.
+    try:
+        from volscope.ui.components.ticker_quick_switch import (
+            render_breadcrumb_trail,
+        )
+        render_breadcrumb_trail(st)
+    except Exception:                                              # noqa: BLE001
+        pass
 
 
 def rgba_inline(hex_or_rgba: str, alpha: float) -> str:

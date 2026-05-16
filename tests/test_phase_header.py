@@ -55,7 +55,11 @@ def test_render_phase_header_known_page_emits_html():
     from volscope.ui.components.phase_header import render_phase_header
     st = _FakeSt()
     render_phase_header(st, page_name="Scope", ticker="PYPL")
-    assert len(st.html) == 1
+    # v0.9.8 — phase strip is at least 1 emission. Breadcrumb trail
+    # under it adds a 2nd if page_history is non-empty (Streamlit's
+    # SessionStateProxy can carry history from prior tests in the
+    # full suite; isolated runs see only the strip).
+    assert len(st.html) >= 1
     body = st.html[0]
     # Includes a phase indicator
     assert "Scan" in body
@@ -71,7 +75,7 @@ def test_render_phase_header_unknown_page_renders_no_highlight_but_still_works()
     st = _FakeSt()
     render_phase_header(st, page_name="this-page-does-not-exist")
     # MUST still render (the strip is informational, not gating)
-    assert len(st.html) == 1
+    assert len(st.html) >= 1
     body = st.html[0]
     assert "Scan" in body and "Investigate" in body
 

@@ -572,6 +572,20 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
         """,
     )
 
+    # ── v0.9.8 Phase B — universal ticker quick-switch ──────────────
+    # Type any ticker, hit Enter → jump to Scope with full context.
+    # Persistent across pages; uses NavIntent + SSOT history.
+    try:
+        from volscope.ui.components.ticker_quick_switch import (
+            render_ticker_quick_switch,
+        )
+        render_ticker_quick_switch(st)
+    except Exception as _qs_exc:                                    # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.sidebar").debug(
+            "quick-switch render failed: %s", _qs_exc,
+        )
+
     # ── Ticker picker + add form ────────────────────────────────────
     ticker = _render_ticker_picker(st, db)
 
