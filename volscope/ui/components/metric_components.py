@@ -76,12 +76,22 @@ def _try_float(value: Any) -> float | None:
         return None
 
 
-def _ibkr_cell(label: str, value: str, value_class: str = "", cell_class: str = "") -> str:
-    """Single dense KPI cell — used by render_kpi_row and other pages."""
+def _ibkr_cell(
+    label: str, value: str, value_class: str = "", cell_class: str = "",
+    *, tooltip: str = "",
+) -> str:
+    """Single dense KPI cell — used by render_kpi_row and other pages.
+
+    ``tooltip`` (optional) renders as the cell's native HTML title=
+    attribute. Tooltips come from
+    ``volscope.ui.components.glossary.glossary(key)`` so all KPI
+    explanations are sourced from one place (master plan §3 Stream A).
+    """
     cls = f"volscope-ibkr-cell {cell_class}".strip()
     vcls = f"volscope-ibkr-value {value_class}".strip()
+    title_attr = f' title="{tooltip}"' if tooltip else ""
     return (
-        f'<div class="{cls}">'
+        f'<div class="{cls}"{title_attr}>'
         f'<div class="volscope-ibkr-label">{label}</div>'
         f'<div class="{vcls}">{value}</div>'
         f'</div>'
@@ -127,13 +137,22 @@ def render_kpi_row(row: dict) -> None:
     perc_v, perc_c = _band(perc)
     spread_v, spread_c = _spread_classes(spread)
 
+    # Tooltip text from the centralised glossary — one source of
+    # truth for every page that displays these KPIs.
+    from volscope.ui.components.glossary import glossary
     cells = [
-        _ibkr_cell("SPOT",     f"${spot:,.2f}" if spot is not None else "—"),
-        _ibkr_cell("IV 30D",   _pct(iv),  value_class="fg-cheap"),
-        _ibkr_cell("HV 20D",   _pct(hv),  value_class="fg-mid"),
-        _ibkr_cell("IV RANK",  _pct(rank), value_class=rank_v, cell_class=rank_c),
-        _ibkr_cell("IV PERC",  _pct(perc), value_class=perc_v, cell_class=perc_c),
-        _ibkr_cell("IV − HV",  _signed_pct(spread), value_class=spread_v, cell_class=spread_c),
+        _ibkr_cell("SPOT",     f"${spot:,.2f}" if spot is not None else "—",
+                   tooltip="Current underlying price (most recent close)."),
+        _ibkr_cell("IV 30D",   _pct(iv),  value_class="fg-cheap",
+                   tooltip=glossary("iv_30d")),
+        _ibkr_cell("HV 20D",   _pct(hv),  value_class="fg-mid",
+                   tooltip=glossary("hv_20d")),
+        _ibkr_cell("IV RANK",  _pct(rank), value_class=rank_v, cell_class=rank_c,
+                   tooltip=glossary("iv_rank")),
+        _ibkr_cell("IV PERC",  _pct(perc), value_class=perc_v, cell_class=perc_c,
+                   tooltip=glossary("iv_percentile")),
+        _ibkr_cell("IV − HV",  _signed_pct(spread), value_class=spread_v, cell_class=spread_c,
+                   tooltip=glossary("iv_hv_spread")),
     ]
     html = '<div class="volscope-ibkr-row">' + "".join(cells) + "</div>"
 
