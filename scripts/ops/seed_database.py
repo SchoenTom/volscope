@@ -120,25 +120,81 @@ def seed_ticker(db: VolScopeDB, ticker: str, period: str = "2y") -> int:
     return rows
 
 
+_DELISTED_CACHE = Path.home() / ".volscope" / "delisted_yahoo.txt"
+
+
+def _load_delisted_cache() -> set[str]:
+    if not _DELISTED_CACHE.exists():
+        return set()
+    return {ln.strip() for ln in _DELISTED_CACHE.read_text().splitlines() if ln.strip()}
+
+
+def _append_delisted(ticker: str) -> None:
+    _DELISTED_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    with _DELISTED_CACHE.open("a") as f:
+        f.write(f"{ticker}\n")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Seed VolScope DB with HV data.")
     parser.add_argument("--tickers", type=str, default="", help="Comma-separated tickers")
     parser.add_argument("--period", type=str, default="2y")
+    parser.add_argument(
+        "--skip-delisted", action="store_true", default=True,
+        help="Skip tickers known to have no Yahoo data (cached after first failure).",
+    )
     args = parser.parse_args(argv)
 
     tickers = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
     if not tickers:
         tickers = all_tickers()
 
+    delisted = _load_delisted_cache() if args.skip_delisted else set()
+    if delisted:
+        skipped_pre = [t for t in tickers if t in delisted]
+        tickers = [t for t in tickers if t not in delisted]
+        if skipped_pre:
+            log.info("Pre-skipping %d known-delisted tickers (cached)", len(skipped_pre))
+
     db = VolScopeDB()
     total = 0
+    failed: list[str] = []
+    new_delisted: list[str] = []
+    fatal_recoveries = 0
+
     for t in tickers:
         try:
-            total += seed_ticker(db, t, args.period)
+            rows = seed_ticker(db, t, args.period)
+            total += rows
+            if rows == 0:
+                # Empty OHLCV → likely delisted; add to cache so the
+                # next run skips it.
+                new_delisted.append(t)
+                _append_delisted(t)
+        except RuntimeError as exc:
+            # Our own upsert_daily wraps duckdb.Error in RuntimeError.
+            # Reconnect to clear FATAL state and continue with next ticker
+            # instead of failing every subsequent upsert.
+            log.error("Fatal upsert for %s — reconnecting DB: %s", t, exc)
+            fatal_recoveries += 1
+            try:
+                db.reconnect()
+            except Exception as rexc:
+                log.error("reconnect failed: %s — aborting", rexc)
+                break
+            failed.append(t)
         except Exception as exc:
             log.error("Failed seeding %s: %s", t, exc)
+            failed.append(t)
+
     db.close()
-    log.info("Seed complete: %d rows across %d tickers", total, len(tickers))
+    log.info(
+        "Seed complete: %d rows across %d tickers (failed=%d, new-delisted=%d, "
+        "fatal-recoveries=%d)",
+        total, len(tickers), len(failed), len(new_delisted), fatal_recoveries,
+    )
+    if failed:
+        log.warning("Failed tickers: %s", ", ".join(failed[:20]))
     return 0
 
 

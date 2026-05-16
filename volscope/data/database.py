@@ -415,6 +415,19 @@ class VolScopeDB:
         Merge-upsert a daily_vol row. Fields not passed in kwargs preserve their
         existing value (so a daily IV scrape does not wipe HV columns written by
         the seed script).
+
+        v0.9.6 — replaced the prior DELETE+INSERT pattern with a single
+        atomic INSERT ... ON CONFLICT (ticker, date) DO UPDATE. The
+        DELETE+INSERT path could throw
+            "Invalid Input Error: Failed to delete all rows from index.
+             Only deleted 0 out of 1 rows"
+        on rows where the unique index state had drifted (rare but
+        observed in seed-full runs of 800+ tickers). DuckDB marks the
+        whole connection FATAL on that error — every subsequent
+        upsert in the same seed loop then fails identically with
+        "database has been invalidated". Result: ~50 % ticker
+        coverage on the full universe seed. ON CONFLICT is one
+        atomic statement, no index-state-drift window.
         """
         existing = self.con.execute(
             "SELECT * FROM daily_vol WHERE ticker = ? AND date = ?",
@@ -430,16 +443,26 @@ class VolScopeDB:
             else:
                 merged[col] = None
 
-        cols = ", ".join(merged.keys())
-        placeholders = ", ".join(["?"] * len(merged))
-        self.con.execute(
-            "DELETE FROM daily_vol WHERE ticker = ? AND date = ?",
-            [ticker, date],
+        cols = list(merged.keys())
+        cols_csv = ", ".join(cols)
+        placeholders = ", ".join(["?"] * len(cols))
+        # Update-set: every non-PK column → excluded.<col>
+        update_cols = [c for c in cols if c not in ("ticker", "date")]
+        update_set = ", ".join(f"{c} = excluded.{c}" for c in update_cols)
+        sql = (
+            f"INSERT INTO daily_vol ({cols_csv}) VALUES ({placeholders}) "
+            f"ON CONFLICT (ticker, date) DO UPDATE SET {update_set}"
         )
-        self.con.execute(
-            f"INSERT INTO daily_vol ({cols}) VALUES ({placeholders})",
-            list(merged.values()),
-        )
+        try:
+            self.con.execute(sql, list(merged.values()))
+        except duckdb.Error as exc:
+            # If DuckDB ever enters fatal state on this path, surface
+            # a clean RuntimeError instead of letting the silent cascade
+            # break the rest of the seed loop. The caller (seed_database)
+            # catches this and reconnects.
+            raise RuntimeError(
+                f"upsert_daily({ticker}, {date}) failed: {exc}"
+            ) from exc
 
     # ------------------------------------------------------------------
     # Positions (trade journal)
@@ -701,13 +724,10 @@ class VolScopeDB:
     # ------------------------------------------------------------------
 
     def upsert_sector_daily(self, sector: str, date, **kwargs) -> None:
-        """Merge-upsert one sector_daily row.
+        """Merge-upsert one sector_daily row (atomic ON CONFLICT).
 
         Fields not passed in kwargs preserve their existing value (so a
         partial aggregation does not wipe yesterday's clean columns).
-        Mirrors upsert_daily's preserve-on-null pattern — without it,
-        a failed flow_score / regime_z calc nulled the row and the
-        Rotation page rendered blanks for that sector.
         """
         _SECTOR_FIELDS = (
             "median_iv", "median_perc", "median_hv", "mean_pcr",
@@ -727,16 +747,36 @@ class VolScopeDB:
             else:
                 row[col] = None
 
-        cols = ", ".join(row.keys())
-        placeholders = ", ".join(["?"] * len(row))
-        self.con.execute(
-            "DELETE FROM sector_daily WHERE sector = ? AND date = ?",
-            [sector, date],
+        cols = list(row.keys())
+        cols_csv = ", ".join(cols)
+        placeholders = ", ".join(["?"] * len(cols))
+        update_cols = [c for c in cols if c not in ("sector", "date")]
+        update_set = ", ".join(f"{c} = excluded.{c}" for c in update_cols)
+        sql = (
+            f"INSERT INTO sector_daily ({cols_csv}) VALUES ({placeholders}) "
+            f"ON CONFLICT (sector, date) DO UPDATE SET {update_set}"
         )
-        self.con.execute(
-            f"INSERT INTO sector_daily ({cols}) VALUES ({placeholders})",
-            list(row.values()),
-        )
+        try:
+            self.con.execute(sql, list(row.values()))
+        except duckdb.Error as exc:
+            raise RuntimeError(
+                f"upsert_sector_daily({sector}, {date}) failed: {exc}"
+            ) from exc
+
+    def reconnect(self) -> None:
+        """Force-reopen the DuckDB connection.
+
+        Called by long-running batch jobs (seed_database, daily_scrape)
+        after they hit a per-row error that may have left the
+        connection in DuckDB's FATAL state. Without this, every
+        subsequent operation in the same loop fails with
+        "database has been invalidated because of a previous fatal error".
+        """
+        try:
+            self.con.close()
+        except Exception:
+            pass
+        self.con = duckdb.connect(self.db_path)
 
     def get_sector_history(self, sector: Optional[str] = None, lookback_days: int = 365) -> pd.DataFrame:
         """Return sector_daily rows, optionally filtered by sector, most recent `lookback_days`."""
