@@ -326,26 +326,34 @@ glossary.
 Definition of done: every "from → to" entry in §4 works with one
 click, ticker context preserved.
 
-### Milestone M3 — Onboarding (Week 5-6) ⏳ NEXT WAVE
-- Stream E: 5-step wizard rewrite with live previews
-- Glossary page (Help expansion) — partial (centralised
-  glossary.py exists; Help page render not yet rebuilt)
+### Milestone M3 — Onboarding (Week 5-6) ✅ SHIPPED 2026-05-16
+- ✅ Stream E: 5-step wizard rewrite. Steps 1-3 (welcome / pack /
+  loading) preserved verbatim; Steps 4-5 ADDED with live previews:
+    - Step 4: First-ticker preview — operator picks any loaded
+      ticker, renders IV-Rank + IV-Pct + Vol Regime card with a
+      one-sentence regime interpretation
+    - Step 5: First watchlist — multi-select 3-5 tickers, optional
+      regime-alarm enable, persists via the watchlist API shipped
+      in v0.9.6
+- ⏳ Help-page rebuild on top of glossary.py (deferred to v0.9.8
+  polish — centralised glossary already powers in-page tooltips)
 
 Definition of done: a tester who has never traded options can finish
 the onboarding and place their first paper trade in ≤ 10 minutes.
 
-### Milestone M4 — Consolidate (Week 7-8) ✅ PARTIAL SHIPPED 2026-05-16
+### Milestone M4 — Consolidate (Week 7-8) ✅ SHIPPED 2026-05-16
 - ✅ Sidebar 23 → 20 entries (Mega-Scan / Earnings Trades / Dossier
   moved to footer cross-links; commit `3773b8a`)
-- ⏳ Full tab-merge of Earnings Hub + Earnings Trades → "Earnings"
-  with tabs (deferred — needs render-function touching)
-- ⏳ Full tab-merge of LEAPS Lab + Dossier → "LEAPS" with tabs
-  (deferred — same reason)
+- ✅ Tab-merge of Earnings Hub + Earnings Trades — Trades render as
+  embedded expander inside Earnings Hub (commit `b6dd96e`)
+- ✅ Tab-merge of LEAPS Lab + Dossier — Dossier renders as embedded
+  expander inside LEAPS Lab (commit `b6dd96e`)
 - ⏳ Signals page evaluation (kept for now; subsumes future Bot
   signal-log)
 
 Definition of done: 19 (or fewer) sidebar entries, no functionality
-lost, all tests green. **Currently: 20 entries, 1930 tests green.**
+lost, all tests green. **Currently: 20 entries with embedded
+expander-merges; 1930 tests green.**
 
 ---
 
