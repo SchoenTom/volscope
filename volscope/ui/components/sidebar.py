@@ -19,6 +19,137 @@ from volscope.ui.components.html_utils import render_html
 from volscope.ui.components.metric_components import freshness_badge
 
 
+def _render_user_watchlists(st, db) -> None:
+    """Sidebar widget: list/create/manage TradingView-style watchlists.
+
+    Compact UI:
+      - One expander per watchlist (collapsed by default)
+      - Click ticker → set selected_ticker + nav to Scope
+      - Delete-button per ticker (single-click; no confirm because
+        the persistence layer can recreate from the add-form)
+      - Bottom: "New watchlist" inline form + add-ticker form
+      - Regime-alarm toggle stored per watchlist
+    """
+    from volscope.persistence.watchlists import (
+        add_ticker_to_watchlist,
+        create_watchlist,
+        ensure_watchlist_tables,
+        list_watchlists,
+        remove_ticker_from_watchlist,
+    )
+
+    # Best-effort: ensure tables exist. DB is read_only in UI context,
+    # so first-time creation can fail. We catch and fall back to "no
+    # watchlists yet" rendering.
+    try:
+        ensure_watchlist_tables(db)
+    except Exception:
+        # Read-only DB: writing here is forbidden. The bot/scrape
+        # process creates the tables on next write-open; until then
+        # we just render an info card.
+        render_html(
+            st,
+            f'<div style="margin-top:8px;color:#8a8f9e;font-family:DM Sans,sans-serif;'
+            f'font-size:11px;padding:8px 10px;background:#1a1d2e;border-radius:4px;">'
+            f'⚑ Watchlists initialise on first scrape — run <code>make scrape</code> '
+            f'or wait for the next cron job to enable this widget.</div>',
+        )
+        return
+
+    lists = list_watchlists(db)
+
+    render_html(
+        st,
+        f'<div style="margin-top:14px;margin-bottom:4px;'
+        f'font-family:DM Sans,sans-serif;font-size:11px;'
+        f'color:#5b8cff;letter-spacing:0.04em;font-weight:600;'
+        f'text-transform:uppercase;">⚑ My watchlists</div>',
+    )
+
+    if not lists:
+        st.caption("No watchlists yet. Create one below ↓")
+    else:
+        for wl in lists:
+            label = f"{wl.name} · {len(wl.tickers)}"
+            if wl.regime_alarms_enabled:
+                label += " 🔔"
+            with st.expander(label, expanded=False):
+                if not wl.tickers:
+                    st.caption("(empty — add tickers below)")
+                else:
+                    for t in wl.tickers:
+                        c1, c2 = st.columns([5, 1])
+                        with c1:
+                            if st.button(
+                                t, key=f"wl_pick_{wl.name}_{t}",
+                                width='stretch',
+                                help=f"Jump to Scope · {t}",
+                            ):
+                                from volscope.ui.components.navigation import (
+                                    NavIntent, nav_to,
+                                )
+                                nav_to(NavIntent(
+                                    page="Scope", ticker=t, source="Watchlist",
+                                ))
+                                st.rerun()
+                        with c2:
+                            if st.button(
+                                "✕", key=f"wl_rm_{wl.name}_{t}",
+                                help=f"Remove {t} from {wl.name}",
+                            ):
+                                try:
+                                    remove_ticker_from_watchlist(db, wl.name, t)
+                                    st.rerun()
+                                except Exception as exc:
+                                    st.error(f"Remove failed: {exc}")
+
+                # Inline add-ticker form, scoped per watchlist
+                with st.form(key=f"wl_add_{wl.name}", border=False):
+                    new_t = st.text_input(
+                        "Add ticker",
+                        placeholder="e.g. PYPL",
+                        key=f"wl_add_input_{wl.name}",
+                        label_visibility="collapsed",
+                    )
+                    if st.form_submit_button(
+                        "+ Add", width='stretch', help="Append to this watchlist",
+                    ):
+                        clean = (new_t or "").strip().upper()
+                        if clean:
+                            try:
+                                add_ticker_to_watchlist(db, wl.name, clean)
+                                st.rerun()
+                            except Exception as exc:
+                                st.error(f"Add failed: {exc}")
+
+    # Create-new-watchlist form (compact)
+    with st.form(key="wl_create_new", border=False):
+        c1, c2 = st.columns([4, 1])
+        with c1:
+            new_name = st.text_input(
+                "New watchlist name",
+                placeholder="e.g. Earnings Plays",
+                key="wl_new_name",
+                label_visibility="collapsed",
+            )
+        with c2:
+            alarms = st.checkbox(
+                "🔔", value=False,
+                key="wl_new_alarms",
+                help="Enable vol-regime alarms (CHEAP/RICH boundary + regime shift)",
+            )
+        if st.form_submit_button(
+            "+ Watchlist", width='stretch', help="Create a new empty watchlist",
+        ):
+            clean_name = (new_name or "").strip()
+            if clean_name:
+                try:
+                    create_watchlist(db, clean_name, regime_alarms=alarms)
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Create failed: {exc}")
+
+
 def _cached_available_tickers(db) -> list[str]:
     """Short-cache wrapper for db.get_available_tickers().
 
@@ -715,8 +846,23 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
                     from volscope.ui.components.navigation import NavIntent, nav_to
                     nav_to(NavIntent(page="Command", source="Sidebar"))
                     st.rerun()
-    except Exception:
-        pass
+    except Exception as exc:                                        # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.sidebar").warning(
+            "Watchlist (alerts) render failed: %s", exc,
+        )
+
+    # ── User Watchlists (TradingView-style) ────────────────────────
+    # Operator-managed groupings with optional regime-alarm trigger.
+    # Persistence in volscope.persistence.watchlists; alarms dispatch
+    # via Telegram + macOS desktop. See PRE_LAUNCH_REPORT.md.
+    try:
+        _render_user_watchlists(st, db)
+    except Exception as exc:                                        # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.sidebar").warning(
+            "User-watchlist widget render failed: %s", exc,
+        )
 
     # ── Dev panel (only when ?dev=1 in URL) ───────────────────────────
     try:

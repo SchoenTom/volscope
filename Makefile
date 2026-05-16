@@ -2,7 +2,7 @@
         audit audit-list audit-schema synth maturity loop loop-pick loop-finalize loop-forever pause unpause \
         simulate validate autonomy-status autonomy-pause autonomy-unpause autonomy-test autonomy-logs \
         load-universe load-universe-resume design-lint backtest-leaps \
-        unlock kill-stale fresh warm repair-iv
+        unlock kill-stale fresh warm repair-iv check-alarms
 
 # ── Lock hygiene ────────────────────────────────────────────────────────
 # The DuckDB exclusive lock is the single most common reason `make start`
@@ -165,10 +165,17 @@ scrape:
 	@python scripts/ops/release_db_lock.py --force
 	python scripts/scrape/daily_scrape.py
 	$(MAKE) convergence
+	@$(MAKE) -s check-alarms || true
 
 # Recompute convergence scores for the latest snapshot. Idempotent.
 convergence:
 	python scripts/compute/compute_convergence_daily.py
+
+# Check user watchlist regime alarms — runs after every scrape via
+# the scrape target, and can also be cron'd standalone (5-min cadence)
+# so alarms fire when Streamlit isn't open. Quiet on no-op runs.
+check-alarms:
+	@python scripts/ops/check_alarms.py --quiet
 
 # Walk-forward backtest of the LEAPS-convergence rule.
 # Default: 365-day hold, monthly resampling, full universe.
