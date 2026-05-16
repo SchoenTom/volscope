@@ -41,8 +41,8 @@ NEXT_STEPS: dict[str, list[tuple[str, str, bool]]] = {
     # ① SCAN
     "Discover": [
         ("Scope",        "Deep-dive {ticker}",                  True),
+        ("Mega-Scan",    "Deeper multi-strategy scan",          False),
         ("Vol Insights", "Asymmetric EM + OI map",              True),
-        ("Pre-Trade",    "Size a trade now",                    True),
     ],
     "Heatmap": [
         ("Scope",        "Deep-dive selected ticker",           True),

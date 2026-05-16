@@ -584,10 +584,17 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # Three semantic groups — trader scans by purpose, not alphabet.
     # Each page renders as a sidebar button so groups can have their own
     # markdown headers between rows. Active page = green, others = muted.
+    # v0.9.7 M4 consolidation: 23 → 20 sidebar entries.
+    # Removed from sidebar (still bookmarkable + reachable via next-step
+    # footers):
+    #   - Mega-Scan       → from Discover footer
+    #   - Earnings Trades → from Earnings Hub footer
+    #   - Dossier         → from LEAPS Lab footer
+    # Page registry retains all entries; pages stay deep-linkable.
     NAV_GROUPS: list[tuple[str, list[str]]] = [
-        ("◆ DECISIONS",  ["Command", "Discover", "Signals", "Bot", "Alerts", "Earnings Hub", "Portfolio", "Mega-Scan"]),
+        ("◆ DECISIONS",  ["Command", "Discover", "Signals", "Bot", "Alerts", "Earnings Hub", "Portfolio"]),
         ("◇ RESEARCH",   ["Scope", "Scanner", "Heatmap", "Rotation", "Flow", "Vol Insights", "Research"]),
-        ("▷ EXECUTION",  ["Pre-Trade", "Builder", "Options Lab", "LEAPS Lab", "Dossier", "Earnings Trades", "Backtest"]),
+        ("▷ EXECUTION",  ["Pre-Trade", "Builder", "Options Lab", "LEAPS Lab", "Backtest"]),
         ("? REFERENCE",  ["Help"]),
     ]
     pages = [p for _, group in NAV_GROUPS for p in group]
