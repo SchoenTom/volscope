@@ -143,38 +143,37 @@ def get_db() -> VolScopeDB:
     """
     Open the VolScope DB, tolerating transient lock collisions.
 
-    DuckDB throws IOException when another process briefly holds a write lock
-    (a running `make scrape`, another Streamlit tab). We retry a few times
-    with a small backoff, then raise so the main() error boundary can show a
-    friendly card instead of a raw traceback.
+    v0.9.8 — prefer WRITABLE (was read-only). The earlier
+    read-only-first policy made paper-trader, watchlist, and
+    personal-cash writes all crash with InvalidInputException —
+    the operator hit "Paper-buy failed", "Portfolio render
+    failed", and "watchlist section missing" in the same session
+    (2026-05-16). Fall back to read-only only if writable open
+    fails persistently (e.g. live bot scheduler holds the
+    exclusive lock).
     """
     import time
     from pathlib import Path
 
     from volscope.config import DB_PATH
 
-    # Prefer read-only — eliminates writer contention with the scheduler.
-    # On a fresh checkout the DB file may not exist yet; in that case open
-    # writable once to bootstrap the schema, then a subsequent rerun will
-    # successfully open read-only.
     db_exists = Path(DB_PATH).exists()
     last_exc: Exception | None = None
     for attempt in range(5):
         try:
-            if db_exists:
-                return VolScopeDB(read_only=True)
             return VolScopeDB()
         except Exception as exc:  # duckdb.IOException subclasses Exception
             last_exc = exc
-            # Read-only open can fail if file briefly missing or another
-            # process holds an exclusive lock during a write. Fall back to
-            # writable on the last attempt so first-launch bootstrap works.
-            if attempt == 4 and db_exists:
-                try:
-                    return VolScopeDB()
-                except Exception as exc2:
-                    last_exc = exc2
-            time.sleep(0.4 * (attempt + 1))
+            time.sleep(0.3 * (attempt + 1))
+
+    # All writable attempts failed → bot scheduler likely holds the
+    # lock. Fall back to read-only so the UI at least renders. Personal
+    # writes will fail with a friendly error from the affected feature.
+    if db_exists:
+        try:
+            return VolScopeDB(read_only=True)
+        except Exception as exc2:
+            last_exc = exc2
     raise last_exc  # type: ignore[misc]
 
 
