@@ -62,6 +62,10 @@ def nav_to(intent: NavIntent) -> None:
     Does NOT call ``st.rerun()`` — the caller is typically inside a
     Streamlit button handler whose return-True path already triggers a
     rerun on the next event loop.
+
+    v0.9.8 — also pushes to the SSOT page_history and (best-effort)
+    syncs the URL query params so deep-links / shared URLs reflect
+    the new view. Both extensions are silent-fallback safe.
     """
     import streamlit as st
 
@@ -75,6 +79,26 @@ def nav_to(intent: NavIntent) -> None:
         st.session_state.pop("nav_source", None)
     if intent.payload is not None:
         st.session_state[_prefill_key(intent.page)] = intent.payload
+
+    # SSOT history + URL sync (best-effort)
+    try:
+        from volscope.ui.state import push_history, sync_to_url
+        push_history(
+            page=intent.page,
+            ticker=intent.ticker,
+            source=intent.source,
+        )
+        sync_to_url()
+    except Exception:                                              # noqa: BLE001
+        pass  # nav still works without history; URL bar may be stale
+
+    # Toast feedback so the operator gets a confirmation chip when
+    # they cross page boundaries. Streamlit >= 1.27 (we run 1.57).
+    if intent.ticker:
+        try:
+            st.toast(f"→ {intent.page} · {intent.ticker}", icon="🎯")
+        except Exception:                                          # noqa: BLE001
+            pass  # toast is non-essential, never raise
 
 
 def consume_prefill(page: str) -> Optional[dict]:

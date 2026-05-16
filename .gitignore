@@ -53,7 +53,7 @@ logs/
 
 # Bot runtime state
 /var/run/volscope/
-state/
+/state/
 
 # Dev-only ad-hoc scripts
 scripts/_dev/

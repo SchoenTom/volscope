@@ -179,6 +179,15 @@ def get_db() -> VolScopeDB:
 
 
 def main() -> None:
+    # v0.9.8 — SSOT state hydration from URL on FIRST boot only.
+    # Lets the operator share links like /?ticker=SNOW&page=Scope.
+    # Idempotent across reruns so user clicks aren't overridden.
+    try:
+        from volscope.ui.state import hydrate_from_url
+        hydrate_from_url()
+    except Exception:                                              # noqa: BLE001
+        pass  # hydration is best-effort; legacy keys still work
+
     # Dynamic page title — picks up the active ticker on rerun so the
     # browser tab reads "VolScope · PYPL" instead of just "VolScope".
     # On first load the session state is empty → fall back to default.
