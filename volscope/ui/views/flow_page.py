@@ -260,6 +260,31 @@ def render_flow_page(db: VolScopeDB, settings: dict) -> None:
         """,
     )
 
+    # Operator-feedback 2026-05-16: "ich versteh den Flow Abteil nicht ganz".
+    # Inline explainer so the page is self-teaching.
+    with st.expander("ℹ️ What this page shows", expanded=False):
+        st.markdown(
+            """
+**Flow** infers where institutional money is being positioned —
+*without* access to dark pools or order flow. It combines five
+public-options signals into a 0-100 score per sector:
+
+| Component | What it measures | Why it matters |
+|---|---|---|
+| **OI growth** | Day-over-day change in total open interest | Rising OI = new positions being opened (vs. closing volume) |
+| **Vol/OI ratio** | Today's volume ÷ existing OI | Low ratio + rising OI = patient builds; high ratio + flat OI = day-trade flow |
+| **PCR shift** | Put-Call Ratio change vs. its 60-day mean | Rapid shift = sentiment regime change |
+| **IV-HV divergence** | IV30 minus HV20 | Positive = the market pays a premium for future risk (often pre-event) |
+| **Volume clustering** | Z-score of total volume vs. its rolling distribution | Detects unusual single-day activity |
+
+A **score ≥ 65** is "hot" (amber/red); ≤ 35 is "cold" (blue). The
+heatmap below shows the score evolution per sector — vertical
+bands of red indicate **synchronised institutional positioning**.
+
+🔵 Cold = positioning unwinding · 🟡 Neutral · 🔴 Hot = positioning building.
+            """,
+        )
+
     # ── Load sector history ─────────────────────────────────────────────
     sector_hist = pd.DataFrame()
     try:

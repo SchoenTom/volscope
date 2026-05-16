@@ -178,11 +178,15 @@ def _render_user_watchlists(st, db) -> None:
     if not lists:
         st.caption("No watchlists yet. Create one below ↓")
     else:
+        # Sidebar can be told to auto-expand a watchlist by name —
+        # used by Scope's "Configure alarms" jump action.
+        hint_name = st.session_state.get("sidebar_watchlist_open")
         for wl in lists:
+            n_alarms = len(wl.alarm_types or [])
             label = f"{wl.name} · {len(wl.tickers)}"
-            if wl.regime_alarms_enabled:
-                label += " 🔔"
-            with st.expander(label, expanded=False):
+            if n_alarms:
+                label += f"  🔔 {n_alarms}"
+            with st.expander(label, expanded=(wl.name == hint_name)):
                 if not wl.tickers:
                     st.caption("(empty — add tickers below)")
                 else:
@@ -233,6 +237,61 @@ def _render_user_watchlists(st, db) -> None:
                                 st.rerun()
                             except Exception as exc:
                                 st.error(f"Add failed: {exc}")
+
+    # TradingView CSV / paste import — operator feedback 2026-05-16:
+    # "vielleicht kann man ja über Pine die TV Watchlist Ticker
+    # exportieren und darein importieren und dann nur sein
+    # ausgewähltes Universum betrachten."
+    with st.expander("📥 Import from TradingView / CSV", expanded=False):
+        with st.form(key="wl_import_csv", border=False):
+            imp_name = st.text_input(
+                "Watchlist name",
+                placeholder="e.g. TV-Tech",
+                key="wl_imp_name",
+            )
+            imp_text = st.text_area(
+                "Paste tickers (comma-, newline-, or space-separated)",
+                placeholder="AAPL, MSFT, NVDA\nGOOGL META\nPLTR",
+                key="wl_imp_text",
+                height=80,
+            )
+            submitted_imp = st.form_submit_button(
+                "+ Import", width='stretch', type="primary",
+            )
+            if submitted_imp:
+                clean_n = (imp_name or "").strip()
+                # Accept commas, newlines, semicolons, whitespace
+                import re as _re
+                raw = imp_text or ""
+                parts = [
+                    _re.sub(r"[^\w\^\.\-]", "", p).upper()
+                    for p in _re.split(r"[,\n;\s]+", raw)
+                ]
+                tickers = [p for p in parts if p and 1 <= len(p) <= 12]
+                if not clean_n:
+                    st.error("Pick a watchlist name.")
+                elif not tickers:
+                    st.error("No valid tickers found in the paste.")
+                else:
+                    try:
+                        from volscope.persistence.watchlists import (
+                            add_ticker_to_watchlist, create_watchlist,
+                        )
+                        create_watchlist(db, clean_n)
+                        n_added = 0
+                        for t in tickers:
+                            try:
+                                add_ticker_to_watchlist(db, clean_n, t)
+                                n_added += 1
+                            except Exception:
+                                pass
+                        st.toast(
+                            f"✓ Imported {n_added}/{len(tickers)} into «{clean_n}»",
+                            icon="📥",
+                        )
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(f"Import failed: {exc}")
 
     # Create-new-watchlist form (compact)
     with st.form(key="wl_create_new", border=False):
@@ -606,6 +665,43 @@ def _render_page_context(
               <div class="volscope-snap-row"><span class="k">HV 20d</span><span class="v" style="color:{hv_color};">{hv_str}</span></div>
               <div class="volscope-snap-row"><span class="k">Percentile</span><span class="v">{perc_str}</span></div>
               <div class="volscope-snap-row"><span class="k">Spread</span><span class="v" style="color:{spread_color};">{spread_str}</span></div>
+            </div>
+            """,
+        )
+    elif page in ("Flow", "Rotation"):
+        # Operator feedback 2026-05-16: sidebar showed empty / wrong
+        # context on Flow / Rotation. Both pages are sector-wide
+        # views; a single "sector heat" panel is the right context.
+        if latest is None or latest.empty or "sector" not in latest.columns:
+            return
+        try:
+            by_sector = (
+                latest.dropna(subset=["sector", "iv_percentile"])
+                .groupby("sector")["iv_percentile"].median()
+                .sort_values(ascending=False)
+                .head(6)
+            )
+        except Exception:
+            return
+        if by_sector.empty:
+            return
+        rows = "".join(
+            f'<div style="display:flex;justify-content:space-between;'
+            f'font-size:11px;padding:2px 0;">'
+            f'<span style="color:#e0e4ef;overflow:hidden;text-overflow:ellipsis;'
+            f'white-space:nowrap;max-width:140px;">{sec}</span>'
+            f'<span style="color:'
+            f'{"#ff4466" if iv > 70 else "#ff9f43" if iv > 50 else "#5b8cff" if iv > 30 else "#00d4aa"};">'
+            f'{iv:.0f}</span></div>'
+            for sec, iv in by_sector.items()
+        )
+        render_html(
+            st,
+            f"""
+            <div style="background:#12131a;border:1px solid #1e2038;border-radius:6px;padding:10px 12px;margin-top:8px;">
+              <div style="color:#9aa0b3;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;margin-bottom:6px;">Sector IV percentile</div>
+              {rows}
+              <div style="margin-top:6px;font-size:10px;color:#6c7286;font-family:'DM Sans',sans-serif;">hot ▶ cold</div>
             </div>
             """,
         )

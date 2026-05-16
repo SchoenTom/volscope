@@ -343,6 +343,16 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
                                    - pd.Timestamp.today().normalize()).days)
     except Exception:
         pass
+    # Operator feedback 2026-05-16 — Scope needs a quick path to add
+    # the active ticker to a watchlist and configure alarms inline.
+    try:
+        from volscope.ui.components.scope_watchlist_actions import (
+            render_scope_watchlist_actions,
+        )
+        render_scope_watchlist_actions(st, db, ticker)
+    except Exception:
+        pass
+
     render_status_bar(
         ticker=ticker,
         history=history,

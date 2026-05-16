@@ -239,9 +239,15 @@ def create_watchlist(
     None. New callers should pass ``alarm_types`` explicitly.
     """
     ensure_watchlist_tables(db)
+    # Operator feedback 2026-05-16: "ich will keine Alerts bekommen
+    # außer die, die ich speziell ausgewählt habe". New default for
+    # ``regime_alarms=True`` no longer implies any alarm — the
+    # operator must explicitly tick alarm types in the picker.
     if alarm_types is None:
-        alarm_types = ["regime_change"] if regime_alarms else []
+        alarm_types = []
     elif regime_alarms and "regime_change" not in alarm_types:
+        # Honour explicit ``regime_alarms=True`` only when the caller
+        # ALSO passes alarm_types (legacy callers that want regime).
         alarm_types = alarm_types + ["regime_change"]
     db.con.execute(
         """
