@@ -300,39 +300,52 @@ Codify in `.claude/rules/perf.md` + `.claude/rules/db-safety.md`.
 
 ## 8 — Ship plan (8 weeks, 4 milestones)
 
-### Milestone M1 — Orientation (Week 1-2)
-- Stream B: phase-header strip on every page
-- Stream A: tooltip pass (P0 metrics first: IV Rank, IV Percentile,
-  Skew, Expected Move, Vol Regime)
-- Stream C: next-step footer helper + Discover/Scope wire-in
+### Milestone M1 — Orientation (Week 1-2) ✅ SHIPPED 2026-05-16
+
+- ✅ Stream B: phase-header strip wired on ALL 22 non-terminal pages
+  (commits `abf9f9b` + `043cdaf` + `4ab45fd`)
+- ✅ Stream A: tooltip pass — centralised `volscope/ui/components/
+  glossary.py` with 21 KPI definitions, first caller wired on
+  Scope KPI-row (commit `db3e55c`)
+- ✅ Stream C: next-step footer helper + 22-page graph, wired on
+  every non-terminal page (commit `18e30eb` + `043cdaf` + `4ab45fd`)
 
 Definition of done: a newbie can navigate any of the 4 phases with
 ≤ 1 click and read the active page's primary KPIs without a
 glossary.
 
-### Milestone M2 — Weave (Week 3-4)
-- Stream C: next-step footer on remaining 21 pages
-- Stream D: Watchlist consolidation
-- Watchlist sidebar widget connects to alarm dispatch (done — verify)
+### Milestone M2 — Weave (Week 3-4) ✅ SHIPPED 2026-05-16
+- ✅ Stream C: next-step footer on remaining 16 pages (M2.A,
+  commit `4ab45fd`)
+- ✅ Stream D: Watchlist concept rename (M2.B, commit `125ae99`) —
+  "Watchlist (alerts)" → "Active alerts"; user-watchlists keep the
+  ⚑ glyph for ticker-grouping role
+- ✅ Watchlist sidebar widget connected to alarm dispatch (commit
+  `8283c92`, cron auto-trigger via `make check-alarms`)
 
 Definition of done: every "from → to" entry in §4 works with one
 click, ticker context preserved.
 
-### Milestone M3 — Onboarding (Week 5-6)
+### Milestone M3 — Onboarding (Week 5-6) ⏳ NEXT WAVE
 - Stream E: 5-step wizard rewrite with live previews
-- Glossary page (Help expansion) explaining 15 core terms
+- Glossary page (Help expansion) — partial (centralised
+  glossary.py exists; Help page render not yet rebuilt)
 
 Definition of done: a tester who has never traded options can finish
 the onboarding and place their first paper trade in ≤ 10 minutes.
 
-### Milestone M4 — Consolidate (Week 7-8)
-- Earnings Hub + Earnings Trades merge
-- LEAPS Lab + Dossier merge
-- Mega-Scan deprecation (folded into Discover)
-- Signals page evaluation
+### Milestone M4 — Consolidate (Week 7-8) ✅ PARTIAL SHIPPED 2026-05-16
+- ✅ Sidebar 23 → 20 entries (Mega-Scan / Earnings Trades / Dossier
+  moved to footer cross-links; commit `3773b8a`)
+- ⏳ Full tab-merge of Earnings Hub + Earnings Trades → "Earnings"
+  with tabs (deferred — needs render-function touching)
+- ⏳ Full tab-merge of LEAPS Lab + Dossier → "LEAPS" with tabs
+  (deferred — same reason)
+- ⏳ Signals page evaluation (kept for now; subsumes future Bot
+  signal-log)
 
 Definition of done: 19 (or fewer) sidebar entries, no functionality
-lost, all tests green.
+lost, all tests green. **Currently: 20 entries, 1930 tests green.**
 
 ---
 
