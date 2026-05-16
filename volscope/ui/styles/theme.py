@@ -608,6 +608,28 @@ CUSTOM_CSS = f"""
         font-family: 'DM Sans', sans-serif;
     }}
 
+    /* v0.9.8 Phase E — pointer cursor on every Streamlit-rendered
+       button-like element so the operator's mouse always tells them
+       what's pressable. !important wins over Streamlit's defaults. */
+    .stButton button,
+    .stDownloadButton button,
+    .stFormSubmitButton button,
+    button[kind="primary"],
+    button[kind="secondary"],
+    [role="button"],
+    [role="link"],
+    .volscope-clickable-row {{
+        cursor: pointer !important;
+    }}
+
+    /* Subtle hover state for custom HTML data rows that opt into
+       .volscope-clickable-row. Used by Portfolio / Scanner / Alerts
+       / Signals / Bot row renderers (Phase C wiring). */
+    .volscope-clickable-row:hover {{
+        background: rgba(0, 212, 170, 0.06) !important;
+        transition: background 0.15s ease;
+    }}
+
     /* Thin scrollbars (TradingView feel) */
     ::-webkit-scrollbar {{
         width: 6px;
