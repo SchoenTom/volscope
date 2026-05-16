@@ -785,14 +785,18 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
         # Validation is non-critical UI; never break the sidebar
         pass
 
-    # ── Watchlist — active alerts at a glance ───────────────────────
+    # ── Active alerts — alert-rule status at a glance ───────────────
     # Shows up to 5 enabled alert rules with live "would fire now?" status.
     # Click → jumps to Command Center where the trader can manage rules.
+    # v0.9.7 rename: was "Watchlist · N rules" — collided with the new
+    # user-watchlist widget below. Both render in the sidebar, but
+    # "Active alerts" describes WHAT this shows (rule status), while
+    # "My watchlists" describes ticker groupings.
     try:
         rules_df = db.get_alert_rules()
         enabled = rules_df[rules_df["enabled"] == True] if not rules_df.empty else rules_df
         if not enabled.empty:
-            with st.expander(f"⚑ Watchlist · {len(enabled)} rules", expanded=False):
+            with st.expander(f"⚠ Active alerts · {len(enabled)} rules", expanded=False):
                 # Compact status: ticker · metric · operator threshold · current
                 from volscope.alerts.alert_engine import AlertRule, evaluate_rule
                 from volscope.ui.components.cached_data import (
