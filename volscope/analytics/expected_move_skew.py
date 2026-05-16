@@ -80,8 +80,15 @@ def _interp_iv_at_delta(
     if df is None or df.empty or "delta" not in df.columns or "iv" not in df.columns:
         return None
     work = df.copy()
+    # yfinance's option_chain sometimes returns object-typed delta with
+    # all values None (no greeks supplied). Coerce to float first; the
+    # raw .abs() call on an all-None object series raises
+    # ``TypeError: bad operand type for abs(): 'NoneType'``.
+    work["delta"] = pd.to_numeric(work["delta"], errors="coerce")
+    work = work.dropna(subset=["delta", "iv"])
+    if work.empty:
+        return None
     work["abs_delta"] = work["delta"].abs()
-    work = work.dropna(subset=["abs_delta", "iv"])
     work = work[(work["iv"] > 0) & (work["abs_delta"] > 0) & (work["abs_delta"] <= 1)]
     if work.empty:
         return None

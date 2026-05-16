@@ -477,10 +477,13 @@ CUSTOM_CSS = f"""
     [data-testid="stExpander"] summary::-webkit-details-marker {{
         display: none !important;
     }}
-    /* Hide every direct child of summary EXCEPT the label container
-       (Streamlit wraps the label in a div with stMarkdownContainer). */
+    /* Hide ONLY the Material Symbols chevron Streamlit injects.
+       Earlier the rule also hid every `summary > span` not matching
+       `.streamlit-expanderHeader`, which in Streamlit 1.57 made
+       expander LABEL text disappear (visible as empty black bars in
+       Earnings Hub day columns). The chevron has a material-icon class,
+       so we can target it specifically without touching the label. */
     [data-testid="stExpander"] summary > svg,
-    [data-testid="stExpander"] summary > span:not(.streamlit-expanderHeader),
     [data-testid="stExpander"] summary > [class*="material"],
     [data-testid="stExpander"] summary > .material-symbols-outlined,
     [data-testid="stExpander"] summary > .material-icons {{

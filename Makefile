@@ -56,6 +56,27 @@ quickstart-bot:
 	$(MAKE) seed-broad-universe
 	$(MAKE) run
 
+# ── make quickstart-fast — 2-minute boot ────────────────────────────
+# Operator feedback 2026-05-16: "VolScope sollte in 2 min ladbar sein".
+# Seeds ONLY SPY (most-traded ETF, single-ticker baseline). The user
+# then grows the universe from the sidebar's quick-add form or by
+# importing a TradingView watchlist. Skips the dependency install
+# step on the assumption it has already happened — if you need a
+# from-scratch setup, run `make setup` first.
+quickstart-fast:
+	@python scripts/ops/release_db_lock.py --force
+	python scripts/ops/seed_database.py --tickers SPY
+	$(MAKE) run
+
+# Minimal NDX-only seed (single ticker QQQ) — even faster alternative.
+seed-minimal:
+	python scripts/ops/seed_database.py --tickers QQQ
+
+# Seed from your existing watchlists (whatever tickers you've added).
+# Falls back to SPY if no watchlists exist yet.
+seed-watchlist:
+	python scripts/ops/seed_from_watchlist.py
+
 # ── Individual stages ───────────────────────────────────────────────
 setup:
 	pip install -r requirements.txt
