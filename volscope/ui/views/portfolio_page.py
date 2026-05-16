@@ -632,7 +632,7 @@ def _render_strategy_groups(
   <div>{leg_rows}</div>
 </div>''',
         )
-        c1, c2 = st_module.columns([1, 4])
+        c1, c_scope, c2 = st_module.columns([1, 1, 3])
         with c1:
             if st_module.button(
                 f"✕ close strategy",
@@ -647,6 +647,24 @@ def _render_strategy_groups(
                     st_module.rerun()
                 except Exception as exc:
                     st_module.error(f"Close failed: {exc}")
+        with c_scope:
+            # v0.9.8 Phase C — clickable cross-link from a Portfolio
+            # group to the Scope deep-dive on its underlying.
+            if st_module.button(
+                f"→ Scope · {g.ticker}",
+                key=f"pf_scope_{g.strategy_group_id}",
+                help=f"Open {g.ticker} in Scope (full IV/HV history + verdict)",
+            ):
+                try:
+                    from volscope.ui.components.navigation import (
+                        NavIntent, nav_to,
+                    )
+                    nav_to(NavIntent(
+                        page="Scope", ticker=g.ticker, source="Portfolio",
+                    ))
+                    st_module.rerun()
+                except Exception as exc:                           # noqa: BLE001
+                    st_module.error(f"Nav failed: {exc}")
         with c2:
             render_html(
                 st_module,

@@ -488,9 +488,18 @@ def render_scan_page(db, settings: dict | None = None) -> None:
         except Exception:
             selected_row_idx = []
     if selected_row_idx and "TICKER" in table.columns:
-        picked_ticker = table.iloc[selected_row_idx[0]]["TICKER"]
-        st.session_state["selected_ticker"] = str(picked_ticker)
-        st.session_state["active_page"] = "Scope"
+        picked_ticker = str(table.iloc[selected_row_idx[0]]["TICKER"])
+        # v0.9.8 Phase C — route through NavIntent so SSOT history,
+        # URL sync, and toast feedback all fire.
+        try:
+            from volscope.ui.components.navigation import NavIntent, nav_to
+            nav_to(NavIntent(
+                page="Scope", ticker=picked_ticker, source="Scanner",
+            ))
+        except Exception:                                          # noqa: BLE001
+            # Fallback to legacy direct mutation if nav layer breaks
+            st.session_state["selected_ticker"] = picked_ticker
+            st.session_state["active_page"] = "Scope"
         st.rerun()
 
     # Explanation strip at the bottom — users need to know what the columns

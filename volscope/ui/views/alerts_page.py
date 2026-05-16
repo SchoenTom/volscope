@@ -174,6 +174,42 @@ def render_alerts_page(db, settings: dict | None = None) -> None:
     rows = "".join(_alert_row_html(a) for a in visible)
     render_html(st, f'<div style="margin-top:8px;">{rows}</div>')
 
+    # v0.9.8 Phase C — clickable ticker jump from the visible feed.
+    # Picks the alert at the top and offers a button; uses NavIntent
+    # for SSOT history + toast feedback.
+    if visible:
+        unique_tickers = []
+        seen = set()
+        for a in visible[:20]:
+            if a.ticker and a.ticker not in seen:
+                unique_tickers.append(a.ticker)
+                seen.add(a.ticker)
+        if unique_tickers:
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                jump_t = st.selectbox(
+                    "Open ticker in Scope",
+                    unique_tickers,
+                    key="alerts_quickjump_select",
+                )
+            with c2:
+                if st.button(
+                    "→ Scope",
+                    key="alerts_quickjump_btn",
+                    width='stretch',
+                    help="Deep-dive the selected ticker on Scope",
+                ):
+                    try:
+                        from volscope.ui.components.navigation import (
+                            NavIntent, nav_to,
+                        )
+                        nav_to(NavIntent(
+                            page="Scope", ticker=jump_t, source="Alerts",
+                        ))
+                        st.rerun()
+                    except Exception as exc:                       # noqa: BLE001
+                        st.error(f"Nav failed: {exc}")
+
     # Footer: rule glossary so the user can audit what fired.
     with st.expander("Rule thresholds (audit)", expanded=False):
         st.markdown(
