@@ -410,6 +410,23 @@ hand-waving.
             """
         )
 
+    # v0.9.7 M4.C — embedded "Trade Dossier" tab (sidebar-merge: the
+    # formerly-separate Dossier page now lives one click away inside
+    # LEAPS Lab via an expander, eliminating one sidebar entry).
+    with st.expander("📁 Trade Dossier — open positions", expanded=False):
+        try:
+            from volscope.ui.views.leaps_dossier_page import (
+                render_leaps_dossier_page,
+            )
+            render_leaps_dossier_page(db, settings)
+        except Exception as _exc:                                   # noqa: BLE001
+            import logging as _lg
+            _lg.getLogger("volscope.ui.leaps_lab").warning(
+                "embedded Dossier render failed: %s", _exc,
+            )
+            st.info("Embedded Dossier view unavailable. Open it via the "
+                    "next-step footer below.")
+
     # v0.9.7 — cross-page weave footer (master plan §4)
     from volscope.ui.components.next_step import render_next_step_footer
     render_next_step_footer(st, page='LEAPS Lab', ticker=st.session_state.get('selected_ticker'))

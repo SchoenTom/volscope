@@ -153,6 +153,24 @@ def render_earnings_hub_page(db, settings: dict | None = None) -> None:
     # ── Sector heatmap footer ────────────────────────────────────────
     _render_sector_heatmap(enriched)
 
+    # v0.9.7 M4.B — embedded "My Earnings Trades" tab (sidebar-merge:
+    # the formerly-separate Earnings Trades page now lives one click
+    # away inside Earnings Hub via an expander, eliminating one
+    # sidebar entry without losing the capability).
+    with st.expander("📁 My Earnings Trades", expanded=False):
+        try:
+            from volscope.ui.views.earnings_positions_page import (
+                render_earnings_positions_page,
+            )
+            render_earnings_positions_page(db, settings)
+        except Exception as _exc:                                   # noqa: BLE001
+            import logging as _lg
+            _lg.getLogger("volscope.ui.earnings_hub").warning(
+                "embedded Earnings Trades render failed: %s", _exc,
+            )
+            st.info("Embedded earnings-trades view unavailable. Open it via the "
+                    "next-step footer below.")
+
     # v0.9.7 — cross-page weave footer (master plan §4)
     from volscope.ui.components.next_step import render_next_step_footer
     render_next_step_footer(st, page='Earnings Hub', ticker=st.session_state.get('selected_ticker'))
