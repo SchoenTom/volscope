@@ -225,8 +225,13 @@ _FONT_IMPORT = (
     "@import url('https://fonts.googleapis.com/css2?"
     "family=JetBrains+Mono:wght@400;500;600;700&"
     "family=DM+Sans:wght@400;500;600;700&display=swap');"
-    "@import url('https://fonts.googleapis.com/icon?family=Material+Icons&display=swap');"
-    "@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap');"
+    # display=block hides the fallback text completely while the font
+    # is loading (vs swap which flashes the literal ligature like
+    # "keyboard_double_arrow_left"). For icon fonts, block is the
+    # correct choice — operator reported the swap-flash as
+    # "keyboard_load_" ghost text in the sidebar header on 2026-05-15.
+    "@import url('https://fonts.googleapis.com/icon?family=Material+Icons&display=block');"
+    "@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=block');"
 )
 
 CUSTOM_CSS = f"""
@@ -383,6 +388,41 @@ CUSTOM_CSS = f"""
     [data-testid="stSidebarCollapseButton"]:hover,
     button[kind="header"]:hover {{
         background: rgba(0, 212, 170, 0.12) !important;
+    }}
+
+    /* v0.9.8 — belt-and-suspenders. Streamlit 1.57 occasionally
+       introduces a new sidebar-header test-id we haven't pinned
+       (operator saw a "keyboard_load_" ghost on 2026-05-15 — that's
+       "keyboard_double_arrow_left" truncated). This rule covers any
+       descendant span of the sidebar-header / sidebar-user-content
+       wrappers that still contains literal ligature text. Once the
+       Material Symbols font lands (display=block) the rule becomes a
+       no-op. Sidebar body content is unaffected because the wrapper
+       containers only hold chrome buttons. */
+    [data-testid="stSidebarHeader"] button,
+    [data-testid="stSidebarHeader"] span,
+    [data-testid="stSidebarUserContent"] > header button,
+    [data-testid="stSidebarUserContent"] > header span {{
+        font-size: 0 !important;
+        color: transparent !important;
+        line-height: 0 !important;
+    }}
+    [data-testid="stSidebarHeader"] button::after {{
+        content: "‹" !important;
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 18px !important;
+        color: {COLORS['accent']} !important;
+        line-height: 1 !important;
+        font-weight: 700 !important;
+    }}
+    [data-testid="stSidebarHeader"] button:has(svg)::after {{
+        content: none !important;
+    }}
+    [data-testid="stSidebarHeader"] svg {{
+        width: 18px !important;
+        height: 18px !important;
+        color: {COLORS['accent']} !important;
+        fill: {COLORS['accent']} !important;
     }}
 
     /* ── IBKR-Density Layout ────────────────────────────────────────────

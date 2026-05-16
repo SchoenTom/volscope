@@ -65,6 +65,53 @@ def _format_message(alarm: WatchlistRegimeAlarm) -> tuple[str, str]:
     return title, body
 
 
+def dispatch_message(title: str, body: str) -> dict:
+    """Send a pre-built (title, body) pair to all channels.
+
+    The cron-side multi-alarm runner builds richer messages than
+    _format_message can produce (current vs threshold, regime, spot,
+    deep-link). Calling this directly bypasses the legacy formatter.
+    """
+    result = {"telegram": False, "macos_desktop": False, "log": True}
+    log.warning("REGIME ALARM %s: %s", title, body)
+
+    try:
+        token = os.environ.get("TELEGRAM__BOT_TOKEN") or os.environ.get(
+            "TELEGRAM_BOT_TOKEN", ""
+        )
+        chat_id = os.environ.get("TELEGRAM__CHAT_ID") or os.environ.get(
+            "TELEGRAM_CHAT_ID", ""
+        )
+        if token and chat_id:
+            import requests
+            r = requests.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": f"{title}\n{body}"},
+                timeout=4,
+            )
+            result["telegram"] = bool(r.ok)
+    except Exception as exc:                                            # noqa: BLE001
+        log.debug("Telegram dispatch failed: %s", exc)
+
+    try:
+        if shutil.which("osascript"):
+            safe_title = title.replace('"', "'").replace("\\", "")
+            safe_body = body.replace('"', "'").replace("\\", "")
+            subprocess.run(
+                [
+                    "osascript", "-e",
+                    f'display notification "{safe_body}" with title "VolScope" '
+                    f'subtitle "{safe_title}"',
+                ],
+                timeout=2, check=False,
+            )
+            result["macos_desktop"] = True
+    except Exception as exc:                                            # noqa: BLE001
+        log.debug("macOS notification failed: %s", exc)
+
+    return result
+
+
 def dispatch(alarm: WatchlistRegimeAlarm) -> dict:
     """Send the alarm to all configured channels. Returns a dict of
     ``{channel: bool_success}`` so the caller can log per-channel.
