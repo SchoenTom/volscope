@@ -101,7 +101,40 @@ summary — leave the trail of judgement visible.
 
 ---
 
+## Next-wave roadmap (v0.9.7+)
+
+**SHIPPED in v0.9.6** (operator-conversation review 2026-05-16):
+- Watchlists (TradingView-style) — `volscope/persistence/watchlists.py`
+  with add/remove/reorder + per-watchlist regime-alarm toggle.
+- Vol-regime alarms — `volscope/alerts/regime_alarm_dispatch.py` fires
+  when an alarm-tracked ticker crosses IV-pct 20 (CHEAP) or 80 (RICH),
+  or transitions named vol-regime. Channels: Telegram (TELEGRAM__*
+  env vars already wired) + macOS desktop notification via osascript
+  + WARNING log line.
+- Skew-adjusted Expected Move — `volscope/analytics/expected_move_skew.py`
+  asymmetric upside/downside from 25Δ Put-IV vs 25Δ Call-IV.
+- Front/Back IV decomposition — `volscope/analytics/front_back_iv.py`
+  isolates earnings-event IV via variance additivity.
+- OI Heatmap — `volscope/analytics/oi_heatmap.py` per-strike OI bar
+  chart with max-pain + support/resistance markers.
+- New "Vol Insights" page wires all three analytics into one view
+  with 5-minute-cached live chain fetch.
+- DuckDB FATAL-cascade fix (upsert_daily DELETE+INSERT → ON CONFLICT)
+  so seed-full no longer corrupts the connection on a single bad row.
+- yfinance hard timeout wrapper + 12-second wall-clock budget.
+
+**STILL TODO (next wave):**
+- Historical Move Calibration: per past earnings, implied vs realised
+  abs move + cumulative hit-rate.
+- SMS notification (Twilio paid integration — defer).
+- Watchlist UI widget in the sidebar — persistence + dispatch are
+  shipped, only Streamlit form bindings remain.
+- Auto-trigger of `check_regime_alarms` in the daily scrape cron.
+
 ## Change Log
 
+- **2026-05-16** — Vol Insights + Watchlists + Regime alarms shipped.
+  DuckDB FATAL-cascade fix + yfinance timeout wrapper. Status:
+  CONDITIONAL (Phase-4 live-IBKR gate unchanged).
 - **2026-05-15** — Initial scaffold post-v0.9.3 hardening. Status:
   CONDITIONAL. Author: Tom + Claude Opus 4.7 (1M context).

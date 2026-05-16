@@ -50,6 +50,7 @@ _PAGE_REGISTRY: dict[str, tuple[str, str]] = {
     "Pre-Trade":  ("volscope.ui.views.pretrade_page",       "render_pretrade_page"),
     "Builder":    ("volscope.ui.views.strategy_builder_page","render_strategy_builder_page"),
     "Options Lab":("volscope.ui.views.options_lab_page",    "render_options_lab_page"),
+    "Vol Insights":("volscope.ui.views.vol_insights_page",  "render_vol_insights_page"),
     "LEAPS Lab":  ("volscope.ui.views.leaps_page",          "render_leaps_page"),
     "Dossier":    ("volscope.ui.views.leaps_dossier_page",  "render_leaps_dossier_page"),
     "Backtest":   ("volscope.ui.views.backtest_page",       "render_backtest_page"),
