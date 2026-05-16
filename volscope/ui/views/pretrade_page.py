@@ -128,6 +128,9 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
     from volscope.ui.components.regime_header import render_regime_header
     from volscope.ui.components.freshness_banner import render_freshness_banner
     render_regime_header(db)
+    # v0.9.7 — phase strip
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name="Pre-Trade", ticker=ticker)
     # v0.9.3 — NYSE-aware freshness banner (hidden when FRESH).
     render_freshness_banner(db)
 
@@ -593,6 +596,10 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
 
     # ── Help & FAQ ──────────────────────────────────────────────────
     _render_help_and_faq()
+
+    # v0.9.7 — cross-page weave footer
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page="Pre-Trade", ticker=ticker)
 
 
 def _render_help_and_faq() -> None:

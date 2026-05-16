@@ -67,6 +67,12 @@ def _cached_chain_fetch(ticker: str, max_expiries: int = 6) -> pd.DataFrame:
 
 def render_vol_insights_page(db, settings: dict | None = None) -> None:
     """Top-level page entry."""
+    # v0.9.7 — phase strip
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(
+        st, page_name="Vol Insights",
+        ticker=st.session_state.get("selected_ticker"),
+    )
     st.markdown("## ⚡ Vol Insights")
     st.caption(
         "Skew-adjusted Expected Move · Front/Back IV decomposition · "
@@ -176,3 +182,7 @@ def render_vol_insights_page(db, settings: dict | None = None) -> None:
 
     # ── 3. OI Heatmap (target expiry) ───────────────────────────────
     render_oi_heatmap_block(st, ticker, target_chain, spot=spot)
+
+    # v0.9.7 — cross-page weave footer
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page="Vol Insights", ticker=ticker)

@@ -787,9 +787,14 @@ def render_discover_page(db, settings: dict | None = None) -> None:
     from volscope.ui.components.auto_refresh import auto_refresh_toggle
     from volscope.ui.components.regime_header import render_regime_header
     from volscope.ui.components.freshness_banner import render_freshness_banner
+    from volscope.ui.components.phase_header import render_phase_header
+    from volscope.ui.components.next_step import render_next_step_footer
 
     # v0.9.0 — persistent vol-regime header strip.
     render_regime_header(db)
+    # v0.9.7 — 4-phase orientation strip (master plan §2).
+    render_phase_header(st, page_name="Discover",
+                         ticker=st.session_state.get("selected_ticker"))
     # v0.9.3 — NYSE-aware freshness banner (hidden when FRESH so the
     # operator only sees it when data is actually stale).
     render_freshness_banner(db)
@@ -966,3 +971,9 @@ def render_discover_page(db, settings: dict | None = None) -> None:
             _render_sector_vol_map(st, latest)
         with c2:
             _render_data_quality(st, latest, bulk_history)
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    render_next_step_footer(
+        st, page="Discover",
+        ticker=st.session_state.get("selected_ticker"),
+    )

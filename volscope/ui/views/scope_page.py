@@ -294,6 +294,9 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
     # v0.9.0 — persistent vol-regime header strip.
     from volscope.ui.components.regime_header import render_regime_header
     render_regime_header(db)
+    # v0.9.7 — phase strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name="Scope", ticker=ticker)
 
     render_html(
         st,
@@ -506,6 +509,10 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
 
     with tab_backtest:
         _render_backtest_section(st, history, ticker)
+
+    # v0.9.7 — cross-page weave footer
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page="Scope", ticker=ticker)
 
 
 def _render_backtest_section(st, history: pd.DataFrame, ticker: str) -> None:

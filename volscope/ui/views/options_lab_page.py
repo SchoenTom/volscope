@@ -128,6 +128,12 @@ def _cached_greeks_curves(
 # ── Public entry point ──────────────────────────────────────────────
 
 def render_options_lab_page(db, settings: dict | None = None) -> None:
+    # v0.9.7 — phase strip
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(
+        st, page_name="Options Lab",
+        ticker=st.session_state.get("selected_ticker"),
+    )
     st.markdown("## ◈ Options Lab")
     st.caption(
         "OptionStrat-grade workbench — payoff, Greeks surface, scenario "
@@ -283,6 +289,13 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
         spot=spot,
         iv=iv,
         iv_perc=cfg.get("iv_perc"),
+    )
+
+    # v0.9.7 — cross-page weave footer
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(
+        st, page="Options Lab",
+        ticker=st.session_state.get("selected_ticker"),
     )
 
 

@@ -290,6 +290,12 @@ def _build_treemap_figure(
 def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
     """Render the Universe Heatmap page."""
     _MONO = "JetBrains Mono, SF Mono, Menlo, monospace"
+    # v0.9.7 — phase strip
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(
+        st, page_name="Heatmap",
+        ticker=st.session_state.get("selected_ticker"),
+    )
     render_html(
         st,
         f'<div style="font-family:{_MONO};font-size:22px;font-weight:700;'
@@ -484,3 +490,10 @@ def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
                 f'<span style="color:#ff4466;">{rich_n} rich</span>'
                 f'</div>',
             )
+
+    # v0.9.7 — cross-page weave footer
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(
+        st, page="Heatmap",
+        ticker=st.session_state.get("selected_ticker"),
+    )
