@@ -8,7 +8,12 @@ Streamlit reruns or daily_scrape iterations indefinitely.
 
 This module wraps the common yfinance entry points with:
 
-  - hard wall-clock timeout (ThreadPoolExecutor + future.result(timeout=N))
+  - hard wall-clock timeout via a module-level long-lived
+    ThreadPoolExecutor (re-using a singleton avoids the per-call
+    create+shutdown thread churn that triggered
+    "RuntimeError: mutex lock failed: Invalid argument" inside
+    Streamlit reruns — Streamlit's own thread scheduler races with
+    short-lived executors).
   - 429-rate-limit detection: the wrapper catches HTTPError 429 and
     surfaces it as `YFRateLimitError`, letting callers back off
     deterministically instead of swallowing it as a generic Exception
@@ -26,6 +31,7 @@ import concurrent.futures
 import contextlib
 import io
 import logging
+import threading
 from typing import Any, Optional
 
 import pandas as pd
@@ -43,6 +49,32 @@ class YFRateLimitError(RuntimeError):
     """Yahoo returned HTTP 429 — back off and retry later."""
 
 
+# ── Module-level executor ──────────────────────────────────────────
+# A SINGLE long-lived pool, NOT per-call. The earlier
+# `with ThreadPoolExecutor(max_workers=1) as ex:` pattern crashed
+# Streamlit with mutex-lock errors after intense chart interaction:
+# Streamlit reruns trigger pool shutdown while the previous future is
+# still in-flight; the worker thread's cleanup races with
+# Streamlit's ScriptRunner thread management.
+#
+# A persistent pool with max_workers=4 lets us run up to 4 yfinance
+# calls concurrently while NEVER triggering executor shutdown until
+# Python interpreter exit.
+_pool_lock = threading.Lock()
+_executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+
+
+def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
+    global _executor
+    with _pool_lock:
+        if _executor is None:
+            _executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=4,
+                thread_name_prefix="yf-safe",
+            )
+        return _executor
+
+
 def _silenced_call(fn, *args, **kwargs):
     """Run fn(*args, **kwargs) with stdout/stderr redirected to /dev/null."""
     with contextlib.redirect_stdout(io.StringIO()), \
@@ -56,20 +88,23 @@ def _run_with_timeout(fn, *args, timeout: float = DEFAULT_TIMEOUT_S, **kwargs):
     Raises YFTimeoutError if it exceeds <timeout>. Raises YFRateLimitError
     if the underlying call returned HTTP 429. Other exceptions propagate.
     """
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(_silenced_call, fn, *args, **kwargs)
-        try:
-            return future.result(timeout=timeout)
-        except concurrent.futures.TimeoutError as exc:
-            raise YFTimeoutError(
-                f"yfinance call exceeded {timeout}s wall-clock budget"
-            ) from exc
-        except Exception as exc:                                   # noqa: BLE001
-            # Detect 429 from common requests / curl_cffi error shapes.
-            msg = str(exc).lower()
-            if "429" in msg or "rate limit" in msg or "too many requests" in msg:
-                raise YFRateLimitError(f"Yahoo 429 rate-limit: {exc}") from exc
-            raise
+    ex = _get_executor()
+    future = ex.submit(_silenced_call, fn, *args, **kwargs)
+    try:
+        return future.result(timeout=timeout)
+    except concurrent.futures.TimeoutError as exc:
+        # NOTE: we deliberately do NOT cancel the future — yfinance's
+        # underlying socket may still be reading; cancelling here would
+        # leave a dangling thread. The pool will reap it when the
+        # socket eventually times out at the network layer.
+        raise YFTimeoutError(
+            f"yfinance call exceeded {timeout}s wall-clock budget"
+        ) from exc
+    except Exception as exc:                                       # noqa: BLE001
+        msg = str(exc).lower()
+        if "429" in msg or "rate limit" in msg or "too many requests" in msg:
+            raise YFRateLimitError(f"Yahoo 429 rate-limit: {exc}") from exc
+        raise
 
 
 def safe_history(
