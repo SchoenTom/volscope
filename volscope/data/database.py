@@ -1,6 +1,7 @@
 """DuckDB persistence layer for VolScope."""
 from __future__ import annotations
 
+import threading
 from datetime import date
 from pathlib import Path
 from typing import Optional
@@ -9,6 +10,119 @@ import duckdb
 import pandas as pd
 
 from volscope.config import DATA_DIR, DB_PATH
+
+
+# Process-wide lock that serialises every execute() on the shared
+# Streamlit @st.cache_resource connection. Multiple browser tabs
+# (or Playwright sessions) share ONE underlying connection because
+# @st.cache_resource is process-global; without serialisation DuckDB
+# raises ``RuntimeError: mutex lock failed: Invalid argument`` mid-
+# query (observed in /tmp/vs.log during the 2026-05-16 live audit).
+# A simple lock + monkey-patched execute() keeps it correct without
+# touching the dozens of call sites.
+_EXEC_LOCK = threading.Lock()
+
+
+class _LockedResult:
+    """Wraps a DuckDB result; lock stays held until fetch is consumed."""
+
+    __slots__ = ("_res", "_held")
+
+    def __init__(self, res) -> None:
+        self._res = res
+        self._held = True
+
+    def _release(self):
+        if self._held:
+            try:
+                _EXEC_LOCK.release()
+            except RuntimeError:
+                pass
+            self._held = False
+
+    def fetchdf(self, *a, **kw):
+        try:
+            return self._res.fetchdf(*a, **kw)
+        finally:
+            self._release()
+
+    def fetchall(self, *a, **kw):
+        try:
+            return self._res.fetchall(*a, **kw)
+        finally:
+            self._release()
+
+    def fetchone(self, *a, **kw):
+        try:
+            return self._res.fetchone(*a, **kw)
+        finally:
+            self._release()
+
+    def fetchmany(self, *a, **kw):
+        try:
+            return self._res.fetchmany(*a, **kw)
+        finally:
+            self._release()
+
+    def df(self, *a, **kw):
+        try:
+            return self._res.df(*a, **kw)
+        finally:
+            self._release()
+
+    def arrow(self, *a, **kw):
+        try:
+            return self._res.arrow(*a, **kw)
+        finally:
+            self._release()
+
+    def __getattr__(self, name):
+        return getattr(self._res, name)
+
+    def __del__(self):
+        try:
+            self._release()
+        except Exception:
+            pass
+
+
+class _LockedConnection:
+    """Wrap a DuckDBPyConnection so execute→fetch is mutex-serialised.
+
+    Pattern: caller writes ``db.con.execute(sql, params).fetchdf()``.
+    The execute() acquires the global lock, runs the statement, and
+    returns a _LockedResult that releases the lock when fetched.
+    Retries once on transient mutex errors.
+    """
+
+    __slots__ = ("_con",)
+
+    def __init__(self, con: "duckdb.DuckDBPyConnection") -> None:
+        self._con = con
+
+    def execute(self, *args, **kwargs):
+        import time
+        for attempt in range(3):
+            _EXEC_LOCK.acquire()
+            try:
+                res = self._con.execute(*args, **kwargs)
+                return _LockedResult(res)
+            except RuntimeError as exc:
+                # Release before retry — mutex error means the call
+                # never reached "ownership" inside DuckDB.
+                try: _EXEC_LOCK.release()
+                except RuntimeError: pass
+                if "mutex lock failed" in str(exc) and attempt < 2:
+                    time.sleep(0.05 * (attempt + 1))
+                    continue
+                raise
+            except Exception:
+                try: _EXEC_LOCK.release()
+                except RuntimeError: pass
+                raise
+
+    def __getattr__(self, name):
+        return getattr(self._con, name)
 
 
 class VolScopeDB:
@@ -24,9 +138,11 @@ class VolScopeDB:
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self.read_only = read_only
         if read_only:
-            self.con = duckdb.connect(self.db_path, read_only=True)
+            raw = duckdb.connect(self.db_path, read_only=True)
+            self.con = _LockedConnection(raw)
         else:
-            self.con = duckdb.connect(self.db_path)
+            raw = duckdb.connect(self.db_path)
+            self.con = _LockedConnection(raw)
             self._create_tables()
         if auto_migrate and not read_only:
             # Silent fix: legacy rows where iv_30d == hv_20d (the old buggy

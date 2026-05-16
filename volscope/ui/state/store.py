@@ -164,29 +164,40 @@ def push_history(
 
 
 def hydrate_from_url() -> None:
-    """Read URL query params at FIRST boot only, seed session_state.
+    """Re-apply URL query params whenever they CHANGE.
 
-    Idempotent: subsequent reruns no-op (guarded by a session flag)
-    so user interactions don't get overridden by stale URL state.
+    Earlier this was one-shot per session — a deep-link like
+    /?page=Scope&ticker=PYPL was ignored on every subsequent visit
+    because the guard flag stayed True. That broke shareable links
+    (the operator pastes a Scope URL but lands on Command) and made
+    Playwright audits unable to deep-link.
+
+    New policy: hydrate when (page, ticker) in URL differs from what
+    we last hydrated. User interactions write through
+    ``sync_to_url`` so this stays consistent with click-driven nav.
     """
     try:
-        if st.session_state.get("_appstate_hydrated"):
-            return
         params = st.query_params
-        # Ticker
-        if "ticker" in params:
-            t = _validate_ticker(params["ticker"])
+        url_page = params.get("page") if "page" in params else None
+        url_ticker = params.get("ticker") if "ticker" in params else None
+        url_source = params.get("source") if "source" in params else None
+
+        last = st.session_state.get("_appstate_last_url", (None, None))
+        if (url_page, url_ticker) == last and st.session_state.get("_appstate_hydrated"):
+            return
+
+        if url_ticker:
+            t = _validate_ticker(url_ticker)
             if t:
                 st.session_state["selected_ticker"] = t
-        # Page
-        if "page" in params:
-            p = _validate_page(params["page"])
+        if url_page:
+            p = _validate_page(url_page)
             if p:
                 st.session_state["active_page"] = p
-        # Source
-        if "source" in params:
-            src = str(params["source"])[:32]
-            st.session_state["nav_source"] = src
+        if url_source:
+            st.session_state["nav_source"] = str(url_source)[:32]
+
+        st.session_state["_appstate_last_url"] = (url_page, url_ticker)
         st.session_state["_appstate_hydrated"] = True
     except Exception as exc:                                       # noqa: BLE001
         log.debug("hydrate_from_url failed: %s", exc)
