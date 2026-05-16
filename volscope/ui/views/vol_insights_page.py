@@ -52,7 +52,12 @@ def _cached_chain_fetch(ticker: str, max_expiries: int = 6) -> pd.DataFrame:
                 "ticker":         r.ticker,
                 "expiry":         r.expiry,
                 "strike":         r.strike,
-                "option_right":   r.option_right,
+                # ChainRow.right is the Python field; option_right is
+                # only the SQL column name (DuckDB reserved-word
+                # workaround). Earlier code used the SQL name on the
+                # dataclass which raised AttributeError silently and
+                # made every Vol Insights render an empty-state card.
+                "option_right":   r.right,
                 "iv":             r.iv,
                 "delta":          getattr(r, "delta", None),
                 "open_interest":  getattr(r, "open_interest", None) or 0,
@@ -61,7 +66,11 @@ def _cached_chain_fetch(ticker: str, max_expiries: int = 6) -> pd.DataFrame:
                 "mid":            getattr(r, "mid", None),
             })
         return pd.DataFrame(records)
-    except Exception:
+    except Exception as exc:
+        import logging
+        logging.getLogger("volscope.ui.vol_insights").warning(
+            "chain fetch failed for %s: %s", ticker, exc,
+        )
         return pd.DataFrame()
 
 
