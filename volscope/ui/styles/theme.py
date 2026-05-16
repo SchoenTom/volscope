@@ -390,6 +390,43 @@ CUSTOM_CSS = f"""
         background: rgba(0, 212, 170, 0.12) !important;
     }}
 
+    /* v0.9.8 — Global Material Symbols ligature nuke. Operator
+       screenshot 2026-05-16 showed "expand_more" / "expand_less"
+       rendered as literal text on popover triggers and other
+       Streamlit chrome. Streamlit 1.57 uses
+       [data-testid="stIconMaterial"] for every icon span — when the
+       Material Symbols font is slow/blocked, the LIGATURE NAME
+       leaks as ASCII text. We hide the literal text universally
+       and inject an ASCII chevron via ::after so the visual
+       affordance survives. Specificity boosted with html prefix to
+       beat Streamlit's emotion-cache inline styles. */
+    html [data-testid="stIconMaterial"] {{
+        font-size: 0 !important;
+        color: transparent !important;
+        line-height: 0 !important;
+        width: 0 !important;
+        display: inline-block !important;
+    }}
+    html [data-testid="stIconMaterial"]::after {{
+        content: "▾";
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 11px !important;
+        color: {COLORS['muted']} !important;
+        line-height: 1 !important;
+        font-weight: 700 !important;
+        margin-left: 4px;
+    }}
+    /* When the font DOES load, the ligature renders as a proper
+       icon glyph. Detect that via font-feature-settings + restore
+       visibility. (Best-effort — CSS can't truly query font load
+       state, but feature-settings is a reasonable proxy.) */
+    @supports (font-feature-settings: 'liga') {{
+        html [data-testid="stIconMaterial"]:lang(font-loaded) {{
+            font-size: inherit !important;
+            color: inherit !important;
+        }}
+    }}
+
     /* v0.9.8 — belt-and-suspenders. Streamlit 1.57 occasionally
        introduces a new sidebar-header test-id we haven't pinned
        (operator saw a "keyboard_load_" ghost on 2026-05-15 — that's

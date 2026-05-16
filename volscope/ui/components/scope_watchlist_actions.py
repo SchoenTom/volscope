@@ -34,10 +34,15 @@ def render_scope_watchlist_actions(st, db, ticker: str) -> None:
             if existing_names:
                 pick = st.selectbox(
                     "Add to existing",
-                    [""] + existing_names,
+                    ["(pick a watchlist)"] + existing_names,
                     key=f"scope_wl_pick_{ticker}",
                     label_visibility="visible",
                 )
+                # An empty-string first option rendered as an invisible
+                # black bar (operator screenshot 2026-05-16). Use a
+                # human-readable placeholder and treat it as "no pick".
+                if pick == "(pick a watchlist)":
+                    pick = ""
                 if pick and st.button(
                     f"✓ Add {ticker} to «{pick}»",
                     key=f"scope_wl_add_existing_{ticker}",
@@ -45,7 +50,7 @@ def render_scope_watchlist_actions(st, db, ticker: str) -> None:
                 ):
                     try:
                         add_ticker_to_watchlist(db, pick, ticker)
-                        st.toast(f"✓ {ticker} → {pick}", icon="⚑")
+                        st.toast(f"✓ {ticker} → {pick}", icon="📌")
                         st.rerun()
                     except Exception as exc:
                         st.error(f"Add failed: {exc}")
@@ -63,7 +68,7 @@ def render_scope_watchlist_actions(st, db, ticker: str) -> None:
                 try:
                     create_watchlist(db, new_name.strip())
                     add_ticker_to_watchlist(db, new_name.strip(), ticker)
-                    st.toast(f"✓ Created «{new_name}» with {ticker}", icon="⚑")
+                    st.toast(f"✓ Created «{new_name}» with {ticker}", icon="📌")
                     st.rerun()
                 except Exception as exc:
                     st.error(f"Create failed: {exc}")
