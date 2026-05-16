@@ -357,6 +357,9 @@ def _render_results(result: GauntletResult) -> None:
 # ── Public entry point ─────────────────────────────────────────────
 
 def render_research_page(db: VolScopeDB, settings: dict) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Research', ticker=st.session_state.get('selected_ticker'))
     """Render the statistical-significance gauntlet page."""
     render_html(
         st,
@@ -469,3 +472,7 @@ def render_research_page(db: VolScopeDB, settings: dict) -> None:
                 n_trials_in_search=int(n_trials),
             )
         _render_results(result)
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Research', ticker=st.session_state.get('selected_ticker'))

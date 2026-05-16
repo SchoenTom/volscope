@@ -61,6 +61,9 @@ def _build_page_data_cached(latest_hash: str, _latest: pd.DataFrame):
 
 
 def render_megascan_page(db: VolScopeDB, settings: dict) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Mega-Scan', ticker=st.session_state.get('selected_ticker'))
     """Top-level renderer for the Mega-Scan page."""
     # Cached snapshot — avoids re-hitting DuckDB on every interaction.
     latest = get_all_latest_cached(make_cache_key(db), db)
@@ -113,6 +116,10 @@ def render_megascan_page(db: VolScopeDB, settings: dict) -> None:
 
     # ── Export ──────────────────────────────────────────────────
     _render_export(st, page_data)
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Mega-Scan', ticker=st.session_state.get('selected_ticker'))
 
 
 # ── Hero strip ─────────────────────────────────────────────────────────

@@ -31,6 +31,9 @@ _REPORT_PATH = Path(__file__).resolve().parents[3] / "data" / "backtest" / "stra
 
 
 def render_backtest_page(db: VolScopeDB, settings: dict) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Backtest', ticker=st.session_state.get('selected_ticker'))
     """Render the Strategy Backtest results page."""
     render_html(
         st,
@@ -157,6 +160,10 @@ def render_backtest_page(db: VolScopeDB, settings: dict) -> None:
     if _REPORT_PATH.exists():
         with st.expander("Methodology + full Markdown report", expanded=False):
             st.markdown(_REPORT_PATH.read_text())
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Backtest', ticker=st.session_state.get('selected_ticker'))
 
 
 # ── Internals ────────────────────────────────────────────────────────────

@@ -920,6 +920,9 @@ def _render_alerts_expander(
 # ---------------------------------------------------------------------------
 
 def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Command', ticker=st.session_state.get('selected_ticker'))
     """Render the Command Center page."""
 
     # v0.9.0 — persistent vol-regime header strip.
@@ -1299,3 +1302,7 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
     with right:
         fig_vrp = create_vrp_bar(chart_data)
         st.plotly_chart(fig_vrp, width='stretch')
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Command', ticker=st.session_state.get('selected_ticker'))

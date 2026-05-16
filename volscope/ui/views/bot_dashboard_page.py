@@ -135,6 +135,9 @@ def _equity_curve_fragment(db: Any) -> None:
 
 
 def render_bot_dashboard_page(db: Any, settings: dict) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Bot')
     """Render the operator-facing Bot Dashboard."""
     # v0.9.0 — persistent vol-regime header strip.
     from volscope.ui.components.regime_header import render_regime_header
@@ -254,6 +257,10 @@ def render_bot_dashboard_page(db: Any, settings: dict) -> None:
     # ── Bot reset (operator-only, gated) ─────────────────────────────
     render_html(st, section_rule_html("OPERATOR ACTIONS"))
     _render_bot_reset(db)
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Bot')
 
 
 def _render_order_history(db: Any) -> None:

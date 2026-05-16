@@ -66,6 +66,9 @@ _SEVERITY_COLOR = {
 
 
 def render_portfolio_page(db: VolScopeDB, settings: dict) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Portfolio', ticker=st.session_state.get('selected_ticker'))
     """Render the Portfolio assistant view."""
     render_html(
         st,
@@ -267,6 +270,10 @@ def render_portfolio_page(db: VolScopeDB, settings: dict) -> None:
     if legs_for_var:
         with st.expander("📊 Scenario Analyzer — what-if stress tests", expanded=True):
             _render_scenario_analyzer(st, legs_for_var)
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Portfolio', ticker=st.session_state.get('selected_ticker'))
 
 
 # ── Add form ─────────────────────────────────────────────────────────────

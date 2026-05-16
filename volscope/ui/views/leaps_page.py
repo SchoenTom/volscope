@@ -258,6 +258,9 @@ def _render_convergence_card(row: pd.Series, suggestion: Optional[LeapsSuggestio
 
 
 def render_leaps_page(db, settings: Optional[dict] = None) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='LEAPS Lab', ticker=st.session_state.get('selected_ticker'))
     """Top-level entry — wired into ``volscope.ui.app._PAGE_REGISTRY``."""
     render_html(
         st,
@@ -406,3 +409,7 @@ fibonacci milestones are shown so the trade is concrete, not directional
 hand-waving.
             """
         )
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='LEAPS Lab', ticker=st.session_state.get('selected_ticker'))

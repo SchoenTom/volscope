@@ -482,6 +482,9 @@ def _load_data(db: VolScopeDB) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def render_rotation_page(db: VolScopeDB, settings: dict) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Rotation')
     """Render the Sector Rotation Engine page."""
     render_html(
         st,
@@ -685,3 +688,7 @@ def render_rotation_page(db: VolScopeDB, settings: dict) -> None:
         f'Run <code style="color:{COLORS["text"]};">make sectors</code> after each daily scrape '
         f'to refresh sector aggregates.</div>',
     )
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Rotation')

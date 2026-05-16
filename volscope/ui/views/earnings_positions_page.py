@@ -32,6 +32,9 @@ from volscope.ui.styles.theme import COLORS
 
 
 def render_earnings_positions_page(db, settings: dict | None = None) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Earnings Trades')
     st.markdown("## ◈ Earnings Trades")
     st.caption(
         "Paper-bought earnings positions. Auto-tracks countdown to "
@@ -100,6 +103,10 @@ def render_earnings_positions_page(db, settings: dict | None = None) -> None:
     # ── Per-group row ────────────────────────────────────────────────
     for d in decorated:
         _render_er_group_row(db, d)
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Earnings Trades')
 
 
 def _is_earnings_group(group) -> bool:

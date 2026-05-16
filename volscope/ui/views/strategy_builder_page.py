@@ -62,6 +62,9 @@ def _days_to_next_earnings(db, ticker: str) -> int | None:
 
 
 def render_strategy_builder_page(db, settings: dict | None = None) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Builder', ticker=st.session_state.get('selected_ticker'))
     st.markdown("## ◈ Strategy Builder")
     st.caption(
         "Pick a thesis, get a fully-specified trade idea. Strike, DTE, "
@@ -350,3 +353,7 @@ def render_strategy_builder_page(db, settings: dict | None = None) -> None:
         f'scenario fires on incomplete data; flags surface what was missing.'
         f'</div>',
     )
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Builder', ticker=st.session_state.get('selected_ticker'))

@@ -145,6 +145,9 @@ def _augment_with_derived_columns(
 
 
 def render_scan_page(db, settings: dict | None = None) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Scanner')
     import streamlit as st
 
     st.markdown("## ◈ Scanner")
@@ -517,3 +520,7 @@ A huge range with IV sitting near the middle → medium Rank, but if most days c
 the low end, the Percentile is HIGH — meaning today is unusual vs typical history.
             """
         )
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Scanner')

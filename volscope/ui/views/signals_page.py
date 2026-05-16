@@ -42,6 +42,9 @@ _FILTER_OPTIONS = ("All", "Long Vol", "Short Vol", "Earnings-Filtered")
 # ── Public entry point ───────────────────────────────────────────────
 
 def render_signals_page(db, settings: Optional[dict] = None) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Signals')
     """Mounted from `_PAGE_REGISTRY` as 'Signals'."""
     st.markdown("## ⚡ IV Trading Signals")
     render_html(
@@ -160,6 +163,10 @@ def render_signals_page(db, settings: Optional[dict] = None) -> None:
 
     # ── Stats footer ────────────────────────────────────────────────
     _render_stats_footer(stats, len(signals))
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Signals')
 
 
 # ── Filter ───────────────────────────────────────────────────────────

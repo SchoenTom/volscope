@@ -80,6 +80,9 @@ _MACRO_EVENTS_2026: tuple[tuple[date, str, str], ...] = (
 # ── Top-level entry point ────────────────────────────────────────────
 
 def render_earnings_hub_page(db, settings: dict | None = None) -> None:
+    # v0.9.7 — 4-phase orientation strip (master plan §2)
+    from volscope.ui.components.phase_header import render_phase_header
+    render_phase_header(st, page_name='Earnings Hub', ticker=st.session_state.get('selected_ticker'))
     """Sidebar entry from `_PAGE_REGISTRY`."""
     st.markdown("## ◈ Earnings Hub")
     render_html(
@@ -149,6 +152,10 @@ def render_earnings_hub_page(db, settings: dict | None = None) -> None:
 
     # ── Sector heatmap footer ────────────────────────────────────────
     _render_sector_heatmap(enriched)
+
+    # v0.9.7 — cross-page weave footer (master plan §4)
+    from volscope.ui.components.next_step import render_next_step_footer
+    render_next_step_footer(st, page='Earnings Hub', ticker=st.session_state.get('selected_ticker'))
 
 
 # ── Controls strip ───────────────────────────────────────────────────
