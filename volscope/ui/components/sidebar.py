@@ -19,6 +19,36 @@ from volscope.ui.components.html_utils import render_html
 from volscope.ui.components.metric_components import freshness_badge
 
 
+def _cached_available_tickers(db) -> list[str]:
+    """Short-cache wrapper for db.get_available_tickers().
+
+    The sidebar calls get_available_tickers in 4 places per render
+    (ticker-picker, bulk-load button enable, brand-counter,
+    add-ticker form). Pre-v0.9.6 those were each a fresh DuckDB
+    query — ~80ms × 4 = 320ms per sidebar render on a warm cache
+    miss. Routing through the existing 60s cached helper drops it
+    to one query per minute.
+    """
+    from volscope.ui.components.cached_data import (
+        get_available_tickers_cached, make_cache_key,
+    )
+    try:
+        return get_available_tickers_cached(make_cache_key(db), db)
+    except Exception:
+        # Fallback to direct query if cache fails for any reason
+        return db.con.execute(
+            "SELECT DISTINCT ticker FROM daily_vol ORDER BY ticker"
+        ).fetchdf()["ticker"].tolist() if not _is_db_empty(db) else []
+
+
+def _is_db_empty(db) -> bool:
+    try:
+        r = db.con.execute("SELECT COUNT(*) FROM daily_vol LIMIT 1").fetchone()
+        return (r[0] if r else 0) == 0
+    except Exception:
+        return True
+
+
 def _freshness(last_scrape):
     """Thin wrapper producing the sidebar-cased version of the badge."""
     label, color = freshness_badge(last_scrape)
@@ -91,7 +121,7 @@ def _render_ticker_picker(st, db) -> str:
     layout used a Mono 9px caps label at #424666 which was
     sub-WCAG (~1.8:1 contrast) — unreadable on dark theme.
     """
-    available = db.get_available_tickers() or all_tickers()
+    available = _cached_available_tickers(db) or all_tickers()
     current = st.session_state.get("selected_ticker", "SPY")
     if current not in available:
         current = available[0] if available else "SPY"
@@ -156,7 +186,7 @@ def _render_live_screener(st, db) -> None:
     expands into a load button via session-state toggle on click.
     """
     universe_size = len(all_tickers())
-    already = len(db.get_available_tickers() or [])
+    already = len(_cached_available_tickers(db) or [])
     missing = universe_size - already
     coverage_pct = int(round(already / max(1, universe_size) * 100))
 
@@ -366,7 +396,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # on the right. Replaces the previous stand-alone wordmark which was
     # decorative-only.
     try:
-        _n_loaded_brand = len(db.get_available_tickers() or [])
+        _n_loaded_brand = len(_cached_available_tickers(db) or [])
     except Exception:
         _n_loaded_brand = 0
     try:
@@ -425,7 +455,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # markdown headers between rows. Active page = green, others = muted.
     NAV_GROUPS: list[tuple[str, list[str]]] = [
         ("◆ DECISIONS",  ["Command", "Discover", "Signals", "Bot", "Alerts", "Earnings Hub", "Portfolio", "Mega-Scan"]),
-        ("◇ RESEARCH",   ["Scope", "Scanner", "Heatmap", "Rotation", "Flow", "Research"]),
+        ("◇ RESEARCH",   ["Scope", "Scanner", "Heatmap", "Rotation", "Flow", "Vol Insights", "Research"]),
         ("▷ EXECUTION",  ["Pre-Trade", "Builder", "Options Lab", "LEAPS Lab", "Dossier", "Earnings Trades", "Backtest"]),
         ("? REFERENCE",  ["Help"]),
     ]
@@ -561,7 +591,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
 
     # ── Data status (bottom, subtle) ────────────────────────────────
     try:
-        n_loaded = len(db.get_available_tickers() or [])
+        n_loaded = len(_cached_available_tickers(db) or [])
     except Exception:
         n_loaded = 0
     try:
@@ -634,7 +664,13 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
             with st.expander(f"⚑ Watchlist · {len(enabled)} rules", expanded=False):
                 # Compact status: ticker · metric · operator threshold · current
                 from volscope.alerts.alert_engine import AlertRule, evaluate_rule
-                latest_for_eval = db.get_all_latest()
+                from volscope.ui.components.cached_data import (
+                    get_all_latest_cached, make_cache_key,
+                )
+                # Cached — sidebar re-renders on every page interaction;
+                # uncached get_all_latest() was a 100-300ms hit per
+                # navigation click on a 800-ticker DB.
+                latest_for_eval = get_all_latest_cached(make_cache_key(db), db)
                 rows_html: list[str] = []
                 for _, r in enabled.head(5).iterrows():
                     try:
