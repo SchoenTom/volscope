@@ -335,6 +335,32 @@ deferral.
 
 ---
 
+## 8.1 — Execution log (2026-05-16)
+
+| Phase | Status | Commit |
+|---|---|---|
+| Audit + plan (docs) | ✅ | `b1f929e` |
+| A — SSOT state store | ✅ | `8876d71` |
+| B — quick-switch + breadcrumb | ✅ | `4a62405` |
+| E — pointer-cursor CSS | ✅ | `72ba9e7` |
+| D — Scope context cards | ✅ | `d4f4496` |
+| C — clickable affordances on Portfolio/Scanner/Alerts | ✅ | `d2a4fce` |
+| F — Brushing & Linking | ⏳ DEFERRED | (Streamlit limitation, post-v1.0) |
+
+**1936 tests pass, 6 skip, 0 fail throughout. Zero rollbacks.**
+
+Operator success-metric coverage (Tom's prompt §8):
+- ✅ Click ticker anywhere → Scope opens (consistent across all 5 audit-flagged pages)
+- ✅ Page orientation: phase strip + breadcrumb + next-step footer
+- ✅ Share-link URL: `/?ticker=SNOW&page=Scope&source=share`
+- ⏳ Cmd+K: deferred — sidebar quick-switch is the workaround
+- ✅ Breadcrumb back-trail under phase strip
+- ✅ Scope shows open positions + upcoming earnings + Discover history
+- ✅ Coherent product feel (combined M1+M2+M4 + this phase)
+- ✅ Hover tooltips on KPIs (M1.D Scope + M2.C Vol Insights)
+
+---
+
 ## 9 — Memory file update (after phase done)
 
 Add to `~/.claude/.../volscope-v0.9.3-state.md`:
