@@ -386,6 +386,120 @@ VolScope reaches v1.0 when:
 
 ---
 
+## 13 — Implementation discipline (how we ship bug-free)
+
+This section answers the operator's 2026-05-16 question:
+*"Wie schließen wir Bugs aus, implementieren optimal, verknüpfen mit
+Vorhandenem und arbeiten sauber?"*
+
+### 13.1 — Per-stream acceptance criteria
+
+A stream is NOT done until ALL of these are true:
+
+| Criterion | How verified |
+|---|---|
+| `py_compile` clean on every touched file | `find . -name "*.py" -exec python -m py_compile {} +` |
+| Pytest 1916 tests still green | `pytest tests/ --ignore=tests/perf -q` |
+| No new `except: pass` introduced | `git diff` review + `.claude/agents/security-reviewer.md` |
+| Streamlit boot < 25 s | curl-poll until HTTP-ready, measured |
+| Playwright multi-page probe — 0 stException | `/tmp/multipage_probe.py` re-run |
+| Inline assert proves the new helper's math | `python -c "from X import Y; assert Y(...) == ..."` |
+| Memory file updated if scope crossed a stream boundary | edit `~/.claude/.../volscope-v0.9.3-state.md` |
+
+If any one of these fails → revert the commit, never patch-forward.
+
+### 13.2 — Integration map (what we touch, what we DON'T)
+
+The plan touches ONLY these surfaces. Everything else is invariant.
+
+| Stream | Touched | Untouched (do not modify) |
+|---|---|---|
+| A — Tooltips | `help=` kwarg on existing `st.*` calls; KPI-card `title` HTML | Analytics math, DB schema, render order |
+| B — Phase strip | New file `phase_header.py`; one `render_phase_header()` line per page | Page logic, KPI computations, charts |
+| C — Next-step footer | New file `next_step.py`; one `render_next_step_footer()` line per page | NavIntent mechanism (already battle-tested) |
+| D — Watchlist consolidation | `sidebar.py` section names; `discover_page.py` filter chips | watchlist persistence + dispatch (just shipped) |
+| E — Onboarding rewrite | `onboarding_page.py` only | Other pages |
+| M4 — Page merges | `app.py` registry + sidebar nav groups | merged pages' render functions (kept verbatim, just exposed as tabs) |
+
+This list is the *operator's contract* — if a diff touches anything
+outside its row, the reviewer rejects.
+
+### 13.3 — Test coverage per stream
+
+| Stream | New tests | Existing tests run |
+|---|---|---|
+| A | None — pure cosmetic | Full 1916 suite |
+| B | `tests/test_phase_header.py` — render returns valid HTML for each page, falls back silently on unknown page | Full suite + multi-page probe |
+| C | `tests/test_next_step.py` — every page in `NEXT_STEPS` resolves to a real page in `app._PAGE_REGISTRY` | Full suite + multi-page probe |
+| D | `tests/test_watchlist_consolidation.py` — Discover filter chip honours user-watchlist membership | Full suite + watchlist persistence tests |
+| E | `tests/test_onboarding_wizard.py` — each step renders without exception under AppTest | Full suite + AppTest perf-smoke |
+| M4 | Test that old-name page paths still load (redirect via session_state) | Full suite |
+
+### 13.4 — Failure-mode catalog
+
+Per stream, the most likely break, and how we detect / fix:
+
+| Stream | Likely break | Detector | Recovery |
+|---|---|---|---|
+| A | Tooltip text contains `{ticker}` that wasn't substituted | grep diff for `{` in `help=` | Replace literal or use f-string |
+| B | Phase header makes pages too tall on small screens | Playwright viewport probe @ 1366×768 | Reduce strip to 20 px or make collapsible |
+| C | Footer click navigates but ticker context lost | Session-state log inspection | NavIntent payload checked at every footer site |
+| D | Discover filter shows ZERO tickers when user-watchlist is empty | AppTest with empty watchlist DB | Show "your watchlist is empty — add tickers" hint |
+| E | Wizard step 3 (payoff diagram) crashes for users with no DB data | AppTest with empty DB | Fall back to synthetic example chain |
+| M4 | Merged-page tab order surprises operator muscle memory | manual test + operator sign-off | Keep tab order matching original page registry order |
+
+### 13.5 — Rollback playbook
+
+Every stream is **one commit per concern**. If a commit ships a bug:
+
+1. `git revert <sha>` on main — never amend a pushed commit.
+2. Reopen the corresponding task as `in_progress`.
+3. Document what broke in `docs/decisions.md` (post-mortem).
+4. Reattempt only after the failure-mode is in §13.4.
+
+This is the same pattern that worked for the iCloud-migration and
+seed-FATAL fixes (v0.9.5 → 9.6, no rollbacks needed because of strict
+atomic discipline).
+
+### 13.6 — How we link to what's already there
+
+We DO NOT re-implement. The plan re-uses these existing pieces
+verbatim:
+
+| Existing | Re-used in | Where |
+|---|---|---|
+| `volscope.ui.components.navigation.NavIntent` + `nav_to()` | All cross-page links (Stream C) | Footer helper |
+| `volscope.ui.components.cached_data` (60s/300s/600s TTL helpers) | All new DB queries | Phase-header `current_phase_from_state()` |
+| `volscope.persistence.watchlists` (just shipped) | Stream D | Discover filter chip |
+| `volscope.alerts.regime_alarm_dispatch` (just shipped) | Stream D follow-on (cron + auto-fire) | Already wired |
+| `.claude/rules/ui.md` (Plotly `go` only, no `st.metric`, `rgba()` helper) | Every new render | Phase strip uses rgba; new tooltips never use `st.metric` |
+| `.claude/rules/perf.md` (every new query through cached_data) | All streams | Enforced by reviewer |
+| `volscope.ui.styles.theme.COLORS` + `rgba()` | Phase header, footer | Single design-token source |
+| `volscope.utils.timing.instrument` decorator | Every new helper > 50 ms expected | Profile-driven; only add when needed |
+
+If a new helper would duplicate ≥ 5 lines of an existing helper,
+the reviewer rejects the diff with "use the existing one".
+
+### 13.7 — Definition of "saubere Arbeit"
+
+Operator-facing translation: clean work means
+
+1. **One commit = one logical change** (not "and also ...").
+2. **Commit message explains WHY, not WHAT** (the diff already
+   shows what).
+3. **No dead code** — if a helper is added but not called yet, the
+   commit also adds the first caller in the same diff.
+4. **No magic numbers** — every literal threshold has a named
+   constant + a comment explaining why that value.
+5. **No silent fallbacks** — every `except:` either re-raises or
+   logs with operator-visible context.
+6. **`Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`**
+   trailer on every commit (so the human/AI division is auditable).
+
+If a diff fails any of these → revert, re-do.
+
+---
+
 ## 12 — What I will do RIGHT NOW vs ASYNCHRONOUSLY
 
 **Right now (next 30 min)**: deliver this document, get your sign-off
