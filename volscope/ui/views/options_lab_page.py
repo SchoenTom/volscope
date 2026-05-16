@@ -291,6 +291,13 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
         iv_perc=cfg.get("iv_perc"),
     )
 
+    # Operator feedback 2026-05-16: "der options builder zeigt mir
+    # nicht mein richtiges portfolio an, ich will mein eigenes". The
+    # full portfolio lives on the Portfolio page; here we surface a
+    # compact "currently held" sidebar-style block so the operator
+    # has their book in view while designing the next trade.
+    _render_my_open_positions(db)
+
     # v0.9.7 — cross-page weave footer
     from volscope.ui.components.next_step import render_next_step_footer
     render_next_step_footer(
@@ -394,6 +401,43 @@ def _render_paper_buy_cta(
         nav_to(NavIntent(page="Portfolio", ticker=mat.ticker,
                           source="Options Lab"))
         st.rerun()
+
+
+def _render_my_open_positions(db) -> None:
+    """Compact 'currently held' panel under the Lab CTA.
+
+    Pulls active strategy groups via paper_trader.list_strategy_groups.
+    Empty state when no positions exist — encourages the operator to
+    use the paper-buy button above.
+    """
+    try:
+        from volscope.data.paper_trader import list_strategy_groups
+        groups = list_strategy_groups(db)
+    except Exception:
+        return
+    with st.expander(
+        f"📂 My open paper positions ({len(groups)})",
+        expanded=False,
+    ):
+        if not groups:
+            st.caption(
+                "No active paper positions. Use the ▶ paper-buy "
+                "button above to log your first trade."
+            )
+            return
+        for g in groups[:20]:
+            cols = st.columns([2, 2, 2, 1])
+            with cols[0]:
+                st.write(f"**{g.ticker}**")
+            with cols[1]:
+                st.write(g.strategy_template)
+            with cols[2]:
+                kind = "debit" if g.net_entry_debit > 0 else "credit"
+                st.write(f"{kind} ${abs(g.net_entry_debit):,.0f}")
+            with cols[3]:
+                st.write(f"{g.n_legs} leg{'s' if g.n_legs != 1 else ''}")
+        if len(groups) > 20:
+            st.caption(f"… +{len(groups) - 20} more on the Portfolio page.")
 
 
 # ── Preset loader ───────────────────────────────────────────────────
