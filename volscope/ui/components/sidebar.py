@@ -845,19 +845,11 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # ── Live screener: bulk load ────────────────────────────────────
     _render_live_screener(st, db)
 
-    # ── My Watchlists (promoted to TOP — v0.9.9) ──────────────────
-    # Operator feedback 2026-05-17: "wo finde ich denn jetzt meine
-    # watchlists? ... im linken sidebar gibts immernoch keine
-    # watchlist". Was buried at the bottom (slot 12 of 14) — almost
-    # certainly below the fold on a laptop viewport. Promoted to
-    # right after the ticker picker so it's visible without scrolling.
-    try:
-        _render_user_watchlists(st, db)
-    except Exception as exc:                                        # noqa: BLE001
-        import logging as _lg
-        _lg.getLogger("volscope.ui.sidebar").warning(
-            "User-watchlist widget render failed: %s", exc,
-        )
+    # v0.9.10 — inline watchlist widget REMOVED from sidebar.
+    # Operator feedback 2026-05-17: the sprawling widget (alarm
+    # picker + add form + create + import all inline) was a mess.
+    # Watchlist management now lives on its own page, reachable via
+    # the "Watchlist" nav button below.
 
     st.divider()
 
@@ -873,7 +865,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     #   - Dossier         → from LEAPS Lab footer
     # Page registry retains all entries; pages stay deep-linkable.
     NAV_GROUPS: list[tuple[str, list[str]]] = [
-        ("◆ DECISIONS",  ["Command", "Discover", "Signals", "Bot", "Alerts", "Earnings Hub", "Portfolio"]),
+        ("◆ DECISIONS",  ["Command", "Discover", "Signals", "Bot", "Alerts", "Earnings Hub", "Watchlist", "Portfolio"]),
         ("◇ RESEARCH",   ["Scope", "Scanner", "Heatmap", "Rotation", "Flow", "Vol Insights", "Research"]),
         ("▷ EXECUTION",  ["Pre-Trade", "Builder", "Options Lab", "LEAPS Lab", "Backtest"]),
         ("? REFERENCE",  ["Help"]),

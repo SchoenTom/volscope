@@ -48,8 +48,8 @@ _TICKER_RE = re.compile(r"^[A-Z0-9.\^\-]{1,16}$")
 # module dependency-light.
 _KNOWN_PAGE_PREFIXES = (
     "Discover", "Heatmap", "Scope", "Vol Insights", "Pre-Trade",
-    "Options Lab", "LEAPS Lab", "Bot", "Portfolio", "Alerts",
-    "Command", "Backtest", "Research", "Earnings Hub",
+    "Options Lab", "LEAPS Lab", "Bot", "Portfolio", "Watchlist",
+    "Alerts", "Command", "Backtest", "Research", "Earnings Hub",
     "Earnings Trades", "Scanner", "Mega-Scan", "Signals", "Rotation",
     "Flow", "Builder", "Dossier", "Help", "Onboarding",
 )

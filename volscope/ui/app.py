@@ -35,6 +35,7 @@ _PAGE_REGISTRY: dict[str, tuple[str, str]] = {
     "Onboarding": ("volscope.ui.views.onboarding_page",     "render_onboarding_page"),
     "Command":    ("volscope.ui.views.command_center_page", "render_command_center_page"),
     "Portfolio":  ("volscope.ui.views.portfolio_page",      "render_portfolio_page"),
+    "Watchlist":  ("volscope.ui.views.watchlist_page",      "render_watchlist_page"),
     "Mega-Scan":  ("volscope.ui.views.megascan_page",       "render_megascan_page"),
     "Discover":   ("volscope.ui.views.discover_page",       "render_discover_page"),
     "Alerts":     ("volscope.ui.views.alerts_page",         "render_alerts_page"),
