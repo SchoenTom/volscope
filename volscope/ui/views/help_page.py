@@ -189,3 +189,82 @@ def render_help_page(db: VolScopeDB, settings: dict) -> None:
         "<code>volscope/analytics/signal.py</code> — buy / lean_buy / "
         "neutral / lean_rich / rich classifier with thresholds.",
     )
+
+    _section(
+        "Estimators & pricing models",
+        "What math is doing the work under the hood.",
+    )
+    _term(
+        "Black-Scholes-Merton (BSM)",
+        "Continuous-dividend, continuous-compounding Black-Scholes pricing "
+        "for European options. Year fraction = days/365; risk-free rate "
+        "from 3-month T-bill snapshot.",
+        "Used everywhere a price → IV or IV → Greek conversion is needed. "
+        "Newton-Raphson solver in <code>analytics/iv_solver.py</code> "
+        "handles edge cases (deep OTM, zero theta).",
+    )
+    _term(
+        "Yang-Zhang volatility (YZ)",
+        "Open-high-low-close historical-volatility estimator from "
+        "Yang & Zhang (2000). Combines overnight + intraday variance for "
+        "lower sample noise than close-to-close.",
+        "Default HV estimator in VolScope. Falls back to close-close only "
+        "when OHLC missing. See <code>analytics/hv.py</code>.",
+    )
+    _term(
+        "Volatility Regime (HMM)",
+        "Six-state Hidden Markov Model fit on rolling IV / HV / skew "
+        "features. States: CRUSHED, CHEAP, FAIR, RICH, EXTREME, BLOW-OFF.",
+        "Regime transitions trigger Watchlist alarms if you tick the "
+        "'≈ Vol Regime change' box on the Watchlist page. Model in "
+        "<code>analytics/regime_hmm.py</code>; needs ≥ 252 days history.",
+    )
+
+    _section(
+        "Bot & risk controls",
+        "Live-trading guardrails (Phase 2.5+, paper-only this quarter).",
+    )
+    _term(
+        "Kill switch",
+        "Eight independent paths that halt the bot (operator manual, "
+        "daily-loss limit, position-concentration cap, IBKR disconnect, "
+        "data-staleness, audit-chain integrity break, risk-config drift, "
+        "circuit-breaker).",
+        "Implemented in <code>risk/kill_switch.py</code>; any path can "
+        "fire from any process. See <code>docs/MASTERPLAN.md</code>.",
+    )
+    _term(
+        "Audit chain",
+        "Append-only, hash-chained log of every bot decision + execution. "
+        "<code>bot_audit_chain</code> table — write-once-read-many. "
+        "<code>make audit-verify</code> walks the chain end-to-end.",
+        "Mutations are forbidden by code review + integration tests. "
+        "Operator can replay any past decision without DB reconstruction.",
+    )
+    _term(
+        "Paper engine",
+        "Simulation lane that runs the full bot decision pipeline against "
+        "real chains but writes only to <code>bot_trades</code>, never to "
+        "IBKR. Required ≥ 100 closed paper trades before live opt-in.",
+        "Code path: <code>execution/paper_engine.py</code> + "
+        "<code>lifecycle/state_machine.py</code> (11-state).",
+    )
+
+    _section(
+        "Operator tools",
+        "Sidebar / page-level features the operator drives.",
+    )
+    _term(
+        "Watchlist",
+        "Custom-named ticker groupings with per-list alarm configuration. "
+        "Tickers click through to Scope; alarms fire via Telegram + "
+        "macOS desktop notifications.",
+        "Page: <strong>Watchlist</strong> (in DECISIONS nav group). "
+        "Persistence in <code>persistence/watchlists.py</code>.",
+    )
+    _term(
+        "Quick-switch (JUMP TO TICKER)",
+        "Sidebar search box — type any symbol + Enter to jump straight "
+        "to Scope. Resolves regional suffixes (HK, XETRA, London, TWN).",
+        "Implementation: <code>ui/components/ticker_quick_switch.py</code>.",
+    )

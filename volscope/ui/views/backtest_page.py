@@ -189,6 +189,26 @@ def _render_empty_state(st_module) -> None:
         f'</div>'
         f'</div>',
     )
+    # Inputs to configure the run (Operator feedback 2026-05-17:
+    # "Backtest hat 0 Inputs"). Surfacing the CLI flags as widgets so
+    # the operator can scope the simulation without dropping to a
+    # terminal.
+    c1, c2 = st_module.columns([3, 1])
+    with c1:
+        ticker_filter = st_module.text_input(
+            "Ticker filter (optional)",
+            placeholder="leave empty for full universe — or e.g. SPY,QQQ,AAPL",
+            key="backtest_ticker_filter",
+            help="Comma-separated subset. Empty = simulate every ticker in the DB.",
+        )
+    with c2:
+        dry_run = st_module.checkbox(
+            "Dry run",
+            value=False,
+            key="backtest_dry_run",
+            help="Read-only dry run — no JSONL output. Useful to verify config.",
+        )
+
     if st_module.button(
         "▶ Run simulation now",
         key="backtest_run_btn",
@@ -199,10 +219,21 @@ def _render_empty_state(st_module) -> None:
         # Stream stdout to a live text panel so the user sees per-ticker
         # progress instead of staring at a spinner for 30s.
         status = st_module.empty()
+        cmd = ["python", "scripts/backtest/run_strategy_simulation.py"]
+        clean_tickers = (ticker_filter or "").strip()
+        if clean_tickers:
+            cmd += ["--tickers", clean_tickers]
+        if dry_run:
+            cmd.append("--dry-run")
         try:
+            # cwd from this module's location — was hardcoded to the
+            # old iCloud Desktop path which silently broke after the
+            # 2026-05-15 migration to ~/dev/VolScope.
+            from pathlib import Path as _P
+            _root = _P(__file__).resolve().parents[3]
             proc = subprocess.Popen(
-                ["python", "scripts/backtest/run_strategy_simulation.py"],
-                cwd="/Users/tomschoen/Desktop/VolScope",
+                cmd,
+                cwd=str(_root),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,

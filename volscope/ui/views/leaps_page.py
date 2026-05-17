@@ -327,6 +327,57 @@ def render_leaps_page(db, settings: Optional[dict] = None) -> None:
     actionable = ranked[ranked["score"] >= CONVERGENCE_THRESHOLD]
     watchlist  = ranked[ranked["score"] < CONVERGENCE_THRESHOLD]
 
+    # v0.9.10 — convergence-score distribution chart. Operator
+    # feedback: LEAPS Lab was table-only, no visual at-a-glance for
+    # WHERE the universe sits vs the threshold. Histogram + threshold
+    # line makes it obvious whether today is "rich pickings" or
+    # "patience day".
+    try:
+        import plotly.graph_objects as go
+        scores = ranked["score"].dropna().astype(float).tolist()
+        if scores:
+            fig = go.Figure()
+            fig.add_trace(go.Histogram(
+                x=scores,
+                xbins=dict(start=0, end=100, size=5),
+                marker=dict(
+                    color=["#00d4aa" if s >= CONVERGENCE_THRESHOLD else "#5b8cff"
+                            for s in scores],
+                    line=dict(color="#0d0f15", width=1),
+                ),
+                opacity=0.85,
+                showlegend=False,
+                name="convergence",
+            ))
+            fig.add_vline(
+                x=CONVERGENCE_THRESHOLD,
+                line=dict(color="#ff9f43", width=2, dash="dash"),
+                annotation_text=f"actionable gate · {CONVERGENCE_THRESHOLD:.0f}",
+                annotation_position="top right",
+                annotation_font=dict(color="#ff9f43", size=10),
+            )
+            fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=180,
+                margin=dict(l=10, r=10, t=24, b=24),
+                xaxis=dict(title="convergence score", title_font=dict(size=10),
+                            tickfont=dict(size=9, color="#9aa0b3"),
+                            gridcolor="rgba(255,255,255,0.04)", range=[0, 100]),
+                yaxis=dict(title="tickers", title_font=dict(size=10),
+                            tickfont=dict(size=9, color="#9aa0b3"),
+                            gridcolor="rgba(255,255,255,0.04)"),
+                title=dict(
+                    text=(f"Universe distribution · {len(scores)} tickers · "
+                           f"{len(actionable)} above gate"),
+                    font=dict(color="#e0e4ef", size=11),
+                    x=0.0, xanchor="left",
+                ),
+            )
+            st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+    except Exception as _exc:
+        pass  # chart is supplementary — table stays the source of truth
+
     _section(
         f"Actionable convergence ({len(actionable)})",
         f"composite ≥ {CONVERGENCE_THRESHOLD:.0f} — vol mispricing × neglect × reversal aligned",

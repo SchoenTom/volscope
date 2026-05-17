@@ -470,9 +470,16 @@ def _render_ticker_picker(st, db) -> str:
     """
     available = _cached_available_tickers(db) or all_tickers()
     current = st.session_state.get("selected_ticker", "SPY")
-    if current not in available:
-        current = available[0] if available else "SPY"
-
+    # When the URL / quick-switch / deep-link supplies a ticker that
+    # isn't yet in the DB, KEEP it (don't silently fall through to
+    # available[0]). The Scope renderer detects empty history and
+    # shows a "No data for {ticker}" card. Pre-fix: an unknown URL
+    # ticker like ?ticker=XYZ123 silently became "0001.HK" (the
+    # alphabetically-first loaded ticker), confusing operators who
+    # expected to see an explicit "not loaded yet" message.
+    options = list(available)
+    if current not in options:
+        options = [current] + options
     render_html(
         st,
         '<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
@@ -481,8 +488,8 @@ def _render_ticker_picker(st, db) -> str:
     )
     ticker = st.selectbox(
         "Ticker",
-        available,
-        index=available.index(current),
+        options,
+        index=options.index(current),
         help="Type to filter your loaded tickers.",
         label_visibility="collapsed",
     )
