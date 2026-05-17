@@ -128,16 +128,46 @@ def _render_alarm_picker_for_watchlist(st, db, wl) -> None:
                     st.error(f"Save failed: {exc}")
 
 
+def _ticker_snapshot(db, ticker: str) -> tuple[str, str, str]:
+    """Return (price_str, change_str, change_color) for a watchlist row.
+
+    Best-effort: returns ("—", "", grey) when DB has no data for the
+    ticker, never raises.
+    """
+    try:
+        r = db.con.execute(
+            "SELECT spot_price FROM daily_vol WHERE ticker = ? "
+            "ORDER BY date DESC LIMIT 2",
+            [ticker],
+        ).fetchall()
+        if not r:
+            return ("—", "", "#6c7286")
+        today = float(r[0][0]) if r[0][0] is not None else None
+        prev = float(r[1][0]) if len(r) > 1 and r[1][0] is not None else None
+        if today is None:
+            return ("—", "", "#6c7286")
+        price = f"${today:,.2f}" if today < 1000 else f"${today:,.0f}"
+        if prev is None or prev <= 0:
+            return (price, "", "#6c7286")
+        chg_pct = (today - prev) / prev * 100.0
+        if abs(chg_pct) < 0.05:
+            return (price, "0.0%", "#8a8f9e")
+        color = "#00d4aa" if chg_pct >= 0 else "#ff4466"
+        sign = "+" if chg_pct >= 0 else ""
+        return (price, f"{sign}{chg_pct:.1f}%", color)
+    except Exception:
+        return ("—", "", "#6c7286")
+
+
 def _render_user_watchlists(st, db) -> None:
     """Sidebar widget: list/create/manage TradingView-style watchlists.
 
-    Compact UI:
-      - One expander per watchlist (collapsed by default)
-      - Click ticker → set selected_ticker + nav to Scope
-      - Delete-button per ticker (single-click; no confirm because
-        the persistence layer can recreate from the add-form)
-      - Bottom: "New watchlist" inline form + add-ticker form
-      - Regime-alarm toggle stored per watchlist
+    v0.9.9 promote-to-top rewrite (operator feedback 2026-05-17):
+      - Promoted to TOP of sidebar (was buried below 12 sections)
+      - Non-empty watchlists default-expanded
+      - Each ticker row now shows spot + 1d change %
+      - Inline rename / delete-watchlist controls
+      - Click ticker → Scope, single-click ✕ removes ticker
     """
     from volscope.persistence.watchlists import (
         add_ticker_to_watchlist,
@@ -147,15 +177,9 @@ def _render_user_watchlists(st, db) -> None:
         remove_ticker_from_watchlist,
     )
 
-    # Best-effort: ensure tables exist. DB is read_only in UI context,
-    # so first-time creation can fail. We catch and fall back to "no
-    # watchlists yet" rendering.
     try:
         ensure_watchlist_tables(db)
     except Exception:
-        # Read-only DB: writing here is forbidden. The bot/scrape
-        # process creates the tables on next write-open; until then
-        # we just render an info card.
         render_html(
             st,
             f'<div style="margin-top:8px;color:#8a8f9e;font-family:DM Sans,sans-serif;'
@@ -166,32 +190,44 @@ def _render_user_watchlists(st, db) -> None:
         return
 
     lists = list_watchlists(db)
+    n_total_tickers = sum(len(wl.tickers) for wl in lists)
 
+    # Prominent header — bigger, top-aligned, with totals badge
     render_html(
         st,
-        f'<div style="margin-top:14px;margin-bottom:4px;'
-        f'font-family:DM Sans,sans-serif;font-size:11px;'
-        f'color:#5b8cff;letter-spacing:0.04em;font-weight:600;'
-        f'text-transform:uppercase;">⚑ My watchlists</div>',
+        f'<div style="margin:14px 0 6px 0;display:flex;justify-content:space-between;'
+        f'align-items:baseline;font-family:DM Sans,sans-serif;">'
+        f'<span style="font-size:13px;color:#5b8cff;letter-spacing:0.04em;'
+        f'font-weight:700;text-transform:uppercase;">⚑ My watchlists</span>'
+        f'<span style="font-size:10px;color:#9aa0b3;">'
+        f'{len(lists)} list{"s" if len(lists) != 1 else ""} · {n_total_tickers} ticker{"s" if n_total_tickers != 1 else ""}</span>'
+        f'</div>',
     )
 
     if not lists:
-        st.caption("No watchlists yet. Create one below ↓")
+        st.caption("No watchlists yet — create your first one below ↓")
     else:
-        # Sidebar can be told to auto-expand a watchlist by name —
-        # used by Scope's "Configure alarms" jump action.
+        # Sidebar can be told to auto-expand a watchlist by name (used
+        # by Scope's Configure-alarms jump). Otherwise expand any
+        # watchlist that has tickers — operator feedback 2026-05-17
+        # said the widget was invisible when collapsed by default.
         hint_name = st.session_state.get("sidebar_watchlist_open")
         for wl in lists:
             n_alarms = len(wl.alarm_types or [])
-            label = f"{wl.name} · {len(wl.tickers)}"
+            label = f"{wl.name}  ·  {len(wl.tickers)}"
             if n_alarms:
-                label += f"  🔔 {n_alarms}"
-            with st.expander(label, expanded=(wl.name == hint_name)):
+                label += f"  🔔{n_alarms}"
+            default_open = (
+                wl.name == hint_name
+                or (hint_name is None and len(wl.tickers) > 0)
+            )
+            with st.expander(label, expanded=default_open):
                 if not wl.tickers:
                     st.caption("(empty — add tickers below)")
                 else:
                     for t in wl.tickers:
-                        c1, c2 = st.columns([5, 1])
+                        price, chg, color = _ticker_snapshot(db, t)
+                        c1, c2, c3 = st.columns([4, 4, 1])
                         with c1:
                             if st.button(
                                 t, key=f"wl_pick_{wl.name}_{t}",
@@ -206,6 +242,15 @@ def _render_user_watchlists(st, db) -> None:
                                 ))
                                 st.rerun()
                         with c2:
+                            render_html(
+                                st,
+                                f'<div style="font-family:JetBrains Mono,monospace;'
+                                f'font-size:10px;line-height:32px;text-align:right;">'
+                                f'<span style="color:#e0e4ef;">{price}</span>'
+                                f'<span style="color:{color};margin-left:6px;">{chg}</span>'
+                                f'</div>',
+                            )
+                        with c3:
                             if st.button(
                                 "✕", key=f"wl_rm_{wl.name}_{t}",
                                 help=f"Remove {t} from {wl.name}",
@@ -800,6 +845,20 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # ── Live screener: bulk load ────────────────────────────────────
     _render_live_screener(st, db)
 
+    # ── My Watchlists (promoted to TOP — v0.9.9) ──────────────────
+    # Operator feedback 2026-05-17: "wo finde ich denn jetzt meine
+    # watchlists? ... im linken sidebar gibts immernoch keine
+    # watchlist". Was buried at the bottom (slot 12 of 14) — almost
+    # certainly below the fold on a laptop viewport. Promoted to
+    # right after the ticker picker so it's visible without scrolling.
+    try:
+        _render_user_watchlists(st, db)
+    except Exception as exc:                                        # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.sidebar").warning(
+            "User-watchlist widget render failed: %s", exc,
+        )
+
     st.divider()
 
     # ── Navigation (grouped) ────────────────────────────────────────
@@ -1085,17 +1144,10 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
             "Watchlist (alerts) render failed: %s", exc,
         )
 
-    # ── User Watchlists (TradingView-style) ────────────────────────
-    # Operator-managed groupings with optional regime-alarm trigger.
-    # Persistence in volscope.persistence.watchlists; alarms dispatch
-    # via Telegram + macOS desktop. See PRE_LAUNCH_REPORT.md.
-    try:
-        _render_user_watchlists(st, db)
-    except Exception as exc:                                        # noqa: BLE001
-        import logging as _lg
-        _lg.getLogger("volscope.ui.sidebar").warning(
-            "User-watchlist widget render failed: %s", exc,
-        )
+    # ── User Watchlists ── moved to top of sidebar (v0.9.9)
+    # The render call lives near the top now (right after the ticker
+    # picker + live screener). Operator was missing it because it
+    # was buried at slot 12 of 14, below the fold on a laptop.
 
     # ── Dev panel (only when ?dev=1 in URL) ───────────────────────────
     try:
