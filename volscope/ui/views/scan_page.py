@@ -145,10 +145,10 @@ def _augment_with_derived_columns(
 
 
 def render_scan_page(db, settings: dict | None = None) -> None:
+    import streamlit as st
     # v0.9.7 — 4-phase orientation strip (master plan §2)
     from volscope.ui.components.phase_header import render_phase_header
     render_phase_header(st, page_name='Scanner')
-    import streamlit as st
 
     st.markdown("## ◈ Scanner")
     st.caption(
