@@ -1254,10 +1254,26 @@ def _render_metrics_row(mat, spot, iv, r, q, dte):
             leg_premium = float(getattr(leg0, "entry_premium", 0.0) or 0.0)
             leg_strike  = float(leg0.strike)
             opt_type    = "call" if str(leg0.option_type).lower().startswith("c") else "put"
+            # v0.9.11 — fix HEBEL/OMEGA scaling. The leverage formula
+            # in option_metrics is ``(spot/premium) × ratio``; ratio
+            # is the warrant-size divisor (≤1 for German warrants).
+            # For US options the ratio must be 1.0 — passing 100 here
+            # inflated HEBEL by ×100 (operator saw 1,610× for an
+            # ATM call where it should have been ~16×).
+            # Also: greeks() returns POSITION-level delta (contracts
+            # × 100 × per-share). The Hebel/Omega formula expects
+            # per-share delta — divide back out so OMEGA = Hebel × |Δ|
+            # gives the elasticity, not (Hebel × per-position-delta).
+            n_contracts_ref = int(getattr(leg0, "contracts", 1) or 1)
+            leg_delta_per_share = (
+                float(g["delta"]) / max(1, n_contracts_ref * 100)
+            )
             qs = compute_all(
                 spot=float(spot), strike=leg_strike, premium=leg_premium,
-                option_type=opt_type, delta=float(g["delta"]), dte=int(dte),
-                ratio=100.0,
+                option_type=opt_type,
+                delta=leg_delta_per_share,
+                dte=int(dte),
+                ratio=1.0,
             )
             qs_cells = [
                 _ibkr_cell("AUFGELD",      f"{qs.aufgeld:+.2f}%"),
@@ -1287,7 +1303,12 @@ def _render_metrics_row(mat, spot, iv, r, q, dte):
     # answer, but the BSM-net is a reasonable proxy in paper-mode).
     try:
         n_contracts = int(mat.legs[0].contracts) if mat.legs else 1
-        capital_at_risk = abs(net) * n_contracts * 100.0
+        # v0.9.11 — net_premium() already multiplies by contracts ×
+        # 100 (see analytics/strategy_templates.py:202). The previous
+        # capital_at_risk redoubled by ×n_contracts×100, inflating
+        # the displayed risk by ~100× (operator saw $27,876 on a
+        # $277 long call). Use net as-is.
+        capital_at_risk = abs(float(net))
         notional_value  = float(spot) * n_contracts * 100.0
         sizing_cells = [
             _ibkr_cell("CONTRACTS",       f"{n_contracts:,}"),
