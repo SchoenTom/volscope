@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 def _repo_root() -> Path:
     """Resolve the project root from this file's location.
 
-    Was hardcoded to /Users/tomschoen/Desktop/VolScope in three
+    Was hardcoded to the old Desktop iCloud path in three
     places — silently broken since the 2026-05-15 migration to
     ~/dev/VolScope. Anchoring on __file__ removes the footgun.
     """

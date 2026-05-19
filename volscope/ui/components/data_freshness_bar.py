@@ -62,7 +62,7 @@ def _age_color(age_days: Optional[int]) -> tuple[str, str, str]:
 def _start_background_scrape() -> tuple[bool, str]:
     """Kick off ``make scrape`` in a detached process, return (ok, log_path).
 
-    Was hardcoded to /Users/tomschoen/Desktop/VolScope — broken
+    Was hardcoded to the old Desktop iCloud path — broken
     since the 2026-05-15 migration to ~/dev/VolScope. Delegates to
     the shared ``make_runner.spawn_make`` helper which derives the
     repo root from __file__.

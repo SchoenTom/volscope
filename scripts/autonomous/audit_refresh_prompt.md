@@ -3,7 +3,7 @@
 You are an autonomous Claude firing weekly to refresh the audit findings that drive the maturity loop. The audit JSONs become stale as code evolves; this routine keeps them honest.
 
 ## Pre-flight
-- `cd /Users/tomschoen/Desktop/VolScope`
+- `cd <repo-root>`
 - Stop if `~/.volscope_loop_pause` exists
 - Read `~/.claude/projects/-Users-tomschoen/memory/volscope-loop.md`
 - Read `data/audit/queue.json` to see what's currently flagged

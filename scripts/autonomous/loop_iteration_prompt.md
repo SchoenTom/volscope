@@ -4,7 +4,7 @@ You are an autonomous Claude session firing on a cron schedule with ONE goal: ex
 
 ## Authorization
 The owner has explicitly authorised:
-- Full file edits anywhere under `/Users/tomschoen/Desktop/VolScope`
+- Full file edits anywhere under `<repo-root>`
 - Running any bash command (pytest, make, python, git status, git diff)
 - Creating local commits on master
 - Installing pip packages if a missing dep blocks progress
@@ -17,7 +17,7 @@ The owner has explicitly NOT authorised:
 - Posting to external services beyond local notifications
 
 ## Pre-flight
-1. `cd /Users/tomschoen/Desktop/VolScope`
+1. `cd <repo-root>`
 2. If `~/.volscope_loop_pause` exists → stop immediately, exit.
 3. Read `~/.claude/projects/-Users-tomschoen/memory/volscope-loop.md` for the loop architecture.
 4. Read `~/.claude/projects/-Users-tomschoen/memory/volscope-project.md` for project state.

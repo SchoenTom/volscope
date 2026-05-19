@@ -4,7 +4,7 @@ description: VolScope volatility intelligence platform — architecture, current
 type: project
 originSessionId: 73e04a0d-97ea-440d-b8de-90c927267bb9
 ---
-VolScope work is always done in `/Users/tomschoen/Desktop/VolScope` (never the iCloud mirror).
+VolScope work is always done in `<repo-root>` (never the iCloud mirror).
 
 **The one question the app exists to answer:** "Are options cheap or expensive right now — buy now or wait?" See [volscope-vision.md](volscope-vision.md) for the four signals Operator explicitly prioritized and the non-goals.
 
@@ -50,6 +50,6 @@ VolScope work is always done in `/Users/tomschoen/Desktop/VolScope` (never the i
 - 15. ~~Position sizing calculator~~ — `analytics/position_sizing.py` (SizingResult, compute_sizing, vega P&L approx). Command Center Position Sizer expander: max-alloc slider, per-ticker table. 44 tests, PASS. Done 2026-04-23.
 - 16. Vol alert system — threshold notifications (desktop/log/email)
 
-**Session-recovery context (April 2026):** Prior Opus 4.6 session built 278+ tests across 35 Ralph-loop tasks + the Giga-Plan blueprint, but forgot to write durable memory before the context ended. Operator asked the next Claude to re-read the full transcript (`/Users/tomschoen/Desktop/VolScope/VolScope-Memory1-Chat.rtf`) and persist the hard-won maturity. The Auto-Dreaming philosophy document is at `~/Downloads/auto-dreaming-blueprint.pdf` — it is the working philosophy for all VolScope iteration.
+**Session-recovery context (April 2026):** Prior Opus 4.6 session built 278+ tests across 35 Ralph-loop tasks + the Giga-Plan blueprint, but forgot to write durable memory before the context ended. Operator asked the next Claude to re-read the full transcript (`<repo-root>/VolScope-Memory1-Chat.rtf`) and persist the hard-won maturity. The Auto-Dreaming philosophy document is at `~/Downloads/auto-dreaming-blueprint.pdf` — it is the working philosophy for all VolScope iteration.
 
 **How to apply:** Always use the Desktop path. When Operator mentions VolScope, read the roadmap and giga-plan memory before suggesting features. If it's a new session, remind Operator the crons need reactivation. Never declare work done without `make verify` passing — the oracle is external by design.

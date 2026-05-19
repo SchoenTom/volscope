@@ -9,7 +9,7 @@
 
 [![CI](https://github.com/SchoenTom/volscope/actions/workflows/ci.yml/badge.svg)](https://github.com/SchoenTom/volscope/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
-![License](https://img.shields.io/badge/license-proprietary-red)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![Made with uv](https://img.shields.io/badge/made%20with-uv-orange)
 ![Status](https://img.shields.io/badge/status-Phase%202%20scaffold-yellow)
 

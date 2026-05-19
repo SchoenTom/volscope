@@ -62,7 +62,7 @@ ready in code; the operator is not yet ready by track record.
 
 - **Backup drill**: `make backup` + `make restore-drill` cycle has
   not been run in the v0.9.3 codebase. Expected to pass.
-- **Hardcoded path cleanup**: 10 absolute `/Users/tomschoen/Desktop/VolScope`
+- **Hardcoded path cleanup**: 10 absolute `<repo-root>`
   paths in `volscope/ui/components/sidebar.py`, `backtest_page.py`,
   `_user_sim.py`, `_perf_audit.py`, `run_audits.py` (×6),
   `test_perf_smoke.py`. Migration to non-iCloud root would break

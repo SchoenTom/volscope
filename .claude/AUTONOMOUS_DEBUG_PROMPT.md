@@ -23,7 +23,7 @@ before context exhausts, then schedule yourself to wake up and continue.
 ## Boot sequence (run ONCE at session start, 60 seconds)
 
 ```bash
-cd /Users/tomschoen/Desktop/VolScope
+cd <repo-root>
 date
 git status --short                    # MUST be clean
 git log --oneline -10                 # last 10 commits

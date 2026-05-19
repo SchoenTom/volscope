@@ -107,7 +107,7 @@ class TestPageRenders:
     @pytest.fixture(scope="class")
     def at(self):
         at = AppTest.from_file(
-            "/Users/tomschoen/Desktop/VolScope/volscope/ui/app.py",
+            "<repo-root>/volscope/ui/app.py",
             default_timeout=90,
         )
         at.session_state["selected_ticker"] = "PYPL"

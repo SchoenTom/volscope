@@ -3,7 +3,7 @@
 You are an autonomous Claude firing weekly (Friday 22:13) to recreate all VolScope cron jobs. Cron jobs registered via Claude's CronCreate tool auto-expire after 7 days. Without renewal the autonomous loop dies.
 
 ## Pre-flight
-- `cd /Users/tomschoen/Desktop/VolScope`
+- `cd <repo-root>`
 - Stop if `~/.volscope_loop_pause` exists
 - Read this file's siblings:
   - `scripts/autonomous/loop_iteration_prompt.md`

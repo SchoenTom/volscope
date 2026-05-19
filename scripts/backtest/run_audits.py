@@ -40,7 +40,7 @@ AGENTS_DIR = AUDIT_DIR / "agents"
 # ─────────────────────────────────────────────────────────────────────────
 
 UI_AUDIT_PROMPT = """\
-You are auditing VolScope's UI/UX layer at /Users/tomschoen/Desktop/VolScope.
+You are auditing VolScope's UI/UX layer at <repo-root>.
 Simulate a hedge-fund trader who opens the app for the first time.
 Read every file under volscope/ui/ — pages, components, styles. Be brutal
 and concrete; the owner has signed off on this honesty.
@@ -77,7 +77,7 @@ Write the JSON to data/audit/ui_<YYYYMMDD_HHMM>.json. Print only the path.
 """
 
 MATH_AUDIT_PROMPT = """\
-You are auditing VolScope's quantitative layer at /Users/tomschoen/Desktop/VolScope.
+You are auditing VolScope's quantitative layer at <repo-root>.
 Read every file under volscope/analytics/ and volscope/data/options_scraper.py
 and volscope/data/risk_free.py.
 
@@ -123,7 +123,7 @@ Write to data/audit/math_<YYYYMMDD_HHMM>.json. Print only the path.
 
 UNIVERSE_AUDIT_PROMPT = """\
 You are auditing VolScope's asset universe and recommendation engine at
-/Users/tomschoen/Desktop/VolScope. The owner trades DAX puts (Sep 2027),
+<repo-root>. The owner trades DAX puts (Sep 2027),
 Nasdaq puts (Dec 2026), and knock-out certificates on MSTR / SNOW / 1810.HK.
 He has explicitly said: "I'm dissatisfied with the pre-loaded asset count
 and with the low-vol-area recommendations."
@@ -172,7 +172,7 @@ Write to data/audit/universe_<YYYYMMDD_HHMM>.json. Print only the path.
 """
 
 IDEAS_AUDIT_PROMPT = """\
-You are the Innovation Agent for VolScope at /Users/tomschoen/Desktop/VolScope.
+You are the Innovation Agent for VolScope at <repo-root>.
 Your job is to brainstorm bold ideas that take VolScope from "good vol tool"
 to "best-in-class hedge-fund Vol Intelligence Platform."
 

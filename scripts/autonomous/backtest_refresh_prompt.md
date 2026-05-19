@@ -3,7 +3,7 @@
 You are an autonomous Claude firing daily to keep the strategy-backtest calibration data fresh. The Kelly sizer + Strategy Recommender both consume calibrated hit-rates from `data/backtest/strategy_stats.jsonl`. As new daily_vol rows land, the calibration must update.
 
 ## Pre-flight
-- `cd /Users/tomschoen/Desktop/VolScope`
+- `cd <repo-root>`
 - Stop if `~/.volscope_loop_pause` exists
 - Stop if no daily scrape has run in 24h (`db.get_last_scrape_date()`)
 

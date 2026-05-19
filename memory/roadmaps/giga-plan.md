@@ -4,7 +4,7 @@ description: Approved 4-phase plan to evolve VolScope from descriptive dashboard
 type: project
 originSessionId: 73e04a0d-97ea-440d-b8de-90c927267bb9
 ---
-**Status as of 2026-04-20:** Plan approved by Operator. Implementation started in a prior session but ran out of 1M-context mid-Phase-1 (hit "Extra usage required"). The plan document lives at `/Users/tomschoen/.claude/plans/iterative-hugging-thimble.md` — read it before proceeding.
+**Status as of 2026-04-20:** Plan approved by Operator. Implementation started in a prior session but ran out of 1M-context mid-Phase-1 (hit "Extra usage required"). The plan document lives at `<home>/.claude/plans/iterative-hugging-thimble.md` — read it before proceeding.
 
 **Why this plan exists:** Operator asked whether VolScope could go beyond descriptive ("here's where IV is") to predictive ("here's what's coming next and what to buy"). The plan answers with four phases, all on free data (Yahoo + FRED).
 
