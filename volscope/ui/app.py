@@ -4,8 +4,29 @@ Run with: streamlit run volscope/ui/app.py
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
+
+# ── Anaconda-Python compatibility shim (MUST RUN BEFORE pandas) ──
+# Anaconda's Python 3.13 produces a `sys.version` string with two
+# `| ... |` segments that CPython's `platform._sys_version` regex
+# can't parse, raising ValueError at pandas import. Streamlit
+# imports pandas indirectly during its own startup, BEFORE this
+# app.py runs `from volscope...`, so the shim in volscope/__init__.py
+# fires too late. Normalising here fixes it for the whole process.
+# Operator 2026-05-19: '.venv/bin/python3 → /opt/anaconda3/bin/python3'
+# triggered this — every Streamlit page rendered an InvalidInput
+# exception.
+if "Anaconda" in sys.version and sys.version.count("|") >= 2:
+    _parts = sys.version.split("|")
+    if len(_parts) >= 3:
+        try:
+            sys.version = _parts[0].strip() + " " + " ".join(
+                p.strip() for p in _parts[2:]
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -139,39 +160,78 @@ def _render_runtime_error(page: str, exc: Exception) -> None:
     )
 
 
-@st.cache_resource
-def get_db() -> VolScopeDB:
-    """
-    Open the VolScope DB, tolerating transient lock collisions.
+def _detect_db_writer() -> tuple[bool, str]:
+    """Return (writer_active, pid_or_msg) — lightweight lock probe.
 
-    v0.9.8 — prefer WRITABLE (was read-only). The earlier
-    read-only-first policy made paper-trader, watchlist, and
-    personal-cash writes all crash with InvalidInputException —
-    the operator hit "Paper-buy failed", "Portfolio render
-    failed", and "watchlist section missing" in the same session
-    (2026-05-16). Fall back to read-only only if writable open
-    fails persistently (e.g. live bot scheduler holds the
-    exclusive lock).
+    Used by get_db() to decide whether to attempt a writable open or
+    immediately go read-only. Avoids the 5-retry × 0.3s backoff loop
+    when a long-running scrape clearly holds the lock.
     """
-    import time
+    import subprocess
+    from volscope.config import DB_PATH as _DB_PATH
+    try:
+        rc = subprocess.run(
+            ["lsof", "-Fp", str(_DB_PATH)],
+            capture_output=True, text=True, timeout=2,
+        )
+    except Exception:
+        return False, ""
+    pids = [line[1:] for line in rc.stdout.splitlines()
+              if line.startswith("p") and line[1:].isdigit()]
+    own_pid = str(os.getpid())
+    others = [p for p in pids if p != own_pid]
+    return (bool(others), others[0] if others else "")
+
+
+@st.cache_resource
+def get_db() -> "VolScopeDB":
+    """Open the VolScope DB, tolerating writer-contention.
+
+    Policy (v0.9.13, hardened after operator hit the "make scrape
+    locks Streamlit out" sequence on 2026-05-19):
+
+      1. Probe for a foreign writer via lsof. If one is detected,
+         open READ-ONLY immediately and tell the rest of the app
+         via st.session_state['vs_db_readonly_reason'].
+      2. No foreign writer → try writable (5 attempts × 0.3s).
+      3. Writable open fails persistently → fall back to read-only.
+
+    Write paths consult ``vs_db_readonly_reason`` and degrade
+    gracefully instead of raising InvalidInputException.
+    """
+    import time, os
     from pathlib import Path
 
     from volscope.config import DB_PATH
+
+    writer_active, writer_pid = _detect_db_writer()
+    if writer_active:
+        st.session_state["vs_db_readonly_reason"] = (
+            f"Another VolScope process (PID {writer_pid}) is writing — "
+            f"reads work, writes paused until it finishes."
+        )
+        try:
+            return VolScopeDB(read_only=True)
+        except Exception:
+            pass  # fall through to writable retry
 
     db_exists = Path(DB_PATH).exists()
     last_exc: Exception | None = None
     for attempt in range(5):
         try:
-            return VolScopeDB()
-        except Exception as exc:  # duckdb.IOException subclasses Exception
+            db = VolScopeDB()
+            st.session_state.pop("vs_db_readonly_reason", None)
+            return db
+        except Exception as exc:
             last_exc = exc
             time.sleep(0.3 * (attempt + 1))
 
-    # All writable attempts failed → bot scheduler likely holds the
-    # lock. Fall back to read-only so the UI at least renders. Personal
-    # writes will fail with a friendly error from the affected feature.
     if db_exists:
         try:
+            st.session_state["vs_db_readonly_reason"] = (
+                "Database is held by another writer — reads work, "
+                "writes paused until the writer finishes."
+            )
             return VolScopeDB(read_only=True)
         except Exception as exc2:
             last_exc = exc2
@@ -226,6 +286,27 @@ def main() -> None:
             """,
         )
         return
+
+    # v0.9.13 — readonly-mode banner. When a foreign writer (the most
+    # common: a `make scrape` spawned from our own button) holds the
+    # exclusive DB lock, get_db() returns a read-only connection
+    # rather than crashing. Surface this state up-front so the
+    # operator understands why writes (paper-buy, watchlist add,
+    # reset cash, …) fail silently while the scrape runs.
+    _ro_reason = st.session_state.get("vs_db_readonly_reason")
+    if _ro_reason:
+        render_html(
+            st,
+            f'<div style="background:{COLORS["card"]};border:1px solid '
+            f'{COLORS["amber"]};border-left:4px solid {COLORS["amber"]};'
+            f'border-radius:6px;padding:10px 14px;margin:8px 0;'
+            f'font-family:JetBrains Mono,monospace;font-size:11px;">'
+            f'<span style="color:{COLORS["amber"]};font-weight:700;">'
+            f'⚑ READ-ONLY MODE</span>'
+            f'<span style="color:{COLORS["muted"]};margin-left:10px;">'
+            f'{_ro_reason} Reload the page after the scrape '
+            f'finishes to resume writes.</span></div>',
+        )
 
     # Onboarding wizard intercept — fresh DB or never-completed flag.
     try:

@@ -47,9 +47,36 @@ def _log_dir() -> Path:
     return p
 
 
+def _scrape_already_running() -> Optional[str]:
+    """Return PID if a daily_scrape.py is currently running, else None."""
+    import subprocess
+    try:
+        rc = subprocess.run(
+            ["pgrep", "-f", "scripts/scrape/daily_scrape.py"],
+            capture_output=True, text=True, timeout=2,
+        )
+        pids = [p for p in rc.stdout.strip().splitlines() if p.strip()]
+        return pids[0] if pids else None
+    except Exception:
+        return None
+
+
 def spawn_make(target: str, *, label_for_log: Optional[str] = None) -> tuple[bool, str]:
     """Spawn ``make <target>`` in a detached process. Returns
-    (ok, log_path_or_error_message)."""
+    (ok, log_path_or_error_message).
+
+    For ``target == "scrape"`` only: refuse to spawn if a scrape is
+    already running (operator hit this on 2026-05-19 — accidental
+    double-click locked Streamlit out of the DB for 40 minutes).
+    """
+    if target == "scrape":
+        existing_pid = _scrape_already_running()
+        if existing_pid:
+            return False, (
+                f"A scrape is already running (PID {existing_pid}). "
+                f"Wait for it to finish or run "
+                f"`kill {existing_pid}` in a terminal to cancel it."
+            )
     name = label_for_log or target
     log_file = _log_dir() / f"manual-{name}-{_dt.datetime.now():%Y%m%d-%H%M%S}.log"
     try:

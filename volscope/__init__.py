@@ -9,6 +9,38 @@ running.
 """
 from __future__ import annotations
 
+
+# ── Anaconda-version compatibility shim ─────────────────────────────
+# Python 3.13.9 distributed by Anaconda produces a `sys.version` string
+# like
+#     '3.13.9 | packaged by Anaconda, Inc. | (main, Oct 21 2025, ...) ...'
+# with TWO `| ... |` segments. CPython's `platform._sys_version()`
+# regex only handles ONE such segment, so it raises
+#     ValueError: failed to parse CPython sys.version: ...
+# the first time pandas calls `platform.python_implementation()` at
+# import. Result: every Streamlit page that touches pandas explodes.
+#
+# Operator hit this on 2026-05-19 — their `.venv/bin/python3` symlinks
+# to `/opt/anaconda3/bin/python3`, exactly the failing combination.
+#
+# Fix: pre-emptively normalise `sys.version` BEFORE anything imports
+# pandas (this module runs on every `import volscope`, which sits
+# above pandas in the dep graph).
+import sys as _sys
+if (
+    "Anaconda" in _sys.version
+    and _sys.version.count("|") >= 2
+):
+    # Strip the "| packaged by Anaconda, Inc. |" segment.
+    _parts = _sys.version.split("|")
+    if len(_parts) >= 3:
+        _normalised = _parts[0].strip() + " " + " ".join(p.strip() for p in _parts[2:])
+        try:
+            _sys.version = _normalised
+        except Exception:  # noqa: BLE001
+            pass
+
+
 import subprocess
 from pathlib import Path
 
