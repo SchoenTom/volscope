@@ -216,11 +216,24 @@ def render_pretrade_page(db: VolScopeDB, settings: dict) -> None:
     iv_perc    = _safe_float(latest.get("iv_percentile"))
     skew_25    = _safe_float(latest.get("iv_skew_25d"))
 
+    from volscope.ui.components.make_runner import run_make_button
     if spot is None or spot <= 0:
-        st.warning(f"{ticker} has no usable spot price — run a scrape first.")
+        st.warning(f"{ticker} has no usable spot price — fetch the latest snapshot:")
+        run_make_button(
+            st, target="scrape", label="↻ Run make scrape",
+            key=f"pt_empty_scrape_spot_{ticker}", button_type="primary",
+            help_text="Spawns make scrape in the background.",
+            use_width_stretch=False,
+        )
         return
     if iv_30d is None or iv_30d <= 0:
-        st.warning(f"{ticker} has no usable IV — run a scrape first.")
+        st.warning(f"{ticker} has no usable IV — fetch the latest snapshot:")
+        run_make_button(
+            st, target="scrape", label="↻ Run make scrape",
+            key=f"pt_empty_scrape_iv_{ticker}", button_type="primary",
+            help_text="Spawns make scrape in the background.",
+            use_width_stretch=False,
+        )
         return
 
     # Show data-quality badge so the trader knows when calculations rest on

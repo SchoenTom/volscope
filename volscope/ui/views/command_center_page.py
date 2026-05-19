@@ -640,7 +640,14 @@ def _render_position_sizer(
             render_html(
                 st,
                 f'<div style="color:{COLORS["muted"]};font-size:11px;">'
-                f'No market data — run <code>make scrape</code>.</div>',
+                f'No market data — fetch the latest snapshot:</div>',
+            )
+            from volscope.ui.components.make_runner import run_make_button
+            run_make_button(
+                st, target="scrape", label="↻ Run make scrape",
+                key="cc_sizing_scrape", button_type="primary",
+                help_text="Spawns make scrape in the background.",
+                use_width_stretch=False,
             )
             return
 

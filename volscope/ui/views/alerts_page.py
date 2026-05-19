@@ -143,8 +143,8 @@ def render_alerts_page(db, settings: dict | None = None) -> None:
             "tracked tickers, or add tickers via the Watchlist page."
             if scope == "My watchlists"
             else "No ticker in the universe is currently hitting an "
-                  "anomaly, flow, regime, or earnings threshold. Re-scan "
-                  "after the next <code>make scrape</code>."
+                  "anomaly, flow, regime, or earnings threshold. Run a "
+                  "fresh scrape to re-evaluate."
         )
         render_html(
             st,
@@ -152,6 +152,14 @@ def render_alerts_page(db, settings: dict | None = None) -> None:
             f'<div class="volscope-empty-headline">No active alerts.</div>'
             f'<div class="volscope-empty-body">{empty_body}</div></div>',
         )
+        if scope != "My watchlists":
+            from volscope.ui.components.make_runner import run_make_button
+            run_make_button(
+                st, target="scrape", label="↻ Run make scrape",
+                key="alerts_empty_scrape",
+                help_text="Spawns make scrape in the background.",
+                use_width_stretch=False,
+            )
         return
 
     counts = count_by_category(alerts)

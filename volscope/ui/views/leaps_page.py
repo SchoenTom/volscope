@@ -299,11 +299,19 @@ def render_leaps_page(db, settings: Optional[dict] = None) -> None:
             render_html(st, empty_state_html(
                 headline="The DB is empty — let's seed it",
                 body=(
-                    "VolScope has no daily snapshot yet. Run `make seed-starter` "
-                    "for an 8-ticker quickstart, or `make scrape` to fetch a full "
-                    "universe. Both finish under a minute on a fresh checkout."
+                    "VolScope has no daily snapshot yet. Click below to fetch "
+                    "the latest data; takes a few minutes on a fresh checkout."
                 ),
             ))
+            from volscope.ui.components.make_runner import run_make_button
+            run_make_button(
+                st,
+                target="scrape",
+                label="↻ Run make scrape",
+                key="leaps_empty_scrape",
+                button_type="primary",
+                help_text="Spawns make scrape in the background (~5-10 min).",
+            )
             return
 
         tickers = latest["ticker"].dropna().astype(str).tolist()

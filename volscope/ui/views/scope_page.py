@@ -314,9 +314,18 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
             title=f"No data for {escape(ticker)}",
             body=(
                 "Use the <strong>Add ticker</strong> box in the sidebar, "
-                "or run <code>make seed</code> / <code>make scrape</code> to "
-                "populate the database."
+                "or click the button below to fetch the latest snapshot."
             ),
+        )
+        from volscope.ui.components.make_runner import run_make_button
+        run_make_button(
+            st,
+            target="scrape",
+            label="↻ Run make scrape",
+            key=f"scope_empty_scrape_{ticker}",
+            button_type="primary",
+            help_text="Spawns make scrape in the background (~5-10 min).",
+            use_width_stretch=False,
         )
         return
 
@@ -491,13 +500,18 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
                 st,
                 f'<div style="background:{COLORS["surface"]};border:1px solid {COLORS["border"]};'
                 f'border-left:3px solid {COLORS["amber"]};border-radius:6px;padding:10px 14px;'
-                f'margin-bottom:12px;font-family:JetBrains Mono,monospace;font-size:11px;">'
+                f'margin-bottom:4px;font-family:JetBrains Mono,monospace;font-size:11px;">'
                 f'<span style="color:{COLORS["amber"]};font-weight:600;">⚠ Seed-only data</span>'
                 f'<span style="color:{COLORS["muted"]};margin-left:10px;">'
-                f'IV 60d / 90d / 180d not yet scraped — run '
-                f'<code style="background:{COLORS["border"]};padding:1px 5px;border-radius:3px;">'
-                f'make scrape</code> to populate the full term structure'
-                f'</span></div>',
+                f'IV 60d / 90d / 180d not yet scraped — run scrape to populate'
+                f' the full term structure.</span></div>',
+            )
+            from volscope.ui.components.make_runner import run_make_button
+            run_make_button(
+                st, target="scrape", label="↻ Run make scrape",
+                key=f"scope_seedonly_scrape_{ticker}",
+                help_text="Spawns make scrape in the background.",
+                use_width_stretch=False,
             )
         with error_boundary(st, "IV vs HV chart"):
             st.plotly_chart(

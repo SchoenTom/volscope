@@ -1184,36 +1184,17 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
         # Dev panel must never break the sidebar
         pass
 
-    # Refresh-data button: triggers `make scrape` in a detached background
-    # process so the UI stays responsive. The scrape itself is long
-    # (several minutes) — we just kick it off and let the user keep
-    # working. Status surfaces via the next page-reload of "last scrape".
-    if st.button(
-        "↻ Refresh market data",
+    # Refresh-data button: triggers `make scrape` in a detached
+    # background process. Uses the shared make_runner helper so the
+    # repo-root path is derived from __file__ (was hardcoded to
+    # the old Desktop iCloud path).
+    from volscope.ui.components.make_runner import run_make_button
+    run_make_button(
+        st,
+        target="scrape",
+        label="↻ Refresh market data",
         key="sidebar_scrape_btn",
-        help="Run `make scrape` in the background (several minutes).",
-        width='stretch',
-    ):
-        import subprocess, os, datetime as _dt
-        log_dir = os.path.expanduser("~/.claude/volscope-cron-logs")
-        os.makedirs(log_dir, exist_ok=True)
-        log_file = os.path.join(
-            log_dir,
-            f"manual-scrape-{_dt.datetime.now().strftime('%Y%m%d-%H%M%S')}.log",
-        )
-        try:
-            with open(log_file, "w") as lf:
-                subprocess.Popen(
-                    ["make", "scrape"],
-                    cwd="/Users/tomschoen/Desktop/VolScope",
-                    stdout=lf,
-                    stderr=subprocess.STDOUT,
-                    start_new_session=True,
-                )
-            # Streamlit ≥1.32 rejects ``↻`` as icon — replaced by the
-            # emoji-presentation ``🔄`` (U+1F504, counterclockwise arrows).
-            st.toast(f"Scrape started — log: {os.path.basename(log_file)}", icon="🔄")
-        except Exception as exc:
-            st.error(f"Could not start scrape: {exc}")
+        help_text="Run `make scrape` in the background (several minutes).",
+    )
 
     return ticker, page, settings

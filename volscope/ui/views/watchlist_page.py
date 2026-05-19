@@ -348,6 +348,66 @@ def _render_alerts_panel(db, wl) -> None:
         "for tickers in this watchlist. Nothing fires unless you tick a box."
     )
 
+    # v0.9.12 — one-click "arm common alerts" button. Operator on
+    # 2026-05-19: "also ein button ebenso für den alert in der
+    # watchlist falls iv ranks oder so ändern". Bundles the four
+    # most-asked alarm types (IV Rank HIGH+LOW, regime change,
+    # earnings imminent) with sensible default thresholds.
+    qa1, qa2 = st.columns(2)
+    with qa1:
+        if st.button(
+            "⚡ Arm common alerts",
+            key=f"wlpage_arm_common_{wl.name}",
+            width='stretch',
+            help=(
+                "One click: enables IV Rank crosses HIGH (80), IV Rank "
+                "crosses LOW (20), Vol Regime change, and Earnings "
+                "imminent (7 days) for every ticker in this watchlist."
+            ),
+        ):
+            try:
+                quick_set = ["iv_rank_high", "iv_rank_low",
+                              "regime_change", "earnings_imminent"]
+                quick_thresholds = {
+                    "iv_rank_high": 80.0,
+                    "iv_rank_low": 20.0,
+                    "earnings_imminent_days": 7,
+                }
+                create_watchlist(
+                    db, wl.name,
+                    regime_alarms=True,
+                    alarm_types=quick_set,
+                    alarm_thresholds={
+                        **(wl.alarm_thresholds or {}),
+                        **quick_thresholds,
+                    },
+                )
+                st.toast(
+                    f"✓ Armed 4 common alerts on «{wl.name}»",
+                    icon="🔔",
+                )
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Arm-common failed: {exc}")
+    with qa2:
+        if st.button(
+            "✕ Disarm all alerts",
+            key=f"wlpage_disarm_{wl.name}",
+            width='stretch',
+            help="Disable every alarm for this watchlist.",
+        ):
+            try:
+                create_watchlist(
+                    db, wl.name,
+                    regime_alarms=False,
+                    alarm_types=[],
+                    alarm_thresholds={},
+                )
+                st.toast(f"✓ All alerts disarmed on «{wl.name}»", icon="🔕")
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Disarm failed: {exc}")
+
     with st.form(f"wlpage_alarms_{wl.name}", border=False, clear_on_submit=False):
         new_types: list[str] = []
         new_thresholds: dict = dict(wl.alarm_thresholds or {})
@@ -508,6 +568,47 @@ Schwellwert 20 ist, kommt:
 > → open Scope: /?ticker=DAX&page=Scope&source=alarm
             """,
         )
+        # v0.9.12 — one-click installer for the background alarm
+        # cron. Operator: "bitte füge hierfür einen button ein im
+        # abteilung watchlist". launchctl install / uninstall calls
+        # are synchronous (≤ 1 s) so we use the sync variant.
+        from volscope.ui.components.make_runner import (
+            run_make_button_sync,
+        )
+        col_install, col_uninstall = st.columns(2)
+        with col_install:
+            run_make_button_sync(
+                st,
+                target="schedule-alerts",
+                label="🔔 Enable background alerts",
+                key="wl_install_alerts",
+                button_type="primary",
+                help_text=(
+                    "Installs a launchd job (~/Library/LaunchAgents/"
+                    "com.volscope.alarms.plist) that runs check_alarms "
+                    "every 30 min during NYSE hours. Works even when "
+                    "VolScope is closed."
+                ),
+                success_message=(
+                    "✓ Background alerts installed — they now fire even "
+                    "when VolScope is closed."
+                ),
+                timeout=15,
+            )
+        with col_uninstall:
+            run_make_button_sync(
+                st,
+                target="unschedule-alerts",
+                label="✕ Disable background alerts",
+                key="wl_uninstall_alerts",
+                help_text=(
+                    "Removes the launchd job. Alerts will only fire "
+                    "while VolScope's check_alarms cron is manually "
+                    "triggered."
+                ),
+                success_message="✓ Background alerts uninstalled.",
+                timeout=10,
+            )
 
     try:
         ensure_watchlist_tables(db)

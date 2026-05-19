@@ -119,8 +119,15 @@ def render_strategy_builder_page(db, settings: dict | None = None) -> None:
             st,
             f'<div style="color:{COLORS["muted"]};font-family:JetBrains Mono,monospace;'
             f'font-size:11px;padding:6px 0;">'
-            f'No history for {escape(ticker)} — run <code>make scrape</code>.'
+            f'No history for {escape(ticker)} — fetch the latest snapshot:'
             f'</div>',
+        )
+        from volscope.ui.components.make_runner import run_make_button
+        run_make_button(
+            st, target="scrape", label="↻ Run make scrape",
+            key=f"sb_empty_scrape_{ticker}", button_type="primary",
+            help_text="Spawns make scrape in the background.",
+            use_width_stretch=False,
         )
         return
 

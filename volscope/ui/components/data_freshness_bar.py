@@ -60,25 +60,15 @@ def _age_color(age_days: Optional[int]) -> tuple[str, str, str]:
 
 
 def _start_background_scrape() -> tuple[bool, str]:
-    """Kick off ``make scrape`` in a detached process, return (ok, log_path)."""
-    log_dir = os.path.expanduser("~/.claude/volscope-cron-logs")
-    os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(
-        log_dir,
-        f"manual-scrape-{_dt.datetime.now().strftime('%Y%m%d-%H%M%S')}.log",
-    )
-    try:
-        with open(log_file, "w") as lf:
-            subprocess.Popen(
-                ["make", "scrape"],
-                cwd="/Users/tomschoen/Desktop/VolScope",
-                stdout=lf, stderr=subprocess.STDOUT,
-                start_new_session=True,
-            )
-        return True, log_file
-    except Exception as exc:
-        log.exception("scrape spawn failed")
-        return False, str(exc)
+    """Kick off ``make scrape`` in a detached process, return (ok, log_path).
+
+    Was hardcoded to /Users/tomschoen/Desktop/VolScope — broken
+    since the 2026-05-15 migration to ~/dev/VolScope. Delegates to
+    the shared ``make_runner.spawn_make`` helper which derives the
+    repo root from __file__.
+    """
+    from volscope.ui.components.make_runner import spawn_make
+    return spawn_make("scrape")
 
 
 def render_data_freshness_bar(db, *, compact: bool = False) -> None:
