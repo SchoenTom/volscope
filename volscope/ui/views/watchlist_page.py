@@ -26,6 +26,103 @@ from volscope.ui.components.html_utils import render_html
 from volscope.ui.styles.theme import COLORS
 
 
+# ── TradingView paste parser ─────────────────────────────────────────
+#
+# TV's native watchlist export gives strings like:
+#   ###Section,
+#   NASDAQ:AAPL,
+#   NYSE:BRK.B,
+#   XETR:SAP,
+#   LSE:HSBA,
+#   HKEX:700,
+#
+# We translate this to Yahoo conventions so VolScope's ticker resolver
+# accepts them: US tickers get the exchange prefix stripped, German
+# get `.DE`, London `.L`, Toronto `.TO`, etc. Section headers (###...)
+# get dropped.
+#
+# Operator feedback 2026-05-19: "kann ich bei TV per Pine mit irgendeinem
+# command mir die Ticker geben lassen der Liste und die dann in dem
+# Format 1:1 einfügen? kannst du die kompatibel machen?"
+#
+# Best path: just use TV's right-click → Export → Copy. The format
+# above pastes 1:1 into our import box now.
+
+_TV_EXCHANGE_TO_YAHOO_SUFFIX: dict[str, str] = {
+    # US — bare ticker
+    "NASDAQ": "", "NYSE": "", "AMEX": "", "ARCA": "",
+    "BATS":   "", "OTC":  "", "CBOE": "",
+    # Europe
+    "XETR":   ".DE",   # Deutsche Börse XETRA  → ticker.DE
+    "FWB":    ".DE",   # Frankfurt (TV alias)
+    "TRADEGATE": ".DE",
+    "LSE":    ".L",    # London
+    "LSIN":   ".L",
+    "EURONEXT": ".PA", # Paris (default)
+    "PA":     ".PA",
+    "AMS":    ".AS",   # Amsterdam
+    "MIL":    ".MI",   # Milan
+    "BME":    ".MC",   # Madrid
+    "SIX":    ".SW",   # Swiss
+    "STO":    ".ST",   # Stockholm
+    "OMXSTO": ".ST",
+    "HEL":    ".HE",   # Helsinki
+    "OSL":    ".OL",   # Oslo
+    "CPH":    ".CO",   # Copenhagen
+    "WBO":    ".VI",   # Vienna
+    # Asia / Pacific
+    "HKEX":   ".HK",
+    "TSE":    ".T",    # Tokyo
+    "TSX":    ".TO",   # Toronto (TV alias)
+    "TSXV":   ".V",
+    "ASX":    ".AX",
+    "BSE":    ".BO",
+    "NSE":    ".NS",
+    "SSE":    ".SS",
+    "SZSE":   ".SZ",
+    "TWSE":   ".TW",
+    "KRX":    ".KS",
+    # Crypto: TV uses BINANCE:BTCUSDT; Yahoo wants BTC-USD
+    # We don't auto-map crypto here — operator should type the
+    # Yahoo form directly if they need crypto.
+}
+
+
+def _parse_tv_paste(raw: str) -> list[str]:
+    """Parse a TradingView watchlist paste OR a plain CSV/whitespace
+    list. Returns deduplicated, validated tickers in input order.
+    """
+    import re
+    if not raw:
+        return []
+    tokens: list[str] = []
+    for line in raw.replace(",", "\n").splitlines():
+        t = line.strip()
+        if not t or t.startswith("#") or t.startswith("//"):
+            continue                                 # TV section headers
+        # TV format: EXCHANGE:TICKER  (e.g. NASDAQ:AAPL, HKEX:700)
+        if ":" in t:
+            exchange, sym = t.split(":", 1)
+            exchange = exchange.strip().upper()
+            sym = sym.strip().upper()
+            # Special: HK uses 4-digit zero-padded codes
+            if exchange == "HKEX" and sym.isdigit():
+                sym = sym.zfill(4)
+            suffix = _TV_EXCHANGE_TO_YAHOO_SUFFIX.get(exchange, "")
+            t = f"{sym}{suffix}"
+        # Allow ^ for indices (^VIX, ^GDAXI), . for class-shares,
+        # - for hyphenated symbols, alphanumeric and BRK.B style.
+        t = re.sub(r"[^\w\^\.\-]", "", t).upper()
+        if 1 <= len(t) <= 14:
+            tokens.append(t)
+    # Dedup preserving order
+    seen, out = set(), []
+    for t in tokens:
+        if t not in seen:
+            seen.add(t); out.append(t)
+    return out
+
+
 _ALARM_ICONS: dict[str, str] = {
     "regime_change":     "≈",
     "iv_pct_high":       "⬆",
@@ -94,6 +191,15 @@ def _render_create_new(db) -> None:
     with c2:
         with st.popover("📥 Import from TradingView / CSV",
                           use_container_width=True):
+            st.caption(
+                "Tolerates TradingView's native watchlist export (the "
+                "**Export → Copy to clipboard** menu in TV's right-side "
+                "watchlist panel). Pastes like `NASDAQ:AAPL,NYSE:BRK.B` "
+                "or section-headered `###Tech,NASDAQ:NVDA,...` work 1:1. "
+                "Exchange prefixes get stripped; suffixes get mapped to "
+                "Yahoo conventions (`XETR:ALV → ALV.DE`, `LSE:HSBA → "
+                "HSBA.L`, `HKEX:700 → 0700.HK`, etc.)."
+            )
             with st.form("wlpage_import", border=False):
                 imp_name = st.text_input(
                     "Watchlist name",
@@ -101,41 +207,46 @@ def _render_create_new(db) -> None:
                     key="wlpage_imp_name",
                 )
                 imp_text = st.text_area(
-                    "Paste tickers (comma-, newline-, or space-separated)",
-                    placeholder="AAPL, MSFT, NVDA\nGOOGL META\nPLTR",
-                    height=100,
+                    "Paste tickers — TV format or plain CSV both work",
+                    placeholder=(
+                        "AAPL, MSFT, NVDA\n"
+                        "NASDAQ:GOOGL,NYSE:BRK.B\n"
+                        "###Tech,XETR:SAP,LSE:HSBA,HKEX:700"
+                    ),
+                    height=110,
                     key="wlpage_imp_text",
                 )
                 imp_submitted = st.form_submit_button(
                     "Import", type="primary", width='stretch',
                 )
                 if imp_submitted:
-                    import re
                     clean = (imp_name or "").strip()
                     raw = imp_text or ""
-                    parts = [
-                        re.sub(r"[^\w\^\.\-]", "", p).upper()
-                        for p in re.split(r"[,\n;\s]+", raw)
-                    ]
-                    tickers = [p for p in parts if p and 1 <= len(p) <= 12]
+                    tickers = _parse_tv_paste(raw)
                     if not clean:
                         st.error("Pick a watchlist name.")
                     elif not tickers:
-                        st.error("No valid tickers found.")
+                        st.error("No valid tickers found in the paste.")
                     else:
                         try:
                             create_watchlist(db, clean)
                             n_added = 0
+                            n_failed = 0
                             for t in tickers:
                                 try:
                                     add_ticker_to_watchlist(db, clean, t)
                                     n_added += 1
                                 except Exception:
-                                    pass
+                                    n_failed += 1
                             st.toast(
                                 f"✓ Imported {n_added}/{len(tickers)} into «{clean}»",
                                 icon="📥",
                             )
+                            if n_failed:
+                                st.warning(
+                                    f"{n_failed} ticker(s) failed to add — they "
+                                    f"may already exist or be invalid."
+                                )
                             st.session_state["wlpage_selected"] = clean
                             st.rerun()
                         except Exception as exc:
