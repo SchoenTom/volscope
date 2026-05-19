@@ -187,6 +187,21 @@ def render_oi_heatmap_block(
     tt_oi   = _esc_attr(glossary("total_open_interest"))
     tt_pcr  = _esc_attr(glossary("put_call_ratio"))
     tt_pain = _esc_attr(glossary("max_pain"))
+
+    # v0.9.11 — None-safe formatting. Vol Insights crashed the whole
+    # page with "TypeError: unsupported format string passed to
+    # NoneType.__format__" whenever the chain had no puts (or no
+    # calls) — overall_pcr returns None in that case. Operator hit
+    # this repeatedly on 2026-05-19 ("VOLINSIGHTS DAUERFEHLER!!").
+    def _fmt_int(v):
+        return f"{v:,}" if isinstance(v, (int, float)) and v is not None else "—"
+    def _fmt_pcr(v):
+        return f"{v:.2f}" if isinstance(v, (int, float)) and v is not None else "—"
+    def _fmt_strike(v):
+        if v is None: return "—"
+        try: return f"${float(v):,.0f}"
+        except Exception: return "—"
+
     render_html(
         st,
         f'<div style="color:{COLORS["accent2"] if "accent2" in COLORS else COLORS["accent"]};'
@@ -194,11 +209,11 @@ def render_oi_heatmap_block(
         f'font-family:DM Sans,sans-serif;" title="{tt_oi}">OI HEATMAP · {ticker}</div>'
         f'<div style="color:{COLORS["muted"]};font-size:11px;'
         f'font-family:JetBrains Mono,monospace;margin-bottom:4px;" title="{tt_pcr}">'
-        f'Total Call OI: {result.total_call_oi:,}   '
-        f'· Total Put OI: {result.total_put_oi:,}   '
-        f'· PCR: {result.overall_pcr:.2f}   '
-        f'· support {result.support_strike}   '
-        f'· resistance {result.resistance_strike}'
+        f'Total Call OI: {_fmt_int(result.total_call_oi)}   '
+        f'· Total Put OI: {_fmt_int(result.total_put_oi)}   '
+        f'· PCR: {_fmt_pcr(result.overall_pcr)}   '
+        f'· support {_fmt_strike(result.support_strike)}   '
+        f'· resistance {_fmt_strike(result.resistance_strike)}'
         f'</div>',
     )
     st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
