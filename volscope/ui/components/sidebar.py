@@ -878,7 +878,15 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
         ("? REFERENCE",  ["Help"]),
     ]
     pages = [p for _, group in NAV_GROUPS for p in group]
-    if current_page not in pages:
+    # v0.9.11 — pages reachable by deep-link / button-driven nav but
+    # not surfaced in the sidebar nav. Without this allowlist, the
+    # recovery heuristic below kicks in and the operator gets snapped
+    # back to Command when, e.g., they click 'Open dossier' on LEAPS
+    # Lab (operator hit this on 2026-05-19: 'IM LEAPS LAB FUNKTIONIERT
+    # DER OPEN DOSSIER BUTTON NICHT').
+    _DEEP_LINK_ONLY_PAGES = ("Dossier", "Mega-Scan", "Earnings Trades", "Onboarding")
+    pages_plus = pages + list(_DEEP_LINK_ONLY_PAGES)
+    if current_page not in pages_plus:
         # Defensive: an unknown ``current_page`` typically means a
         # caller used the wrong registry key (e.g. "Bot Dashboard"
         # instead of "Bot", or "Command Center" instead of "Command").
