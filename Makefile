@@ -215,6 +215,18 @@ convergence:
 check-alarms:
 	@python scripts/ops/check_alarms.py --quiet
 
+# v0.9.11 — one-command alarm scheduler. Generates a launchd plist
+# that calls check_alarms every 30 min during NYSE business hours
+# (09-21 NY time, weekdays). Operator runs `make schedule-alerts`
+# once; alarms then fire even when Streamlit is closed.
+schedule-alerts:
+	@python scripts/ops/install_alarm_scheduler.py
+
+unschedule-alerts:
+	@launchctl unload ~/Library/LaunchAgents/com.volscope.alarms.plist 2>/dev/null || true
+	@rm -f ~/Library/LaunchAgents/com.volscope.alarms.plist
+	@echo "[scheduler] VolScope alarm cron uninstalled."
+
 # Walk-forward backtest of the LEAPS-convergence rule.
 # Default: 365-day hold, monthly resampling, full universe.
 backtest-leaps:

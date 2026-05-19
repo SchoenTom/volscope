@@ -94,23 +94,63 @@ def render_alerts_page(db, settings: dict | None = None) -> None:
     from volscope.ui.components.phase_header import render_phase_header
     render_phase_header(st, page_name='Alerts')
     st.markdown("## ◈ Alerts")
-    st.caption(
-        "Universe-wide scanner — anomaly, flow, regime, and earnings "
-        "conditions that just tripped a threshold."
+
+    # v0.9.11 — operator feedback 2026-05-19: "bei alerts sollte
+    # alles gelöscht sein und nur das aus einer Watchlist kommen,
+    # also nur Watchlist alerts". Default to watchlist-scope so the
+    # signal isn't drowned by 200+ universe-wide threshold trips.
+    scope = st.radio(
+        "Scope",
+        ["My watchlists", "Full universe"],
+        index=0,
+        horizontal=True,
+        key="alerts_scope",
+        label_visibility="collapsed",
+        help=(
+            "My watchlists (default): only alerts for tickers in at "
+            "least one of your watchlists.  Full universe: every "
+            "tracked ticker in the DB."
+        ),
     )
 
-    with st.spinner("Scanning universe..."):
-        alerts = scan_alerts(db)
+    allow_tickers: "set[str] | None" = None
+    if scope == "My watchlists":
+        try:
+            from volscope.persistence.watchlists import list_watchlists
+            wls = list_watchlists(db)
+            allow_tickers = set()
+            for wl in wls:
+                for t in wl.tickers:
+                    allow_tickers.add(str(t).upper())
+        except Exception:
+            allow_tickers = set()
+
+    st.caption(
+        f"{'Watchlist-scoped' if scope == 'My watchlists' else 'Universe-wide'} "
+        f"scanner — anomaly, flow, regime, and earnings "
+        f"conditions that just tripped a threshold."
+        + (f"  ·  {len(allow_tickers)} watchlist ticker(s) in scope."
+            if allow_tickers is not None else "")
+    )
+
+    with st.spinner("Scanning..."):
+        alerts = scan_alerts(db, allow_tickers=allow_tickers)
 
     if not alerts:
+        empty_body = (
+            "None of your watchlist tickers currently hit a threshold. "
+            "Switch to <strong>Full universe</strong> above to scan all "
+            "tracked tickers, or add tickers via the Watchlist page."
+            if scope == "My watchlists"
+            else "No ticker in the universe is currently hitting an "
+                  "anomaly, flow, regime, or earnings threshold. Re-scan "
+                  "after the next <code>make scrape</code>."
+        )
         render_html(
             st,
             f'<div class="volscope-empty-state">'
             f'<div class="volscope-empty-headline">No active alerts.</div>'
-            f'<div class="volscope-empty-body">'
-            f'No ticker in the universe is currently hitting an anomaly, flow, regime, '
-            f'or earnings threshold. Re-scan after the next <code>make scrape</code>.'
-            f'</div></div>',
+            f'<div class="volscope-empty-body">{empty_body}</div></div>',
         )
         return
 

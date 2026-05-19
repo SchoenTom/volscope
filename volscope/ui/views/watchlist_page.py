@@ -346,6 +346,58 @@ def render_watchlist_page(db, settings: dict | None = None) -> None:
         "Everything in one place — no sidebar clutter."
     )
 
+    # v0.9.11 — operator feedback 2026-05-19: "wie erhalte ich die
+    # Benachrichtigungen? steht dann beim Alert auch was für einer?
+    # bleibt meine watchlist immer erhalten? erhalte ich auch
+    # benachrichtigungen wenn volscope aus ist?"
+    with st.expander("ℹ How alerts work · Wie funktionieren die Benachrichtigungen", expanded=False):
+        st.markdown(
+            """
+**Persistence — ja, deine Watchlists bleiben erhalten.**
+Die Watchlists liegen in der lokalen DuckDB (`watchlists` +
+`watchlist_items` Tabellen). Sie überleben Streamlit-Neustarts,
+App-Close, Mac-Reboot. Einzig manuelles Löschen der DB oder ein
+Restore eines älteren Backups (`make restore-drill`) wischt sie.
+
+**Benachrichtigungskanäle** (`.env` konfigurierbar):
+1. **Telegram** — setze `TELEGRAM__BOT_TOKEN` und
+   `TELEGRAM__CHAT_ID` in `.env`; Alarme erscheinen als Chat-
+   Nachricht.
+2. **macOS Desktop Notification** — keine Konfiguration nötig
+   (`osascript`-basiert, immer an).
+3. **Log line** — jeder Alarm wird zusätzlich ins App-Log
+   geschrieben.
+
+**Wann feuern Alarme?**
+Ein eigener Cron-Job (`scripts/ops/check_alarms.py`) läuft
+**unabhängig vom UI** — du brauchst weder Streamlit offen noch
+Auto-Refresh aktiv. Setup:
+
+```bash
+make schedule-alerts     # registriert einen launchd-Job, der den
+                         # Cron alle 30 min während NYSE-Stunden
+                         # (09-21 NY-Zeit, Werktage) laufen lässt
+```
+
+**Was steht im Alarm?**
+Jeder Alert nennt explizit:
+- Ticker + Alarm-Typ (z.B. `▲ DAX · IV Rank crosses HIGH`)
+- aktueller Wert vs. konfigurierter Schwellwert (`IV Rank 82 crossed
+  threshold 80`)
+- aktuelle Vol-Regime + Spot-Preis
+- Quell-Watchlist
+- Deep-Link auf Scope für diesen Ticker
+
+**Steht da auch "DAX IV rank < 20"?** Ja, exakt so — wenn du den
+`▼ IV Rank crosses LOW`-Alarm auf deine Watchlist setzt und der
+Schwellwert 20 ist, kommt:
+> `▼ DAX · IV Rank crosses LOW`
+> IV Rank 18 crossed threshold 20
+> regime CHEAP · spot $44.61 · from watchlist «Mein DAX»
+> → open Scope: /?ticker=DAX&page=Scope&source=alarm
+            """,
+        )
+
     try:
         ensure_watchlist_tables(db)
     except Exception as exc:

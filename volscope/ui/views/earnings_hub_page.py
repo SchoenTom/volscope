@@ -101,7 +101,7 @@ def render_earnings_hub_page(db, settings: dict | None = None) -> None:
     render_data_freshness_bar(db)
 
     # Week navigation + filter strip
-    week_start, sort_mode, sector_filter, watchlist_only = _render_controls(db)
+    week_start, sort_mode, sector_filter, watchlist_only, watchlist_filter = _render_controls(db)
     week_end = week_start + timedelta(days=6)
 
     # Pull events for the week
@@ -134,7 +134,7 @@ def render_earnings_hub_page(db, settings: dict | None = None) -> None:
         return
 
     # Optional filters
-    events = _apply_filters(events, sector_filter, watchlist_only, db)
+    events = _apply_filters(events, sector_filter, watchlist_only, db, watchlist_filter)
     if not events:
         st.info("No events match the current filter combination.")
         return
@@ -309,11 +309,23 @@ def _render_controls(db) -> tuple[date, str, Optional[str], bool]:
                                label_visibility="collapsed")
         sector = None if sector == "all" else sector
 
-    watchlist_only = st.toggle(
-        "Only tickers in my portfolio", value=False,
-        key="eh_watchlist_only",
-        help="Show only tickers you currently hold a position in.",
-    )
+    tcol1, tcol2 = st.columns(2)
+    with tcol1:
+        watchlist_only = st.toggle(
+            "Only tickers in my portfolio", value=False,
+            key="eh_watchlist_only",
+            help="Show only tickers you currently hold a position in.",
+        )
+    with tcol2:
+        # v0.9.11 — operator feedback: add "only watchlist tickers"
+        # toggle (their daily workflow is watchlist-driven, not
+        # portfolio-driven). Both toggles AND together — turn both
+        # on to intersect, leave both off to see the full grid.
+        watchlist_filter = st.toggle(
+            "Only tickers in my watchlists", value=False,
+            key="eh_watchlist_filter",
+            help="Show only tickers that appear in at least one of your watchlists.",
+        )
 
     render_html(
         st,
@@ -323,7 +335,7 @@ def _render_controls(db) -> tuple[date, str, Optional[str], bool]:
         f'{week_start.strftime("%b %d")} → {week_end.strftime("%b %d %Y")}'
         f'</strong></div>',
     )
-    return week_start, sort_mode, sector, watchlist_only
+    return week_start, sort_mode, sector, watchlist_only, watchlist_filter
 
 
 # ── Event sourcing & enrichment ──────────────────────────────────────
@@ -352,7 +364,8 @@ def _events_for_week(db, week_start: date, week_end: date) -> list[dict]:
     return df.to_dict("records") if not df.empty else []
 
 
-def _apply_filters(events, sector_filter, watchlist_only, db) -> list[dict]:
+def _apply_filters(events, sector_filter, watchlist_only, db,
+                    watchlist_filter: bool = False) -> list[dict]:
     out = events
     if sector_filter:
         out = [e for e in out if (e.get("sector") or "").lower()
@@ -365,6 +378,17 @@ def _apply_filters(events, sector_filter, watchlist_only, db) -> list[dict]:
         except Exception:
             held = set()
         out = [e for e in out if str(e["ticker"]).upper() in held]
+    if watchlist_filter:
+        try:
+            from volscope.persistence.watchlists import list_watchlists
+            wls = list_watchlists(db)
+            wl_tickers = set()
+            for wl in wls:
+                for t in wl.tickers:
+                    wl_tickers.add(str(t).upper())
+        except Exception:
+            wl_tickers = set()
+        out = [e for e in out if str(e["ticker"]).upper() in wl_tickers]
     return out
 
 

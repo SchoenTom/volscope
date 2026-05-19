@@ -365,13 +365,22 @@ def _days_to_next_earnings(db, ticker: str) -> Optional[int]:
 def scan_alerts(
     db,
     history_lookback: int = 25,
+    allow_tickers: "set[str] | None" = None,
 ) -> list[Alert]:
     """
-    Scan the entire ticker universe for active alerts.
+    Scan the ticker universe for active alerts.
 
     Reads ``daily_vol`` once, plus a tail of history per ticker for
     rules that need a previous reference (volume spike, regime shifts,
     spread sign-flips). Earnings rules use ``earnings`` table.
+
+    Args:
+        allow_tickers: if non-None, restrict the scan to this set of
+            tickers (e.g. the union of all watchlists). Default
+            ``None`` = full universe. Added 2026-05-19 — operator
+            wanted the Alerts page to default to watchlist-scope so
+            it doesn't drown the operator in 200+ universe-wide
+            hits.
 
     Returns alerts sorted by (severity DESC, ticker ASC).
     """
@@ -381,6 +390,12 @@ def scan_alerts(
         return []
     if latest is None or latest.empty:
         return []
+    if allow_tickers is not None:
+        latest = latest[latest["ticker"].astype(str).str.upper().isin(
+            {t.upper() for t in allow_tickers}
+        )]
+        if latest.empty:
+            return []
 
     alerts: list[Alert] = []
 
