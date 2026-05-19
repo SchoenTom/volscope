@@ -21,12 +21,22 @@ cd ~/dev/VolScope
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt && pip install -e .
 cp .env.example .env             # fill in keys before live work
-make quickstart                  # seeds 842-ticker universe + launches UI
+make quickstart                  # seeds your watchlist (or SPY+QQQ) + launches UI
 ```
 
-`make quickstart` takes ~30-45 min on a cold checkout (yfinance rate-
-limits at 360 req/h). For a faster boot with the 75-ticker trading
-universe, use `make quickstart-bot` instead.
+`make quickstart` boots in ~2 min — it seeds your existing
+watchlist tickers (or a 2-ticker baseline of SPY + QQQ on a fresh
+DB). Grow the universe interactively via the sidebar's add-ticker
+form or the Watchlist page's CSV import.
+
+For bigger initial seeds:
+
+| Target | Tickers | Time |
+|---|---|---|
+| `make quickstart` (default) | watchlist or 2 | ~2 min |
+| `make quickstart-bot` | ~75 | ~4 min |
+| `make seed-broad` | ~280 | ~10 min |
+| `make quickstart-full` | ~842 | ~30-45 min |
 
 Open <http://localhost:8501>.
 

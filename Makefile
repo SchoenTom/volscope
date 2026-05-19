@@ -32,17 +32,34 @@ repair-iv:
 
 # ── Quick Start ─────────────────────────────────────────────────────
 # One command, zero decisions. Installs deps, releases any stale DB
-# lock, seeds the FULL UNIVERSE (842 tickers across all sectors so
-# Discover / Heatmap / Rotation have maximum breadth from minute one),
-# launches the UI in headless mode (no stdin block, no telemetry).
-# Total runtime on a fresh checkout: ~30-45 minutes (yfinance rate-
-# limit at 360 req/hour bounds this; the seeder retries failed
-# tickers automatically). For a faster setup with the trading-only
-# universe (75 tickers, ~4 min): `make quickstart-bot` instead.
+# v0.9.11 — make quickstart now boots fast (target: ≤ 2 min).
+# Seeds your existing watchlist tickers if any, falls back to SPY +
+# QQQ as a sensible 2-ticker baseline. Operator can grow the universe
+# from the sidebar's add-ticker form or by importing a TradingView
+# watchlist (📥 Import on the Watchlist page).
+#
+# WHY this changed: the old quickstart ran seed-full (842 tickers,
+# ~30 min). Operator hit the wall on 2026-05-19 ("ich finde der
+# loader brauchst etwas lange... können wir das ursprünglich
+# geladene set verkleinern dass volscope in so 1-2 min startet?").
+#
+# Three alternatives still available for bigger seeds:
+#   - make quickstart-bot   → ~75 tickers, ~4 min
+#   - make seed-broad       → ~280 tickers, ~10 min
+#   - make seed-full        → ~842 tickers, ~30-45 min
 quickstart:
 	@bash scripts/ops/keep_warm.sh
 	pip install -q -r requirements.txt
 	pip install -q -e .                                    # makes volscope importable from anywhere
+	@python scripts/ops/release_db_lock.py --force
+	$(MAKE) seed-watchlist
+	$(MAKE) run
+
+# Legacy: full 842-ticker seed. Now an explicit opt-in.
+quickstart-full:
+	@bash scripts/ops/keep_warm.sh
+	pip install -q -r requirements.txt
+	pip install -q -e .
 	@python scripts/ops/release_db_lock.py --force
 	$(MAKE) seed-full
 	$(MAKE) run

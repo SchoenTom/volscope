@@ -44,8 +44,11 @@ def main() -> int:
                 tickers.append(t)
 
     if not tickers:
-        log.info("No watchlist tickers configured — seeding SPY as baseline")
-        tickers = ["SPY"]
+        log.info(
+            "No watchlist tickers configured — seeding SPY + QQQ as baseline "
+            "(grow via sidebar add-ticker or Watchlist page CSV import)",
+        )
+        tickers = ["SPY", "QQQ"]
 
     log.info("Seeding %d ticker(s): %s", len(tickers), ", ".join(tickers))
 
