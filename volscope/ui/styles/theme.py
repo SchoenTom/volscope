@@ -741,7 +741,25 @@ CUSTOM_CSS = f"""
     .volscope-mono,
     .volscope-kpi-value {{
         font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace !important;
-        font-variant-numeric: tabular-nums;
+        /* Tabular figures + slashed zero — the single most "terminal" tell:
+           every digit is the same width and 0 can never be read as O. */
+        font-variant-numeric: tabular-nums slashed-zero;
+        font-feature-settings: "tnum" 1, "zero" 1;
+    }}
+
+    /* Keyboard focus rings — :focus-visible only, so a mouse click never
+       shows a ring. An inset accent ring reads as deliberate, not default. */
+    .stButton button:focus-visible,
+    [data-baseweb="select"]:focus-within,
+    input:focus-visible,
+    textarea:focus-visible,
+    .stTabs [data-baseweb="tab"]:focus-visible {{
+        outline: none !important;
+        box-shadow:
+            0 0 0 1px {COLORS['bg']},
+            0 0 0 3px {rgba(COLORS['accent'], 0.60)},
+            0 0 12px {rgba(COLORS['accent'], 0.20)} !important;
+        border-radius: 6px;
     }}
 
     /* Sidebar — one shade lighter than the page */
