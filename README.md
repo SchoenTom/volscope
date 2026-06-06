@@ -1,22 +1,24 @@
 # ◈ VolScope
 
-> A volatility-research workbench for options traders, with an
-> in-process paper-trading engine. Built around an own
-> Black-Scholes-Merton + IV solver, Yang-Zhang HV, an HMM regime
-> classifier, and a Streamlit dashboard that surfaces the
-> dashboards a retail trader would otherwise pay Bloomberg for.
+> ### Is this stock's implied volatility cheap or expensive?
+>
+> VolScope answers above the fold. Type any ticker and get **one instant
+> verdict** on its options — backed by its own Black-Scholes-Merton + IV
+> solver (**never** Yahoo's IV), Yang-Zhang realized vol, a volatility
+> cone, a time-travelling term structure, regime-shaded IV history, and a
+> plain-English read. The volatility screen a retail trader would otherwise
+> rent from Bloomberg — self-hosted, in a browser tab.
 
 [![CI](https://github.com/SchoenTom/volscope/actions/workflows/ci.yml/badge.svg)](https://github.com/SchoenTom/volscope/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-![Status](https://img.shields.io/badge/status-research%20%2F%20paper--only-yellow)
+![Status](https://img.shields.io/badge/status-IV%20research-brightgreen)
 
 > [!IMPORTANT]
-> **Research / educational software.** VolScope is paper-only.
-> It does not place orders with a real broker, it does not give
-> investment advice, and its outputs are not a recommendation. See
-> the disclaimer in [`LICENSE`](LICENSE) before connecting it to
-> anything that touches real capital.
+> **Research / educational software.** VolScope computes and visualises
+> volatility — it does not place orders, connect to a broker, or give
+> investment advice, and its outputs are not a recommendation. See the
+> disclaimer in [`LICENSE`](LICENSE).
 
 ## Quick Start
 
