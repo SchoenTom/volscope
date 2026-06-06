@@ -538,7 +538,27 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
     ])
 
     with tab_vol:
-        # Compact HTML 52-week range bar — full-width above whatever follows.
+        # ── THE hero chart ─────────────────────────────────────────────
+        # Implied vs Realized vol is the heart of VolScope — the single
+        # picture that answers "is the option market pricing more or less
+        # movement than the stock has actually delivered?". It leads the
+        # Vol View, full-width and tall.
+        render_html(
+            st,
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:13px;'
+            f'font-weight:700;color:{COLORS["text"]};margin:2px 0 -6px 2px;">'
+            f'Implied vs Realized Volatility'
+            f'<span style="color:{COLORS["muted"]};font-weight:400;font-size:11px;'
+            f'margin-left:8px;">IV above HV → options pricing in more move than '
+            f'the stock has delivered (rich); below → cheap.</span></div>',
+        )
+        with error_boundary(st, "IV vs HV chart"):
+            st.plotly_chart(
+                create_iv_hv_chart(history, ticker, earnings_dates=earnings),
+                width='stretch',
+            )
+
+        # Compact HTML 52-week range bar — full-width below the hero chart.
         with error_boundary(st, "52-Week IV Range"):
             render_iv_range_bar(history)
 
@@ -564,11 +584,6 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
                 key=f"scope_seedonly_scrape_{ticker}",
                 help_text="Spawns make scrape in the background.",
                 use_width_stretch=False,
-            )
-        with error_boundary(st, "IV vs HV chart"):
-            st.plotly_chart(
-                create_iv_hv_chart(history, ticker, earnings_dates=earnings),
-                width='stretch',
             )
         with error_boundary(st, "IV-HV Spread chart"):
             st.plotly_chart(

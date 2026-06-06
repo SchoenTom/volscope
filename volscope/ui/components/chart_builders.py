@@ -199,7 +199,8 @@ def create_iv_hv_chart(
     _add_today_gap(fig, history, label="STALE")
 
     layout = _base_layout(f"{ticker} — IMPLIED vs REALIZED VOLATILITY")
-    layout["height"] = 300
+    # The hero chart of VolScope — give it room.
+    layout["height"] = 440
     layout["xaxis"]["rangeselector"] = _range_selector()
     layout["yaxis"]["ticksuffix"] = "%"
     layout["yaxis"]["rangemode"] = "tozero"
