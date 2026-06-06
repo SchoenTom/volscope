@@ -85,6 +85,8 @@ def decompose_front_back_iv(
         return None
     if front_dte <= 0 or back_dte <= 0:
         return None
+    if front_iv <= 0 or back_iv <= 0:
+        return None  # non-positive IV is degenerate — variance term goes negative
     if back_dte <= front_dte:
         return None  # back must be strictly later than front
     if event_dte_days <= 0:

@@ -108,6 +108,6 @@ def test_zero_sigma_equals_discounted_intrinsic():
 
 
 @pytest.mark.golden
-def test_unknown_option_type_raises():
-    with pytest.raises(ValueError, match="call.*put"):
-        bs_price(100, 100, 0.5, 0.05, 0.20, 0, "swaption")
+def test_unknown_option_type_returns_none():
+    # Analytics rule: bad input returns None, never raises.
+    assert bs_price(100, 100, 0.5, 0.05, 0.20, 0, "swaption") is None

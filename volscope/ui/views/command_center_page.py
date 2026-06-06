@@ -1141,16 +1141,16 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
                     edge=edges_by_ticker.get(ticker),
                 ),
             )
-            # Inline action row: jump to Pre-Trade or Scope for this ticker
+            # Inline action row: jump to Options Lab or Scope for this ticker
             act_l, act_r = st.columns(2)
             if act_l.button(
-                f"▷ Pre-Trade",
-                key=f"cmd_pretrade_{ticker}",
+                "▷ Options Lab",
+                key=f"cmd_optionslab_{ticker}",
                 width='stretch',
-                help=f"Open Pre-Trade card for {ticker}",
+                help=f"Price + Greeks for {ticker}",
             ):
                 from volscope.ui.components.navigation import NavIntent, nav_to
-                nav_to(NavIntent(page="Pre-Trade", ticker=ticker, source="Command"))
+                nav_to(NavIntent(page="Options Lab", ticker=ticker, source="Command"))
                 st.rerun()
             if act_r.button(
                 f"◈ Scope",
@@ -1249,8 +1249,11 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
                         if close_cols[j % 4].button(
                             f"Close {t} {entry_str}", key=f"close_pos_{pos_id}"
                         ):
-                            db.close_position(pos_id)
-                            st.rerun()
+                            try:
+                                db.close_position(pos_id)
+                                st.rerun()
+                            except Exception as exc:           # noqa: BLE001
+                                st.error(f"Couldn't close position: {exc}")
         else:
             render_html(st,
                 f'<div style="color:{COLORS["muted"]};font-family:{_MONO};font-size:11px;">'
@@ -1273,16 +1276,19 @@ def render_command_center_page(db: VolScopeDB, settings: dict) -> None:
 
         if log_submit and add_ticker:
             sym = add_ticker.strip().upper()
-            db.add_position(
-                ticker=sym,
-                entry_date=add_date,
-                entry_iv_30d=add_iv if add_iv > 0 else None,
-                entry_iv_percentile=add_pct if add_pct > 0 else None,
-                entry_vrp=add_vrp if add_vrp > 0 else None,
-                notes=add_notes.strip(),
-            )
-            st.success(f"Logged entry for {sym} on {add_date}")
-            st.rerun()
+            try:
+                db.add_position(
+                    ticker=sym,
+                    entry_date=add_date,
+                    entry_iv_30d=add_iv if add_iv > 0 else None,
+                    entry_iv_percentile=add_pct if add_pct > 0 else None,
+                    entry_vrp=add_vrp if add_vrp > 0 else None,
+                    notes=add_notes.strip(),
+                )
+                st.success(f"Logged entry for {sym} on {add_date}")
+                st.rerun()
+            except Exception as exc:                           # noqa: BLE001
+                st.error(f"Couldn't log entry (database read-only?): {exc}")
 
     # ── Position Sizer ────────────────────────────────────────────────────
     _render_position_sizer(command_tickers, latest_rows, signals, db)

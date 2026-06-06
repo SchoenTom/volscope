@@ -528,14 +528,23 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
         if has_skew:
             with error_boundary(st, "25Δ Skew chart"):
                 st.plotly_chart(create_skew_chart(history), width='stretch')
-        # Inline action: open Pre-Trade for this ticker
+        else:
+            render_html(
+                st,
+                f'<div style="color:{COLORS["muted"]};font-family:JetBrains Mono,'
+                f'monospace;font-size:12px;padding:8px 0;">No 25Δ skew yet for '
+                f'{escape(ticker)} — needs an option-chain scrape with both '
+                f'wings. Run <code>make scrape</code> to populate '
+                f'<code>iv_skew_25d</code>.</div>',
+            )
+        # Inline action: price this ticker in Options Lab
         if st.button(
-            f"▷ Open Pre-Trade for {ticker}",
-            key=f"scope_pretrade_{ticker}",
+            f"▷ Price {ticker} in Options Lab",
+            key=f"scope_optionslab_{ticker}",
             help="Build a strategy + Greeks for this ticker.",
         ):
             from volscope.ui.components.navigation import NavIntent, nav_to
-            nav_to(NavIntent(page="Pre-Trade", ticker=ticker, source="Scope"))
+            nav_to(NavIntent(page="Options Lab", ticker=ticker, source="Scope"))
             st.rerun()
 
     with tab_backtest:

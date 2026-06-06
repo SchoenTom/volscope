@@ -10,23 +10,16 @@ The gate. Must exit 0 across every step before you commit / push:
 # 1. Ruff
 .venv/bin/ruff check . && .venv/bin/ruff format --check .
 
-# 2. Mypy (strict on new packages)
+# 2. Mypy (strict on core packages)
 .venv/bin/mypy --strict --ignore-missing-imports \
-    volscope/signals volscope/risk volscope/lifecycle \
-    volscope/execution volscope/scheduler volscope/persistence
+    volscope/persistence volscope/analytics
 
 # 3. Fast pytest
 .venv/bin/python -m pytest \
     -m "not slow and not integration and not perf and not ibkr" \
     --tb=short -q
 
-# 4. Audit-chain verify (on the local DB if it exists)
-.venv/bin/python -m scripts.audit.verify_chain || echo "(no DB or empty chain — OK on fresh)"
-
-# 5. Risk-thresholds unchanged
-.venv/bin/python scripts/audit/check_risk_thresholds_unchanged.py
-
-# 6. Gitleaks (full history)
+# 4. Gitleaks (full history)
 gitleaks detect --no-banner --no-git -v
 ```
 

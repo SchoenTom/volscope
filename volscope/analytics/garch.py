@@ -6,7 +6,8 @@ volatility forward 30 days. Paired with the HMM regime detector
 (`volscope/analytics/regime.py`), this is the "forward-looking RV"
 side of the composite signal score.
 
-Deferred import: `arch` is in the `bot` extras (`uv sync --extra bot`).
+Deferred import: `arch` is in the `forecasting` extras
+(`uv sync --extra forecasting`).
 The rest of the codebase imports `analytics.garch` safely even without
 the dep installed; `GarchForecaster.fit()` raises a clear error at
 that point.
@@ -57,7 +58,7 @@ class GarchForecaster:
         except ImportError as exc:
             raise ImportError(
                 "GarchForecaster.fit() requires the `arch` library. "
-                "Install with `uv sync --extra bot`."
+                "Install with `uv sync --extra forecasting`."
             ) from exc
 
         x = log_returns.dropna().to_numpy(dtype=float)

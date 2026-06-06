@@ -155,9 +155,10 @@ def _fetch_vdax_proxy_ewg(period: str = "1y") -> tuple[pd.Series, str]:
         if T <= 0:
             return pd.Series(dtype=float), ""
 
-        # get_rate requires days_to_expiry (no default). Use the matched
-        # horizon for this expiry so the BSM IV solve sees the right rate.
-        r = get_rate(max(int((exp_date - today).days), 1)) / 100.0
+        # get_rate requires days_to_expiry (no default) and already returns a
+        # decimal fraction (e.g. 0.045), which is exactly what the BSM IV
+        # solve expects — do NOT divide by 100 again.
+        r = get_rate(max(int((exp_date - today).days), 1))
 
         chain = ticker.option_chain(best_expiry)
         calls = chain.calls if chain.calls is not None else pd.DataFrame()

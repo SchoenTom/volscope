@@ -7,16 +7,17 @@
 
 ## Project Identity
 
-VolScope is a **volatility-research workbench** with a **simulation
-bot** + **paper-trading capability** for retail options traders.
+VolScope is a focused **IV-research workbench** for retail options
+traders — implied-vol richness/cheapness discovery, term structure,
+skew, earnings, and regime forecasting.
 
-- Tech: Python 3.11+, Streamlit, DuckDB 1.4+, Plotly, yfinance (research),
-  `ib_async` 2.1+ (paper/live, paper-only this quarter).
+- Tech: Python 3.11+, Streamlit, DuckDB 1.4+, Plotly, yfinance (research).
 - Operator: SchoenTom (private repo, plan to flip MIT later).
-- Stage: paper-development. **No live IBKR orders** until Phase 4 with
-  explicit opt-in + ≥100 closed paper trades.
-- Vision: research dashboard primary; bot is one user of the engine;
-  paper trader is a manual workflow on the same DB.
+- Stage: research tool. No order execution — VolScope surfaces signals;
+  the human decides and trades elsewhere.
+- Vision: answer one question — where is vol cheap vs rich? — across
+  Discover, Scope, Heatmap, Earnings Hub, Vol Insights, Scanner, and
+  the forecasting (GARCH / HMM regime) layer.
 
 ## Session Boot Sequence
 
@@ -39,32 +40,25 @@ for direction.
 4. **Plotly = `go` only.** Never `plotly.express`. Never 8-char hex
    `fillcolor` — use `rgba()` helper at `volscope/ui/styles/theme.py:15`.
 5. **`st.metric` is forbidden** — truncates. Use `kpi_grid_html()`.
-6. **Live IBKR orders are FORBIDDEN** until Phase 4 with operator
-   opt-in. v0.3.0+ paper engine writes to `bot_trades` only.
-7. **No `--force` on main** — branch protection enforces; recovery via
+6. **No `--force` on main** — branch protection enforces; recovery via
    `chore/initial-fixup` branch per `CONTRIBUTING.md`.
-8. **No `--no-verify`** on commits — pre-commit hooks are sacrosanct.
-9. **Config changes are weekend-only** — `config/risk-thresholds.yaml`
-   is operator-only with `OPERATOR_APPROVED=yes` trailer; reviews in
-   the Sunday 18:00 ET window with 90-day cooldown.
-10. **No mutations to `bot_audit_chain`** — append-only, hash-chained.
+7. **No `--no-verify`** on commits — pre-commit hooks are sacrosanct.
 
-Path-scoped detail in `.claude/rules/{analytics,ui,persistence,live-trading,secrets}.md`.
+Path-scoped detail in `.claude/rules/{analytics,ui,persistence,secrets}.md`.
 
 ## Hard commands
 
 | Action | Command |
 |---|---|
 | Install deps | `.venv/bin/pip install -r requirements.txt` |
-| Install bot extras | `.venv/bin/pip install transitions arch hmmlearn apscheduler ib_async orjson hypothesis` |
+| Install forecasting extras | `.venv/bin/pip install -e '.[forecasting]'` |
 | Run app | `make run` |
 | Fast tests | `make pre-merge-check` |
-| New-modules sweep | `.venv/bin/python -m pytest tests/test_audit_chain.py tests/test_intent_manager.py tests/test_risk_locks.py tests/golden/ tests/properties/ -q` |
+| Golden + property sweep | `.venv/bin/python -m pytest tests/golden/ tests/properties/ -q` |
 | E2E smoke | `make verify-all` |
 | Release DB lock | `make unlock` |
 | Backup | `make backup` |
 | Restore drill | `make restore-drill` |
-| Audit-chain verify | `make audit-verify` |
 
 ## Tool Workflow Standards
 
@@ -114,12 +108,10 @@ Verbatim from Anthropic's prompting guide (also in `WELCOME-AGENT.md`):
 | Phase | State | What it is |
 |---|---|---|
 | 0 | ✅ DONE | Dashboard bug fixes |
-| 1 | ✅ DONE | Signal engine: factors / composite / filters / ranker / HMM scaffold / GARCH |
-| 2 | 🔧 SCAFFOLD (v0.3.0+) | Paper engine with real chain data + state machine + scheduler + kill switch |
-| 2.5 | ⏳ next | Live IBKR wiring (Watchdog, BAG combos, walk-price, reconciler) |
-| 3 | ⏳ planned | Backtest validation: vectorbt + optopsy + CPCV + Bootstrap CI |
-| 4 | ⏳ planned | Go-live ramp (10% → 25% → 50% → 100% over 12 weeks) |
-| 5+ | ⏳ future | SVI/SSVI, per-name GEX, dispersion, calendar spreads |
+| 1 | ✅ DONE | IV/HV analytics: BSM, IV solver, HV estimators, regime, GARCH |
+| 2 | ✅ Core | Research pages: Discover, Scope, Heatmap, Earnings Hub, Vol Insights, Scanner |
+| 3 | ⏳ next | Forecasting layer polish: GARCH(1,1)-t + HMM regime surfacing |
+| 4+ | ⏳ future | SVI/SSVI surface fit, per-name GEX, dispersion, calendar analytics |
 
 Anchor doc: `docs/roadmap/MASTER_PLAN.md` + `docs/roadmap/MASTERPIECE_BACKLOG.md`.
 
@@ -131,15 +123,11 @@ Non-obvious "the codebase looks like X but actually behaves like Y":
   `volscope/ui/styles/theme.py:15`.
 - **`st.metric`** truncates. Use `kpi_grid_html()`.
 - **DuckDB exclusive lock** — one writer at a time. UI is read-only;
-  bot is sole writer. `make unlock` if stuck.
+  the scraper is sole writer. `make unlock` if stuck.
 - **DuckDB reserved words** — `RIGHT` is one. Use `option_right` in
   chain tables (see ADR-0002 + decision-log 2026-05-14).
 - **DuckDB no partial indexes** — use full index + WHERE in queries.
-- **ib_async clientId=0** — master ID, sees manual GUI orders. Bot
-  uses ≥1 to stay isolated.
 - **HMM regime fit** needs ≥252 days; the model raises on shorter.
-- **IBKR rate limit** — 50 msgs/sec hard cap. Wrap in
-  `asyncio.Semaphore(40)`.
 - **DuckDB no PITR** — `EXPORT DATABASE` after market close + hourly
   during. See `docs/BACKUPS.md`.
 - **Canonical project path is `~/dev/VolScope`** (NOT `~/Desktop/VolScope`).
@@ -157,8 +145,6 @@ Non-obvious "the codebase looks like X but actually behaves like Y":
   (~360 req/hour/IP). EOD only.
 - **`right` as a Python attribute** keeps working on dataclasses;
   only the SQL column was renamed to `option_right`.
-- **orjson canonical JSON** — audit chain uses `OPT_SORT_KEYS` for
-  deterministic hashing. Don't substitute a different serializer.
 - **IV Rank single-spike contamination** — `|IVR − IVP| > 30` flags
   the FISV-class bug where one extreme spike inflates the 52-week
   MAX, making standard IVR misleadingly "CHEAP". Always check
@@ -170,12 +156,7 @@ Non-obvious "the codebase looks like X but actually behaves like Y":
 | Path | Purpose |
 |---|---|
 | `volscope/analytics/` | Pure math: BSM, IV solver, HV estimators, regime, GARCH |
-| `volscope/signals/` | Bot brain: factors, composite, filters, ranking |
-| `volscope/risk/` | Kill switch, locks, thresholds — operator-only |
-| `volscope/execution/` | Paper engine + intent manager + IBKR stub |
-| `volscope/lifecycle/` | 11-state trade machine + daily MTM |
-| `volscope/scheduler/` | APScheduler 3.11, America/New_York |
-| `volscope/persistence/` | DuckDB migrations + audit chain |
+| `volscope/persistence/` | DuckDB migrations |
 | `volscope/data/` | Yahoo scraper, chain scraper, ticker resolver |
 | `volscope/ui/` | Streamlit pages + components |
 | `tests/` | pytest (golden / properties / unit / integration / perf) |

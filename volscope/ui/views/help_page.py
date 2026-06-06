@@ -221,36 +221,6 @@ def render_help_page(db: VolScopeDB, settings: dict) -> None:
     )
 
     _section(
-        "Bot & risk controls",
-        "Live-trading guardrails (Phase 2.5+, paper-only this quarter).",
-    )
-    _term(
-        "Kill switch",
-        "Eight independent paths that halt the bot (operator manual, "
-        "daily-loss limit, position-concentration cap, IBKR disconnect, "
-        "data-staleness, audit-chain integrity break, risk-config drift, "
-        "circuit-breaker).",
-        "Implemented in <code>risk/kill_switch.py</code>; any path can "
-        "fire from any process. See <code>docs/MASTERPLAN.md</code>.",
-    )
-    _term(
-        "Audit chain",
-        "Append-only, hash-chained log of every bot decision + execution. "
-        "<code>bot_audit_chain</code> table — write-once-read-many. "
-        "<code>make audit-verify</code> walks the chain end-to-end.",
-        "Mutations are forbidden by code review + integration tests. "
-        "Operator can replay any past decision without DB reconstruction.",
-    )
-    _term(
-        "Paper engine",
-        "Simulation lane that runs the full bot decision pipeline against "
-        "real chains but writes only to <code>bot_trades</code>, never to "
-        "IBKR. Required ≥ 100 closed paper trades before live opt-in.",
-        "Code path: <code>execution/paper_engine.py</code> + "
-        "<code>lifecycle/state_machine.py</code> (11-state).",
-    )
-
-    _section(
         "Operator tools",
         "Sidebar / page-level features the operator drives.",
     )

@@ -38,6 +38,7 @@ References:
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
@@ -137,7 +138,17 @@ def detect_contamination(
         - > 50 → EXTREME: range is heavily contaminated, consider
           blocking the ticker from trading.
     """
-    if iv_rank is None or iv_percentile is None:
+    # None OR NaN both mean "insufficient data" — a NaN iv_rank (the
+    # sentinel ivr()/ivp() emit) would otherwise produce divergence=NaN,
+    # which fails every `<= threshold` test (IEEE 754) and falls through to
+    # a bogus EXTREME verdict with a NaN divergence that orjson turns into
+    # null. Treat non-finite inputs as CLEAN/insufficient.
+    if (
+        iv_rank is None
+        or iv_percentile is None
+        or not math.isfinite(float(iv_rank))
+        or not math.isfinite(float(iv_percentile))
+    ):
         return ContaminationLevel.CLEAN, 0.0
 
     divergence = abs(float(iv_rank) - float(iv_percentile))
@@ -365,9 +376,12 @@ def assess_iv_quality(
     robust = robust_iv_rank(iv_series)
 
     # Insufficient data — forces quality to 0
+    def _missing(v: object) -> bool:
+        return v is None or (isinstance(v, float) and not math.isfinite(v))
+
     insufficient = (
-        iv_rank_value is None
-        or iv_percentile_value is None
+        _missing(iv_rank_value)
+        or _missing(iv_percentile_value)
         or iv_series is None
         or len(iv_series.dropna()) < 100
     )

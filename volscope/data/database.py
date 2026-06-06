@@ -77,6 +77,11 @@ class _LockedResult:
             self._release()
 
     def __getattr__(self, name):
+        # Any unproxied attribute access (e.g. a fetch variant we didn't
+        # wrap) terminates use of this result, so release the exec lock
+        # before delegating — otherwise the lock leaks and the next
+        # execute() on this connection deadlocks.
+        self._release()
         return getattr(self._res, name)
 
     def __del__(self):
@@ -499,6 +504,17 @@ class VolScopeDB:
         "total_open_interest",
         "sector",
         "company_name",
+        # v0.8 — Bayesian vol-regime label + posterior probabilities.
+        # Without these in the whitelist upsert_daily silently dropped them,
+        # so compute_vol_regime's writes never persisted and the Vol Regime
+        # feature (charts + ribbons) read NULL forever.
+        "vol_regime",
+        "p_vol_crushed",
+        "p_vol_cheap",
+        "p_vol_fair",
+        "p_vol_rich",
+        "p_vol_extreme",
+        "p_vol_crisis",
     )
 
     @staticmethod

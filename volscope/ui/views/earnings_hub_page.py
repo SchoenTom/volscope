@@ -10,8 +10,8 @@ Layout (top → bottom):
 
 Each tile carries the 4 numbers that decide the trade: implied move,
 direction skew, crowded score (vs ticker's pre-ER history), expected
-post-print crush. Click → drawer expansion with detail charts + a
-paper-buy CTA wired into ``paper_trader.paper_buy_strategy``.
+post-print crush. Click → drawer expansion with detail charts and the
+strategy recommendation for the print.
 
 Why this matters: a vol trader's morning ritual is "what earnings
 events am I trading this week" and "what is the market mispricing".
@@ -46,7 +46,11 @@ from volscope.ui.components.earnings_diagnostics import (
     render_calibration_bar,
     render_pre_er_drift,
 )
-from volscope.ui.components.html_utils import page_banner_html, render_html
+from volscope.ui.components.html_utils import (
+    kpi_grid_html,
+    page_banner_html,
+    render_html,
+)
 from volscope.ui.styles.theme import COLORS, seq_color
 
 log = logging.getLogger(__name__)
@@ -454,6 +458,7 @@ def _enrich(db, ev: dict) -> dict:
 
     # v0.9.2 cached path. Reaches all four analytics calls in one
     # cache key, so subsequent renders of the same week hit cache.
+    cache_hit = False
     try:
         from volscope.ui.components.cached_data import make_cache_key
         cached = _enrich_analytics(
@@ -463,30 +468,32 @@ def _enrich(db, ev: dict) -> dict:
         out["crowded"]     = cached["crowded"]
         out["crush"]       = cached["crush"]
         out["calibration"] = cached["calibration"]
-        return out                                              # short-circuit
+        cache_hit = True
     except Exception as exc:                                    # noqa: BLE001
         # Cache failed for any reason — fall through to the original
         # per-call path below (preserves correctness, just slower).
         log.debug("enrich cache miss %s: %s", ticker, exc)
 
-    try:
-        out["implied"] = compute_implied_move(db, ticker, er_date)
-    except Exception as exc:
-        log.debug("implied move %s: %s", ticker, exc)
-    try:
-        out["crowded"] = compute_pre_er_crowded(db, ticker)
-    except Exception as exc:
-        log.debug("crowded pre-er %s: %s", ticker, exc)
-    try:
-        out["crush"] = compute_crush_estimate(db, ticker)
-    except Exception as exc:
-        log.debug("crush %s: %s", ticker, exc)
-    try:
-        out["calibration"] = calibrate_implied_vs_realised(db, ticker, min_events=3)
-    except Exception as exc:
-        log.debug("calibration %s: %s", ticker, exc)
+    if not cache_hit:
+        try:
+            out["implied"] = compute_implied_move(db, ticker, er_date)
+        except Exception as exc:
+            log.debug("implied move %s: %s", ticker, exc)
+        try:
+            out["crowded"] = compute_pre_er_crowded(db, ticker)
+        except Exception as exc:
+            log.debug("crowded pre-er %s: %s", ticker, exc)
+        try:
+            out["crush"] = compute_crush_estimate(db, ticker)
+        except Exception as exc:
+            log.debug("crush %s: %s", ticker, exc)
+        try:
+            out["calibration"] = calibrate_implied_vs_realised(db, ticker, min_events=3)
+        except Exception as exc:
+            log.debug("calibration %s: %s", ticker, exc)
 
-    # Recommendation
+    # Recommendation — computed for BOTH the cache-hit and slow paths
+    # (previously the cache path returned early and left this None).
     try:
         latest = db.get_ticker_history(ticker).iloc[-1]
         iv_rank = float(latest.get("iv_rank") or 0)
@@ -781,11 +788,19 @@ def _render_tile_drawer(db, ev: dict) -> None:
 
     # ── Calibration: implied-vs-realised history bar chart ──────────
     if cal is not None:
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Avg implied", f"{cal.avg_implied_pct:.1f}%")
-        col2.metric("Avg realised", f"{cal.avg_realised_pct:.1f}%")
-        col3.metric("Ratio", f"{cal.ratio:.2f}×")
-        col4.metric("Band", cal.band.upper())
+        # st.metric is forbidden (truncates) — use the KPI grid helper.
+        render_html(
+            st,
+            kpi_grid_html(
+                [
+                    ("AVG IMPLIED", f"{cal.avg_implied_pct:.1f}%", None),
+                    ("AVG REALISED", f"{cal.avg_realised_pct:.1f}%", None),
+                    ("RATIO", f"{cal.ratio:.2f}×", None),
+                    ("BAND", cal.band.upper(), None),
+                ],
+                variant="detail",
+            ),
+        )
 
         # Pull the per-event rows for the visual bar stack
         try:

@@ -1209,7 +1209,7 @@ def _cached_greek_surface(
         for j, s in enumerate(S):
             try:
                 Z[i, j] = mat.greeks(float(s), iv=iv, r=r, q=q, T=T_i)[greek_name]
-            except (KeyError, Exception):                      # noqa: BLE001
+            except Exception:                                  # noqa: BLE001
                 Z[i, j] = 0.0
     return Z
 
@@ -1307,9 +1307,11 @@ def _render_greeks_surface(mat, spot, iv, r, q, dte):
     invalidates the operator's stored camera (rotation/zoom) and
     snaps back to the default angle.
     """
+    # Only the five first-order Greeks that MaterializedStrategy.greeks()
+    # actually computes. Vanna/Charm/Volga were removed — they were rendering
+    # silently all-zero surfaces because greeks() never returned them.
     sub_tabs = st.tabs([
-        "Δ Delta", "Γ Gamma", "Θ Theta", "ν Vega",
-        "Vanna ∂Δ/∂σ", "Charm ∂Δ/∂t", "Volga ∂ν/∂σ",
+        "Δ Delta", "Γ Gamma", "Θ Theta", "ν Vega", "ρ Rho",
     ])
 
     surfaces = [
@@ -1317,9 +1319,7 @@ def _render_greeks_surface(mat, spot, iv, r, q, dte):
         ("gamma",          "Gamma",  [[0, COLORS["bg"]],          [0.5, COLORS["accent2"]], [1, COLORS["accent"]]], None, ""),
         ("theta_per_day",  "Theta/day", [[0, COLORS["candle_down"]], [0.5, COLORS["bg"]], [1, COLORS["candle_up"]]], 0.0, " $/day"),
         ("vega_per_1pct",  "Vega/1%",[[0, COLORS["bg"]],          [0.5, COLORS["accent2"]], [1, COLORS["accent"]]], None, " $/1%IV"),
-        ("vanna",          "Vanna",  [[0, COLORS["candle_down"]], [0.5, COLORS["bg"]], [1, COLORS["candle_up"]]], 0.0,  ""),
-        ("charm",          "Charm",  [[0, COLORS["candle_down"]], [0.5, COLORS["bg"]], [1, COLORS["candle_up"]]], 0.0,  ""),
-        ("volga",          "Volga",  [[0, COLORS["bg"]],          [0.5, COLORS["accent2"]], [1, COLORS["accent"]]], None, ""),
+        ("rho_per_1pct",   "Rho/1%", [[0, COLORS["candle_down"]], [0.5, COLORS["bg"]], [1, COLORS["candle_up"]]], 0.0, " $/1%r"),
     ]
 
     for tab, (key, label, cscale, cmid, unit) in zip(sub_tabs, surfaces):

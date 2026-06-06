@@ -33,30 +33,26 @@ jobs:
           pip install -r requirements.txt
           pip install ruff mypy pytest pytest-cov pytest-asyncio hypothesis pre-commit \
                       pydantic pydantic-settings pyyaml httpx structlog typer \
-                      transitions arch hmmlearn apscheduler sqlalchemy ib_async
+                      arch hmmlearn
 
       - name: Ruff lint + format check
         run: |
           ruff check . || true
           ruff format --check . || true
 
-      - name: Mypy (strict on new modules — warn only initially)
+      - name: Mypy (strict on core modules — warn only initially)
         run: |
-          mypy --ignore-missing-imports volscope/signals volscope/risk volscope/lifecycle \
-               volscope/execution volscope/scheduler volscope/persistence \
+          mypy --ignore-missing-imports volscope/persistence \
                volscope/analytics/regime.py volscope/analytics/garch.py || true
 
       - name: Pytest (fast subset)
         run: pytest -m "not slow and not integration and not perf and not ibkr" --tb=short -q || true
 
-      - name: Pytest with coverage on new modules
+      - name: Pytest with coverage on core modules
         run: |
-          pytest tests/test_signal_factors.py tests/test_signal_composite.py \
-                 tests/test_signal_filters.py tests/test_signal_ranking.py \
-                 tests/test_persistence_db.py tests/test_persistence_killswitch_migration.py \
-                 tests/test_risk_killswitch.py tests/test_lifecycle_machine.py \
-                 tests/test_execution_ibkr_stub.py tests/test_analytics_garch.py \
-                 tests/test_scheduler_jobs.py tests/test_chain_snapshots.py \
+          pytest tests/test_persistence_db.py \
+                 tests/test_analytics_garch.py \
+                 tests/test_chain_snapshots.py \
                  --tb=short -q
 
       - name: Upload coverage

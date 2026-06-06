@@ -765,19 +765,20 @@ def _render_best_setup_hero(st, latest: pd.DataFrame, db) -> None:
         f'</div>'
         # Footer
         f'<div style="margin-top:8px;color:{COLORS["muted"]};font-size:9px;">'
-        f'open Pre-Trade for {escape(top.ticker)} to size + price the structure'
+        f'deep-dive {escape(top.ticker)} in Scope to confirm the IV verdict'
         f'</div>'
         f'</div>',
     )
 
-    # Quick-jump button to Pre-Trade for this ticker
+    # Quick-jump button to Scope for this ticker (via the registry-validated
+    # nav helper, not a raw active_page write to a removed page).
     if st.button(
-        f"▷ Open Pre-Trade for {top.ticker}",
-        key="best_setup_pretrade_btn",
+        f"▷ Deep-dive {top.ticker} in Scope",
+        key="best_setup_scope_btn",
         width='content',
     ):
-        st.session_state["selected_ticker"] = top.ticker
-        st.session_state["active_page"] = "Pre-Trade"
+        from volscope.ui.components.navigation import NavIntent, nav_to
+        nav_to(NavIntent(page="Scope", ticker=top.ticker, source="Discover"))
         st.rerun()
 
 

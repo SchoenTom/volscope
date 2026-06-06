@@ -60,6 +60,11 @@ def hv_yang_zhang(
     ann: int = 252,
 ) -> pd.Series:
     """Yang-Zhang (2000) — drift-independent, handles opening gaps."""
+    # window < 2 makes the YZ weight k = 0.34/(1.34 + (n+1)/(n-1)) divide by
+    # zero. The estimator is undefined for a 1-bar window; return NaN per the
+    # analytics rule (never raise) so callers degrade gracefully.
+    if window < 2:
+        return pd.Series([float("nan")] * len(close), index=close.index)
     log_ho = np.log(high / open_)
     log_lo = np.log(low / open_)
     log_co = np.log(close / open_)

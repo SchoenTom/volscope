@@ -180,6 +180,10 @@ class TestRho:
     def test_zero_sigma_returns_zero(self):
         assert bs_rho(100, 100, 1.0, 0.04, 0.0, option_type="call") == 0.0
 
-    def test_invalid_option_type_raises(self):
-        with pytest.raises(ValueError):
-            bs_rho(100, 100, 1.0, 0.04, 0.25, option_type="banana")
+    def test_invalid_option_type_returns_none(self):
+        # Analytics rule: bad input returns None, never raises (so the UI
+        # keeps rendering). Was previously a ValueError.
+        assert bs_rho(100, 100, 1.0, 0.04, 0.25, option_type="banana") is None
+        assert bs_price(100, 100, 1.0, 0.04, 0.25, option_type="banana") is None
+        assert bs_delta(100, 100, 1.0, 0.04, 0.25, option_type="banana") is None
+        assert bs_theta(100, 100, 1.0, 0.04, 0.25, option_type="banana") is None

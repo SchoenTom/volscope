@@ -137,18 +137,9 @@ def render_scope_context_cards(st, db, ticker: str) -> None:
             f'<span style="color:{COLORS["muted"]};">{top_line}</span>'
             f'</div>',
         )
-        # Click-through button to Portfolio
-        if st.button(
-            "Open in Portfolio →",
-            key=f"scope_ctx_portfolio_{ticker}",
-            help="See full position details + P/L",
-        ):
-            try:
-                from volscope.ui.components.navigation import NavIntent, nav_to
-                nav_to(NavIntent(page="Portfolio", ticker=ticker, source="Scope"))
-                st.rerun()
-            except Exception as exc:                               # noqa: BLE001
-                log.warning("nav to Portfolio failed: %s", exc)
+        # (Portfolio click-through removed in the IV-research refocus — the
+        # Portfolio page was cut. The positions badge above stays, sourced
+        # from the manual trade journal on Command.)
 
     # ── Earnings card ──
     if next_earn is not None:

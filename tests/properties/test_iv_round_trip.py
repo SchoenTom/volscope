@@ -59,6 +59,15 @@ def test_iv_solver_round_trip(S, K, T, r, sigma, q, option_type):
         return
     if option_type == "call" and moneyness < 0.4:
         return
+    # Direct vega-collapse guard — the mathematically correct criterion for
+    # "is sigma recoverable here?". Below this, price is insensitive to sigma
+    # (vega -> 0 via pdf(d1) underflow at deep-moneyness / low-vol / long-T),
+    # so a sub-bp price error amplifies past tolerance. A healthy round-trip
+    # case has vega in the tens; the falsifying deep-ITM-put corner has vega
+    # ~0. Vendor solvers (Bloomberg/Schwab) reject this region outright.
+    from volscope.analytics.black_scholes import bs_vega
+    if bs_vega(S, K, T, r, sigma, q) < 0.05:
+        return
     # Skip near-intrinsic cases — time-value < 5 % of price means the
     # option is dominated by intrinsic and σ is information-theoretically
     # unrecoverable to any tight tolerance. Real-market IV solvers

@@ -27,16 +27,13 @@ cat <<EOF >> docs/BACKUPS.md
 - Operator initials: <Tom — fill in>
 EOF
 
-# 4. Verify the chain still verifies after restore
-.venv/bin/python -m scripts.audit.verify_chain
 ```
 
 ## Pass criteria
 
 - `restore_db.py --temp` exit 0.
-- All `bot_*` tables present in restored DB.
+- All core tables present in restored DB.
 - Row counts equal source ±0.
-- Audit chain verifies (no break introduced by serialization).
 
 ## On failure
 

@@ -36,14 +36,14 @@ def bs_price(
     sigma: float,
     q: float = 0.0,
     option_type: str = "call",
-) -> float:
+) -> Optional[float]:
     """Black-Scholes-Merton price with continuous dividend yield q."""
     if S <= 0 or K <= 0:
         return 0.0
     if T <= 0:
         if option_type == "call":
-            return max(S - K, 0.0)
-        return max(K - S, 0.0)
+            return float(max(S - K, 0.0))
+        return float(max(K - S, 0.0))
     if sigma <= 0:
         if option_type == "call":
             return max(S * math.exp(-q * T) - K * math.exp(-r * T), 0.0)
@@ -56,7 +56,7 @@ def bs_price(
         return S * disc_q * norm.cdf(d1) - K * disc_r * norm.cdf(d2)
     if option_type == "put":
         return K * disc_r * norm.cdf(-d2) - S * disc_q * norm.cdf(-d1)
-    raise ValueError(f"option_type must be 'call' or 'put', got {option_type!r}")
+    return None  # analytics rule: bad input returns None, never raises
 
 
 def bs_vega(S: float, K: float, T: float, r: float, sigma: float, q: float = 0.0) -> float:
@@ -83,7 +83,7 @@ def bs_delta(
     sigma: float,
     q: float = 0.0,
     option_type: str = "call",
-) -> float:
+) -> Optional[float]:
     if S <= 0 or K <= 0 or T <= 0 or sigma <= 0:
         return 0.0
     d1, _ = _d1_d2(S, K, T, r, sigma, q)
@@ -92,7 +92,7 @@ def bs_delta(
         return disc_q * norm.cdf(d1)
     if option_type == "put":
         return disc_q * (norm.cdf(d1) - 1.0)
-    raise ValueError(f"option_type must be 'call' or 'put', got {option_type!r}")
+    return None  # analytics rule: bad input returns None, never raises
 
 
 def bs_gamma(S: float, K: float, T: float, r: float, sigma: float, q: float = 0.0) -> float:
@@ -110,7 +110,7 @@ def bs_theta(
     sigma: float,
     q: float = 0.0,
     option_type: str = "call",
-) -> float:
+) -> Optional[float]:
     """Theta per year (divide by 365 for per-day)."""
     if S <= 0 or K <= 0 or T <= 0 or sigma <= 0:
         return 0.0
@@ -122,7 +122,7 @@ def bs_theta(
         return first - r * K * disc_r * norm.cdf(d2) + q * S * disc_q * norm.cdf(d1)
     if option_type == "put":
         return first + r * K * disc_r * norm.cdf(-d2) - q * S * disc_q * norm.cdf(-d1)
-    raise ValueError(f"option_type must be 'call' or 'put', got {option_type!r}")
+    return None  # analytics rule: bad input returns None, never raises
 
 
 def bs_rho(
@@ -133,7 +133,7 @@ def bs_rho(
     sigma: float,
     q: float = 0.0,
     option_type: str = "call",
-) -> float:
+) -> Optional[float]:
     """
     Rho — sensitivity of option price to 1.00 change in risk-free rate.
 
@@ -156,7 +156,7 @@ def bs_rho(
         return K * T * disc_r * norm.cdf(d2)
     if option_type == "put":
         return -K * T * disc_r * norm.cdf(-d2)
-    raise ValueError(f"option_type must be 'call' or 'put', got {option_type!r}")
+    return None  # analytics rule: bad input returns None, never raises
 
 
 def _intrinsic(S: float, K: float, r: float, q: float, T: float, option_type: str) -> float:
