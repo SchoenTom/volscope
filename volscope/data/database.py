@@ -474,6 +474,13 @@ class VolScopeDB:
         self.con.execute(
             "CREATE INDEX IF NOT EXISTS idx_daily_vol_date ON daily_vol(date)"
         )
+        # Composite (ticker, date) — without it every per-ticker query
+        # (get_ticker_history, upsert pre-read, the alert scan) does a full
+        # sequential scan of the whole daily_vol table. ~7.5x speedup.
+        self.con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_daily_vol_ticker_date "
+            "ON daily_vol(ticker, date)"
+        )
         self.con.execute(
             "CREATE INDEX IF NOT EXISTS idx_earnings_date ON earnings(earnings_date)"
         )

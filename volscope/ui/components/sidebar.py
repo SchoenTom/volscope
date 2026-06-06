@@ -12,6 +12,7 @@ Design principles:
 from __future__ import annotations
 
 import pandas as pd
+import streamlit as st
 
 from volscope.data.ticker_resolver import resolve_and_ingest
 from volscope.data.ticker_universe import TICKER_UNIVERSE, all_tickers
@@ -779,6 +780,27 @@ def _render_page_context(
         )
 
 
+@st.cache_data(ttl=60, show_spinner=False)
+def _cached_alert_count(_db_marker: str, _db) -> int:
+    """Sidebar alert badge count — cached for 60 s.
+
+    MUST live at module level: a @st.cache_data function defined inside
+    render_sidebar() is rebuilt every rerun, so its TTL never applies and
+    the underlying 812-ticker scan_alerts() runs on every page render.
+    ``_db`` is underscore-prefixed so Streamlit doesn't try to hash the
+    connection; ``_db_marker`` (the DB path) is the real cache key.
+    """
+    try:
+        from volscope.analytics.alerts_scanner import scan_alerts
+        return len(scan_alerts(_db))
+    except Exception as exc:                                    # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.sidebar").warning(
+            "scan_alerts failed; alert count rendered as 0: %s", exc,
+        )
+        return 0
+
+
 def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str, dict]:
     import streamlit as st
 
@@ -912,23 +934,12 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # path above has something better than "Command" to fall back to.
     st.session_state["vs_last_valid_page"] = current_page
 
-    # Live alert counter — cached for 60 s so each rerun is cheap.
-    # Failures are logged (not silenced) so an operator-visible "0
-    # alerts" doesn't mask a broken scanner (DB lock / bad query / etc).
-    @st.cache_data(ttl=60, show_spinner=False)
-    def _cached_alert_count(_db_marker: str) -> int:
-        try:
-            from volscope.analytics.alerts_scanner import scan_alerts
-            return len(scan_alerts(db))
-        except Exception as exc:                                # noqa: BLE001
-            import logging as _lg
-            _lg.getLogger("volscope.ui.sidebar").warning(
-                "scan_alerts failed; alert count rendered as 0: %s", exc,
-            )
-            return 0
-
+    # Live alert counter — cached for 60 s (the cache function lives at
+    # MODULE level; defining it inside render_sidebar created a fresh
+    # function object every rerun so the TTL never applied and the
+    # 812-ticker scan_alerts ran on EVERY page render — a ~4.5 s tax).
     try:
-        _alert_n = _cached_alert_count(str(getattr(db, "path", "default")))
+        _alert_n = _cached_alert_count(str(getattr(db, "path", "default")), db)
     except Exception as exc:                                    # noqa: BLE001
         import logging as _lg
         _lg.getLogger("volscope.ui.sidebar").warning(

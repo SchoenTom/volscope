@@ -1122,11 +1122,13 @@ def _render_metrics_row(mat, spot, iv, r, q, dte):
                 dte=int(dte),
                 ratio=1.0,
             )
+            # English labels (were German: AUFGELD/HEBEL/OMEGA) — an English
+            # app must not surprise users with foreign jargon.
             qs_cells = [
-                _ibkr_cell("AUFGELD",      f"{qs.aufgeld:+.2f}%"),
-                _ibkr_cell("AUFGELD P.A.", f"{qs.aufgeld_pa:+.1f}%"),
-                _ibkr_cell("HEBEL",        f"{qs.leverage:,.1f}×"),
-                _ibkr_cell("OMEGA",        f"{qs.omega:,.2f}"),
+                _ibkr_cell("PREMIUM",      f"{qs.aufgeld:+.2f}%"),
+                _ibkr_cell("PREMIUM P.A.", f"{qs.aufgeld_pa:+.1f}%"),
+                _ibkr_cell("LEVERAGE",     f"{qs.leverage:,.1f}×"),
+                _ibkr_cell("ELASTICITY",   f"{qs.omega:,.2f}"),
                 _ibkr_cell("BREAK-EVEN",   f"${qs.break_even:,.2f}"),
                 _ibkr_cell("BE MOVE",      f"{qs.break_even_pct:+.2f}%"),
             ]

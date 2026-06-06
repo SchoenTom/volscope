@@ -37,11 +37,14 @@ _cache: dict[str, object] = {"date": None, "curve": {}}
 _cache_lock = threading.Lock()
 
 
+_FRED_TIMEOUT_S = 5
+
+
 def _fetch_one(series: str) -> Optional[float]:
     """Fetch the most recent non-missing value of a FRED series."""
     url = _FRED_URL.format(series=series)
     try:
-        with urllib.request.urlopen(url, timeout=10) as resp:
+        with urllib.request.urlopen(url, timeout=_FRED_TIMEOUT_S) as resp:
             text = resp.read().decode()
     except Exception as exc:
         log.warning("FRED %s fetch failed: %s", series, exc)
@@ -59,28 +62,39 @@ def _fetch_one(series: str) -> Optional[float]:
 
 
 def _refresh_curve() -> dict[int, float]:
+    import concurrent.futures
+
     today = datetime.date.today()
     # Fast path: serve a same-day cache without holding the lock across
     # the network fetch.
     if _cache.get("date") == today and _cache.get("curve"):
         return _cache["curve"]  # type: ignore
+    # If we already tried today and FRED was unreachable, do NOT retry on
+    # every render (that was a 4 x 5 s block per call on a restricted
+    # network). get_rate() falls back to the static config rate.
+    if _cache.get("tried") == today:
+        return {}
 
+    # Fetch the 4 curve points CONCURRENTLY (was serial — up to 4 x 5 s).
     curve: dict[int, float] = {}
-    for days, series in _SERIES.items():
-        rate = _fetch_one(series)
-        if rate is not None and 0.0 <= rate < 0.20:
-            curve[days] = rate
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+        futs = {ex.submit(_fetch_one, series): days
+                for days, series in _SERIES.items()}
+        for fut in concurrent.futures.as_completed(futs):
+            days = futs[fut]
+            try:
+                rate = fut.result()
+            except Exception:                                  # noqa: BLE001
+                rate = None
+            if rate is not None and 0.0 <= rate < 0.20:
+                curve[days] = rate
 
-    if curve:
-        with _cache_lock:
-            # Re-check inside the lock: another thread may have filled the
-            # cache while we were fetching. Write date+curve atomically so
-            # no reader observes a new date with a stale/empty curve.
-            if not (_cache.get("date") == today and _cache.get("curve")):
-                _cache["date"] = today
-                _cache["curve"] = curve
-        return _cache["curve"]  # type: ignore
-    return curve
+    with _cache_lock:
+        _cache["tried"] = today
+        if curve and not (_cache.get("date") == today and _cache.get("curve")):
+            _cache["date"] = today
+            _cache["curve"] = curve
+    return _cache["curve"] if curve else {}  # type: ignore
 
 
 def get_term_structure() -> dict[int, float]:
@@ -117,3 +131,4 @@ def reset_cache() -> None:
     """Clear in-memory cache (for tests)."""
     _cache["date"] = None
     _cache["curve"] = {}
+    _cache.pop("tried", None)
