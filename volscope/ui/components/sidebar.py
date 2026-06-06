@@ -495,38 +495,30 @@ def _render_ticker_picker(st, db) -> str:
         label_visibility="collapsed",
     )
 
-    render_html(
-        st,
-        '<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
-        'color:#9aa0b3;margin:12px 0 4px 0;font-weight:500;'
-        'letter-spacing:0.02em;">Add symbol</div>',
-    )
-    with st.form("add_ticker_form", clear_on_submit=True):
-        # Stacked layout — input on top at full width, button below
-        # at full width. Prior side-by-side split (st.columns([3, 1]))
-        # crammed the placeholder against the button in a ~200px
-        # sidebar; vertical stacking gives both elements room to
-        # breathe and reads cleanly on narrow viewports.
-        raw = st.text_input(
-            "Symbol",
-            placeholder="z.B. PLTR oder ^VIX",
-            label_visibility="collapsed",
-            help=(
-                "Single symbol per add. Digit-only codes auto-resolve to "
-                "HK / TW / Shanghai. Alpha codes that fail bare also try "
-                "London / XETRA / Paris."
-            ),
-        )
-        submitted = st.form_submit_button("+ ADD", width='stretch')
-        if submitted and raw:
-            with st.spinner(f"Resolving {raw.strip().upper()}..."):
-                result = resolve_and_ingest(db, raw)
-            if result.ok:
-                st.success(result.message)
-                st.session_state["selected_ticker"] = result.ticker
-                st.rerun()
-            else:
-                st.error(result.message)
+    # Add-a-ticker is a secondary action — tuck it behind a collapsed
+    # expander so the picker stays a single calm row by default.
+    with st.expander("＋  Add a ticker", expanded=False):
+        with st.form("add_ticker_form", clear_on_submit=True):
+            raw = st.text_input(
+                "Symbol",
+                placeholder="e.g. PLTR or ^VIX",
+                label_visibility="collapsed",
+                help=(
+                    "Single symbol per add. Digit-only codes auto-resolve to "
+                    "HK / TW / Shanghai. Alpha codes that fail bare also try "
+                    "London / XETRA / Paris."
+                ),
+            )
+            submitted = st.form_submit_button("Add", width='stretch')
+            if submitted and raw:
+                with st.spinner(f"Resolving {raw.strip().upper()}..."):
+                    result = resolve_and_ingest(db, raw)
+                if result.ok:
+                    st.success(result.message)
+                    st.session_state["selected_ticker"] = result.ticker
+                    st.rerun()
+                else:
+                    st.error(result.message)
 
     return ticker
 
@@ -868,19 +860,19 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
             "quick-switch render failed: %s", _qs_exc,
         )
 
-    # ── Ticker picker + add form ────────────────────────────────────
+    # ── Ticker picker (the rail's one primary input) ───────────────
     ticker = _render_ticker_picker(st, db)
 
-    # ── Live screener: bulk load ────────────────────────────────────
-    _render_live_screener(st, db)
+    # (Removed from the rail in the 2026-06 declutter: the bulk
+    # "load N missing" screener was a long-running job trigger in a
+    # wayfinding surface — it belongs on a Data page, not the sidebar.
+    # _render_live_screener() is retained in this module but no longer
+    # rendered here. The inline watchlist widget was removed earlier
+    # for the same reason; it lives on the Watchlist page.)
 
-    # v0.9.10 — inline watchlist widget REMOVED from sidebar.
-    # Operator feedback 2026-05-17: the sprawling widget (alarm
-    # picker + add form + create + import all inline) was a mess.
-    # Watchlist management now lives on its own page, reachable via
-    # the "Watchlist" nav button below.
-
-    st.divider()
+    st.markdown(
+        "<div style='height:14px'></div>", unsafe_allow_html=True,
+    )
 
     # ── Navigation (grouped) ────────────────────────────────────────
     # Three semantic groups — trader scans by purpose, not alphabet.

@@ -204,6 +204,17 @@ def create_iv_hv_chart(
     layout["xaxis"]["rangeselector"] = _range_selector()
     layout["yaxis"]["ticksuffix"] = "%"
     layout["yaxis"]["rangemode"] = "tozero"
+    # Premium chart polish (terminal feel): horizontal-only dotted grid +
+    # a cursor crosshair spike, so the data lines stay the loudest thing.
+    layout["xaxis"]["showgrid"] = False
+    layout["xaxis"]["showspikes"] = True
+    layout["xaxis"]["spikemode"] = "across"
+    layout["xaxis"]["spikethickness"] = 1
+    layout["xaxis"]["spikedash"] = "solid"
+    layout["xaxis"]["spikecolor"] = COLORS["spike"]
+    layout["xaxis"]["spikesnap"] = "cursor"
+    layout["yaxis"]["gridcolor"] = "rgba(255,255,255,0.04)"
+    layout["yaxis"]["griddash"] = "dot"
     fig.update_layout(**layout)
     return fig
 
