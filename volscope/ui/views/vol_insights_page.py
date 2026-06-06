@@ -100,6 +100,7 @@ def render_vol_insights_page(db, settings: dict | None = None) -> None:
         dte_target = st.number_input(
             "Target DTE", min_value=1, max_value=365, value=30, step=1,
             key="vol_insights_dte",
+            help="DTE = Days To Expiration — how far out the option chain you're analysing.",
         )
     with col3:
         max_expiries = st.number_input(

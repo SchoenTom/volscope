@@ -209,11 +209,11 @@ def render_iv_verdict_hero(history: Any, lookback_days: int = 252) -> None:
     rise_from_min = (iv_now - iv_min) / iv_min * 100.0
 
     html = f'''
-<div style="background:{bg};border-left:4px solid {color};border-radius:6px;
+<div class="volscope-verdict-hero" style="--vd:{color};
+            background:{bg};border-left:4px solid {color};border-radius:6px;
             padding:10px 14px;margin:6px 0 12px 0;
             display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-            font-family:'JetBrains Mono',monospace;
-            animation:vs-fade-in 200ms ease-out both;">
+            font-family:'JetBrains Mono',monospace;">
   <div style="display:flex;flex-direction:column;line-height:1.1;">
     <span style="color:{color};font-weight:700;font-size:22px;letter-spacing:-0.3px;">
       {verdict}

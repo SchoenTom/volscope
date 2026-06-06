@@ -143,21 +143,21 @@ def render_status_bar(
       <span class="vs-status-label">HV20</span>
       <span class="vs-status-val" style="color:{COLORS['accent2']};">{_fmt(hv20, suffix='%')}</span>
     </span>
-    <span class="vs-status-cell">
+    <span class="vs-status-cell" title="IV Rank — where current IV sits in its 52-week range (0 = lowest, 100 = highest)">
       <span class="vs-status-label">RANK</span>
       <span class="vs-status-val" style="background:{rank_bg};color:#0a0b0f;
             padding:1px 5px;border-radius:3px;font-weight:700;">
         {_fmt(rank, precision=0)}
       </span>
     </span>
-    <span class="vs-status-cell">
+    <span class="vs-status-cell" title="IV Percentile — % of the last year IV was below today's level">
       <span class="vs-status-label">PERC</span>
       <span class="vs-status-val" style="background:{perc_bg};color:#0a0b0f;
             padding:1px 5px;border-radius:3px;font-weight:700;">
         {_fmt(perc, precision=0)}
       </span>
     </span>
-    <span class="vs-status-cell">
+    <span class="vs-status-cell" title="IV minus realized vol (the volatility risk premium)">
       <span class="vs-status-label">SPREAD</span>
       <span class="vs-status-val" style="color:{spread_color};">
         {_fmt(spread, suffix='pt', signed=True)}

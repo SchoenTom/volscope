@@ -397,6 +397,11 @@ def render_heatmap_page(db: VolScopeDB, settings: dict) -> None:
         f'</div>',
     )
 
+    st.caption(
+        "Rectangle size = total option open interest. "
+        "Colour = IV Percentile (green = cheap, red = rich)."
+    )
+
     # Build the figure inside a cached wrapper so subsequent reruns
     # (radio toggle / sidebar interaction) replay an existing
     # Plotly-spec dict instead of rebuilding the 800+ hover strings

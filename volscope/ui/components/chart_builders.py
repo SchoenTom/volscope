@@ -591,11 +591,11 @@ def create_term_structure_chart(history: pd.DataFrame) -> go.Figure:
                 )
 
     if slope > 0.5:
-        verdict = f"CONTANGO · +{slope:.1f}pt"
+        verdict = f"CONTANGO (longer-dated IV richer — calm) · +{slope:.1f}pt"
         verdict_color = COLORS["accent2"]
         commentary = "longer-dated richer — calm regime"
     elif slope < -0.5:
-        verdict = f"BACKWARDATION · {slope:+.1f}pt"
+        verdict = f"BACKWARDATION (near-dated IV richer — stress) · {slope:+.1f}pt"
         verdict_color = COLORS["warn"]
         commentary = "near-dated richer — stress signal"
     else:

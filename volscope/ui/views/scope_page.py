@@ -117,8 +117,10 @@ def _render_skew_metric(st, latest: dict, history=None) -> None:
     render_html(
         st,
         f'<div style="margin:2px 0 10px 0;font-family:{mono};font-size:10px;'
-        f'color:{COLORS["label"]};">'
-        f'25Δ skew · '
+        f'color:{COLORS["label"]};" '
+        f'title="25-delta skew — how much more the market pays for downside '
+        f'puts vs upside calls (positive = pricier protection).">'
+        f'puts vs calls · 25Δ skew · '
         f'<span style="color:{color};font-weight:600;">{sign}{skew_f:.1f}pt</span>'
         f'<span style="color:{COLORS["muted"]};margin-left:6px;">{label}</span>'
         f'{pct_html}</div>',

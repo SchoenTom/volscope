@@ -922,6 +922,18 @@ CUSTOM_CSS = f"""
         from {{ --dial-pct-anim: 0; }}
         to   {{ --dial-pct-anim: var(--dial-pct, 0); }}
     }}
+    /* Signature "Vol Verdict reveal" — the colored halo flares on entry,
+       then settles to a permanent soft glow. Fires once per render; the
+       verdict color is passed in via the --vd CSS variable. */
+    @keyframes vs-verdict-settle {{
+        0%   {{ box-shadow: 0 0 0 0 transparent; }}
+        35%  {{ box-shadow: -8px 0 26px -4px var(--vd, {COLORS['accent']}); }}
+        100% {{ box-shadow: -5px 0 16px -8px var(--vd, {COLORS['accent']}); }}
+    }}
+    .volscope-verdict-hero {{
+        animation: vs-fade-in 200ms ease-out both,
+                   vs-verdict-settle 900ms cubic-bezier(0.4,0,0.2,1) both;
+    }}
 
     /* Convergence dial — pure CSS conic-gradient ring with the score
        in the centre. */

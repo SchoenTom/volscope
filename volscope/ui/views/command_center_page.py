@@ -323,7 +323,10 @@ def _market_card_html(
             slope = iv60_f - iv_f2
             if abs(slope) > 0.1:
                 sign = "+" if slope > 0 else ""
-                direction = "contango" if slope > 0 else "backwardation"
+                direction = (
+                    "contango (60d > 30d, normal)" if slope > 0
+                    else "backwardation (30d > 60d, stress)"
+                )
                 col = COLORS["accent2"] if slope > 0 else COLORS["amber"]
             else:
                 sign, direction, col = "", "flat curve", COLORS["muted"]
@@ -400,8 +403,8 @@ def _market_card_html(
         f'<span style="color:{COLORS["label"]};font-size:9px;text-transform:uppercase;letter-spacing:1px;">HV 20d</span><br>'
         f'<span style="color:{COLORS["accent2"]};">{hv_str}</span>'
         f'</div>'
-        f'<div>'
-        f'<span style="color:{COLORS["label"]};font-size:9px;text-transform:uppercase;letter-spacing:1px;">VRP</span><br>'
+        f'<div title="Volatility Risk Premium — IV divided by realized vol; above 1.0 = options pricing more move than the stock delivered">'
+        f'<span style="color:{COLORS["label"]};font-size:9px;text-transform:uppercase;letter-spacing:1px;">VRP (IV ÷ HV)</span><br>'
         f'<span style="color:{vrp_color};">{vrp_str}</span>'
         f'</div>'
         f'</div>'
