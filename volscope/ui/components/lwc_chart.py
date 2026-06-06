@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Sequence
 
 import pandas as pd
+import streamlit as st
 
 from volscope.ui.styles.theme import COLORS
 
@@ -412,68 +413,61 @@ def fetch_daily_ohlcv(ticker: str, period: str = "5y") -> pd.DataFrame:
     Returns an empty DataFrame on any failure so the caller's
     fallback path engages cleanly.
     """
-    def _raw_yf(t: str, p: str) -> pd.DataFrame:
-        try:
-            import yfinance as yf
-            df = yf.Ticker(t).history(period=p, interval="1d", auto_adjust=False)
-            if df is None or df.empty:
-                return pd.DataFrame()
-            return df.reset_index()
-        except Exception:                                      # noqa: BLE001
-            return pd.DataFrame()
-
-    def _is_stale(df: pd.DataFrame) -> bool:
-        if df is None or df.empty:
-            return True
-        # Find the most recent date in any plausible "date" column.
-        for col in ("Date", "date", "Datetime", "datetime"):
-            if col in df.columns:
-                try:
-                    last = pd.to_datetime(df[col]).max()
-                    if pd.isna(last):
-                        return True
-                    return (pd.Timestamp.now() - last).days > 5
-                except Exception:                              # noqa: BLE001
-                    return True
-        if isinstance(df.index, pd.DatetimeIndex):
-            return (pd.Timestamp.now() - df.index.max()).days > 5
-        return True
-
     try:
-        import streamlit as st
-
-        # Cache only *non-empty, non-stale* responses; empty/stale
-        # frames go through a short 60-second negative cache so we
-        # don't hammer yfinance on a rate-limited symbol but still
-        # recover within a minute when the upstream comes back.
-        @st.cache_data(ttl=3600, show_spinner=False)
-        def _cached_ok(t: str, p: str, version: int) -> pd.DataFrame:
-            return _raw_yf(t, p)
-
-        @st.cache_data(ttl=60,   show_spinner=False)
-        def _cached_neg(t: str, p: str) -> int:
-            # Returns a sentinel int; used purely as a TTL gate.
-            return 1
-
-        df = _cached_ok(ticker, period, version=int(pd.Timestamp.now().date().toordinal()))
+        day = int(pd.Timestamp.now().date().toordinal())
+        df = _cached_ohlcv(ticker, period, day)
         if df.empty or _is_stale(df):
-            # Force a fresh upstream call; bypass the long TTL by
-            # mutating the version argument. Re-cache only if fresh.
-            _cached_neg(ticker, period)  # honors the 60s negative cache
+            # Cached frame is empty/stale — re-fetch once. If we get a good
+            # frame, drop the bad cache entry so the next render re-caches.
             fresh = _raw_yf(ticker, period)
             if not fresh.empty and not _is_stale(fresh):
-                # Replace the cached entry by calling the OK fn with
-                # a new version so it stores the fresh frame.
                 try:
-                    _cached_ok.clear()                          # type: ignore[attr-defined]
+                    _cached_ohlcv.clear()                      # type: ignore[attr-defined]
                 except Exception:                              # noqa: BLE001
                     pass
-                return fresh
             return fresh
         return df
     except Exception:                                          # noqa: BLE001
-        # Streamlit not in context (e.g. unit test) — call raw.
+        # Streamlit cache unavailable (e.g. unit test) — call raw.
         return _raw_yf(ticker, period)
+
+
+def _raw_yf(t: str, p: str) -> pd.DataFrame:
+    try:
+        import yfinance as yf
+        df = yf.Ticker(t).history(period=p, interval="1d", auto_adjust=False)
+        if df is None or df.empty:
+            return pd.DataFrame()
+        return df.reset_index()
+    except Exception:                                          # noqa: BLE001
+        return pd.DataFrame()
+
+
+def _is_stale(df: pd.DataFrame) -> bool:
+    if df is None or df.empty:
+        return True
+    for col in ("Date", "date", "Datetime", "datetime"):
+        if col in df.columns:
+            try:
+                last = pd.to_datetime(df[col]).max()
+                if pd.isna(last):
+                    return True
+                return (pd.Timestamp.now() - last).days > 5
+            except Exception:                                  # noqa: BLE001
+                return True
+    if isinstance(df.index, pd.DatetimeIndex):
+        return (pd.Timestamp.now() - df.index.max()).days > 5
+    return True
+
+
+# Module-level cache (was defined inside fetch_daily_ohlcv, which rebuilt the
+# function every call so the TTL never applied — yfinance was re-hit on every
+# render, ~0.4-0.7s of dead latency on the Scope price tab). Keyed by
+# (ticker, period, calendar day) so it refreshes once per day and caches
+# across reruns.
+@st.cache_data(ttl=3600, show_spinner=False)
+def _cached_ohlcv(ticker: str, period: str, day: int) -> pd.DataFrame:
+    return _raw_yf(ticker, period)
 
 
 def render_lwc_safe(charts_spec: list[dict[str, Any]], *, key: str) -> bool:
