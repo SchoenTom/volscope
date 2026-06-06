@@ -1,19 +1,15 @@
 # CODEOWNERS — automatic review requests for critical paths.
-#
-# Update the @-handle when the repo owner finalises their GitHub username.
 
-# Critical bot-loop code
+# Core analytics + data layer (the IV/HV math and the scrape pipeline)
 /volscope/analytics/        @SchoenTom
-/volscope/risk/             @SchoenTom
-/volscope/execution/        @SchoenTom
-/volscope/lifecycle/        @SchoenTom
-/volscope/scheduler/        @SchoenTom
-/volscope/signals/          @SchoenTom
+/volscope/data/             @SchoenTom
+/volscope/persistence/      @SchoenTom
 
-# Config that governs live behaviour
-/config/risk.yaml           @SchoenTom
-/config/strategies.yaml     @SchoenTom
-/config/tickers.yaml        @SchoenTom
+# UI
+/volscope/ui/               @SchoenTom
+
+# Config that governs the universe + thresholds
+/config/                    @SchoenTom
 
 # Repo hygiene + CI
 /.github/                   @SchoenTom

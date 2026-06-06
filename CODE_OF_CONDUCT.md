@@ -47,10 +47,11 @@ with this Code of Conduct.
 ## Reporting
 
 Instances of abusive, harassing, or otherwise unacceptable behaviour
-may be reported by opening a GitHub issue with the `code-of-conduct`
-label, or by contacting the maintainers via the email address listed
-in the repository's GitHub profile. All complaints will be reviewed
-and investigated promptly and fairly.
+may be reported privately to the maintainer at
+**tom.schoen@uni-konstanz.de**, or by opening a GitHub issue with the
+`code-of-conduct` label for non-sensitive matters. All complaints will be
+reviewed and investigated promptly and fairly, and the reporter's identity
+will be kept confidential.
 
 ## Attribution
 
