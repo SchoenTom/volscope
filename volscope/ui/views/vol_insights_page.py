@@ -183,11 +183,30 @@ def render_vol_insights_page(db, settings: dict | None = None) -> None:
     back_chain  = chain[chain["expiry"] == back_exp]
     front_atm = _atm_iv(front_chain)
     back_atm  = _atm_iv(back_chain)
-    render_front_back_block(
-        st, ticker,
-        front_iv=front_atm, front_dte=front_dte,
-        back_iv=back_atm, back_dte=back_dte,
-    )
+    # The live yfinance chain reports IV as a fraction (0.20) and may be
+    # missing/zero for thin chains. Front/Back decomposition needs IV in
+    # PERCENT (>=1). Rather than render a meaningless "0%" card, show an
+    # honest diagnostic when the chain IV isn't usable.
+    if (front_atm is None or back_atm is None
+            or front_atm < 1.0 or back_atm < 1.0):
+        render_html(
+            st,
+            f'<div style="background:{COLORS["surface"]};border:1px solid '
+            f'{COLORS["border"]};border-left:3px solid {COLORS["amber"]};'
+            f'border-radius:6px;padding:12px 16px;margin:10px 0;'
+            f'font-family:JetBrains Mono,monospace;font-size:11px;'
+            f'color:{COLORS["muted"]};">Front/Back IV decomposition needs a '
+            f'usable per-strike option chain — the live feed for {ticker} is '
+            f'thin or rate-limited right now. The term-structure on Scope '
+            f'(from the daily scrape) is the reliable view; try again shortly.'
+            f'</div>',
+        )
+    else:
+        render_front_back_block(
+            st, ticker,
+            front_iv=front_atm, front_dte=front_dte,
+            back_iv=back_atm, back_dte=back_dte,
+        )
 
     # ── 3. OI Heatmap (target expiry) ───────────────────────────────
     render_oi_heatmap_block(st, ticker, target_chain, spot=spot)

@@ -525,8 +525,8 @@ def _render_regime_strip(st, latest: pd.DataFrame) -> None:
 <div style="color:{COLORS['muted']};font-size:11px;font-family:'JetBrains Mono',monospace;">across {n} tickers</div>
 </div>
 <div style="margin-top:8px;color:{COLORS['text']};font-size:12px;line-height:1.5;">{commentary}</div>
-<div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:{COLORS['muted']};">
-IQR <span style="color:{COLORS['text']};">{q25:.0f}</span> — <span style="color:{COLORS['text']};">{q75:.0f}</span>
+<div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:{COLORS['muted']};" title="The middle 50% of tickers fall in this IV-percentile range.">
+middle 50%: <span style="color:{COLORS['text']};">{q25:.0f}</span> — <span style="color:{COLORS['text']};">{q75:.0f}</span>
 &nbsp;·&nbsp; median <span style="color:{COLORS['text']};">{median:.0f}</span>
 </div>
 </div>
@@ -825,6 +825,8 @@ def render_discover_page(db, settings: dict | None = None) -> None:
                 "💎 CHEAPEST = options below their own annual percentile and below realized vol. "
                 "🔥 RICHEST = options above. ⚡ MOVERS = today's biggest IV jumps. "
                 "🌐 CROWDED = consensus extremes (reversal risk). "
+                "The **P** badge on each card = IV percentile (0 = cheapest it's "
+                "been in a year, 100 = the most expensive). "
                 "Click any card to drill into Scope.",
                 # Streamlit ≥1.32 rejects ``ℹ`` (U+2139) as icon — it
                 # is Emoji=Yes but Emoji_Presentation=No. ``💡`` is
@@ -926,11 +928,11 @@ def render_discover_page(db, settings: dict | None = None) -> None:
             f'border-radius:6px;padding:8px 12px;margin:6px 0 10px 0;'
             f'font-family:\'DM Sans\',sans-serif;font-size:11px;'
             f'color:{COLORS["text"]};">'
-            f'⚠ <strong>{n_crisis_blocked}</strong> ticker(s) flagged as '
-            f'<span style="color:{COLORS["warn"]};">VOL_CRISIS</span> '
-            f'were excluded from CHEAPEST. In a vol-explosion regime '
-            f'"cheap" is a snapshot artifact — long-vega entries are '
-            f'risk-managed away by the HMM + VIX/IV-HV override.'
+            f'⚠ <strong>{n_crisis_blocked}</strong> ticker(s) in a '
+            f'<span style="color:{COLORS["warn"]};">volatility-spike regime</span> '
+            f'were hidden from CHEAPEST. When volatility is exploding, a low '
+            f'IV reading is a fleeting snapshot — it looks cheap but is about '
+            f'to jump, so these are filtered out automatically.'
             f'</div>',
         )
 
