@@ -174,8 +174,17 @@ def render_scan_page(db, settings: dict | None = None) -> None:
         all_tickers = []
     bulk_history: dict[str, pd.DataFrame] = {}
     if all_tickers:
+        # Cached (60s-TTL) bulk fetch — the same path Discover uses. Without
+        # this, every filter/preset click re-ran an 800-ticker x 60-day
+        # DuckDB read (5-15s per interaction), making the Scanner unusable.
+        from volscope.ui.components.cached_data import (
+            get_recent_for_tickers_cached,
+            make_cache_key,
+        )
         with st.spinner("Computing derived metrics..."):
-            bulk_history = db.get_recent_for_tickers(all_tickers, lookback_days=60)
+            bulk_history = get_recent_for_tickers_cached(
+                make_cache_key(db), tuple(all_tickers), 60, db,
+            )
 
     # Filter state persists across reruns so the user's "Sector=Tech"
     # survives navigating to Scope and back.

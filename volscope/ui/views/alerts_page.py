@@ -152,7 +152,15 @@ def render_alerts_page(db, settings: dict | None = None) -> None:
             f'<div class="volscope-empty-headline">No active alerts.</div>'
             f'<div class="volscope-empty-body">{empty_body}</div></div>',
         )
-        if scope != "My watchlists":
+        if scope == "My watchlists":
+            # Don't dead-end a first-timer with an empty watchlist — give
+            # them the obvious next step instead of plain text.
+            if st.button("→ Go to Watchlist to add tickers", type="primary",
+                         key="alerts_empty_to_watchlist"):
+                from volscope.ui.components.navigation import NavIntent, nav_to
+                nav_to(NavIntent(page="Watchlist", source="Alerts"))
+                st.rerun()
+        else:
             from volscope.ui.components.make_runner import run_make_button
             run_make_button(
                 st, target="scrape", label="↻ Run make scrape",

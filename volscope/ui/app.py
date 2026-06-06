@@ -259,23 +259,26 @@ def main() -> None:
     try:
         db = get_db()
     except Exception as exc:
+        log.warning("get_db failed (likely a refresh holding the lock): %s", exc)
+        # Calm, user-facing message — no raw exception class or filesystem
+        # path. The only realistic cause for an end user is a data refresh
+        # briefly holding the database; it clears in seconds.
         render_html(
             st,
             f"""
-            <div style="background:{COLORS['card']};border:1px solid {COLORS['warn']};border-left:4px solid {COLORS['warn']};border-radius:8px;padding:18px 22px;margin-top:12px;">
-              <div style="color:{COLORS['warn']};font-weight:600;font-size:13px;letter-spacing:0.5px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;">
-                ⚠ Database unavailable
+            <div style="background:{COLORS['card']};border:1px solid {COLORS['amber']};border-left:4px solid {COLORS['amber']};border-radius:8px;padding:20px 24px;margin-top:24px;max-width:560px;">
+              <div style="color:{COLORS['amber']};font-weight:700;font-size:15px;margin-bottom:8px;font-family:'DM Sans',sans-serif;">
+                VolScope is refreshing its data
               </div>
-              <div style="color:{COLORS['muted']};font-size:12px;font-family:'JetBrains Mono',monospace;line-height:1.6;">
-                <strong>{exc.__class__.__name__}</strong>: {str(exc) or 'no message'}<br><br>
-                <span style="color:{COLORS['text']};">Path:</span> {DB_PATH}<br><br>
-                Most common cause: another VolScope process (a running
-                <code>make scrape</code> or a second Streamlit tab) is
-                holding a write lock. Stop it and reload this page.
+              <div style="color:{COLORS['text']};font-size:13px;font-family:'DM Sans',sans-serif;line-height:1.6;">
+                The market database is busy updating right now — this only
+                takes a few seconds. Give it a moment and reload.
               </div>
             </div>
             """,
         )
+        if st.button("↻ Reload", type="primary"):
+            st.rerun()
         return
 
     # v0.9.13 — readonly-mode banner. When a foreign writer (the most

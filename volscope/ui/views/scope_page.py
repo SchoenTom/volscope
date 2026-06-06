@@ -702,12 +702,23 @@ def _render_backtest_section(st, history: pd.DataFrame, ticker: str) -> None:
     )
     ci_str = f"[{lo:+.1f}%, {hi:+.1f}%]" if not math.isnan(lo) else "—"
 
+    # Colour BUY HIT by performance vs the naive baseline — never hardcode
+    # green (a 0% hit-rate rendered green is the opposite of the signal).
+    if math.isnan(buy_hit) or math.isnan(naive):
+        _buy_hit_class = "fg-muted"
+    elif buy_hit >= naive + 0.05:
+        _buy_hit_class = "fg-cheap"
+    elif buy_hit >= naive - 0.05:
+        _buy_hit_class = "fg-muted"
+    else:
+        _buy_hit_class = "fg-rich"
+
     from volscope.ui.components.metric_components import _ibkr_cell
     cells = [
         _ibkr_cell("HOLD",          f"{result.hold_days}d"),
         _ibkr_cell("N TOTAL",       f"{result.n_total}"),
         _ibkr_cell("BUY SIGNALS",   f"{n_buy}"),
-        _ibkr_cell("BUY HIT",       _pct(buy_hit), value_class="fg-cheap"),
+        _ibkr_cell("BUY HIT",       _pct(buy_hit), value_class=_buy_hit_class),
         _ibkr_cell("NAIVE BASE",    _pct(naive)),
         _ibkr_cell("Δ VS BASE",     delta_vs_naive,
                    value_class=("fg-cheap" if "+" in delta_vs_naive else "fg-rich")),

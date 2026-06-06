@@ -166,8 +166,6 @@ def render_help_page(db: VolScopeDB, settings: dict) -> None:
     _term("g d", "Go to Discover.")
     _term("g c", "Go to Command Center.")
     _term("g s", "Go to Scope.")
-    _term("g p", "Go to Portfolio.")
-    _term("g t", "Go to Pre-Trade.")
     _term("/", "Focus the global ticker selector.")
 
     _section(
