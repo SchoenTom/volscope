@@ -25,7 +25,6 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from volscope.analytics.probability import pop as compute_pop
-from volscope.analytics.probability import profit_density
 from volscope.analytics.strategy_templates import TEMPLATES
 from volscope.ui.components.html_utils import render_html
 from volscope.ui.components.metric_components import _ibkr_cell
@@ -278,25 +277,8 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
     with tab_u:
         _render_underlying_context(history, ticker)
 
-    # ── Paper-buy CTA (v0.9.1) ─────────────────────────────────────
-    # Materialised strategy → paper_buy_strategy → positions /
-    # paper_trades. Same engine path Pre-Trade has used since v0.3.x,
-    # now reachable from Options Lab so the operator can act on a
-    # candidate trade without switching pages.
-    _render_paper_buy_cta(
-        db,
-        mat=mat,
-        spot=spot,
-        iv=iv,
-        iv_perc=cfg.get("iv_perc"),
-    )
-
-    # Operator feedback 2026-05-16: "der options builder zeigt mir
-    # nicht mein richtiges portfolio an, ich will mein eigenes". The
-    # full portfolio lives on the Portfolio page; here we surface a
-    # compact "currently held" sidebar-style block so the operator
-    # has their book in view while designing the next trade.
-    _render_my_open_positions(db)
+    # (Paper-buy CTA + "my open positions" removed in the IV-research
+    # refocus — Options Lab is now a pure pricing/Greeks/payoff bench.)
 
     # v0.9.7 — cross-page weave footer
     from volscope.ui.components.next_step import render_next_step_footer
@@ -304,140 +286,6 @@ def render_options_lab_page(db, settings: dict | None = None) -> None:
         st, page="Options Lab",
         ticker=st.session_state.get("selected_ticker"),
     )
-
-
-def _render_paper_buy_cta(
-    db,
-    *,
-    mat,
-    spot: float,
-    iv: float,
-    iv_perc: Optional[float] = None,
-) -> None:
-    """Render the Paper Buy row at the bottom of Options Lab.
-
-    Mirrors ``pretrade_page.py`` line ~480-540 BUY logic but lives
-    here so the operator can buy a multi-leg structure straight from
-    the Options-Lab builder without bouncing through Pre-Trade.
-
-    Single source of truth for the *actual* engine call: the same
-    ``volscope.data.paper_trader.paper_buy_strategy`` function both
-    pages use. This keeps cash-debit, ledger journaling, and
-    strategy-group bookkeeping identical across entry points.
-    """
-    from datetime import date as _date
-
-    render_html(
-        st,
-        f'<div style="margin-top:22px;padding-top:14px;'
-        f'border-top:1px solid {COLORS["border"]};'
-        f'font-family:\'DM Sans\',sans-serif;font-size:13px;'
-        f'font-weight:600;color:{COLORS["muted"]};letter-spacing:0.02em;">'
-        f'PAPER TRADE — execute this candidate</div>',
-    )
-    render_html(
-        st,
-        f'<div style="background:{COLORS["surface"]};border-left:3px solid '
-        f'{COLORS["accent"]};padding:10px 14px;border-radius:5px;margin:6px 0;'
-        f'font-family:\'DM Sans\',sans-serif;font-size:12px;'
-        f'color:{COLORS["text"]};">'
-        f'Click <strong>▶ paper-buy</strong> to write '
-        f'<strong>{mat.template_name}</strong> · '
-        f'<strong>{len(mat.legs)} legs</strong> on '
-        f'<strong>{mat.ticker}</strong> into the Portfolio paper engine. '
-        f'No IBKR call, no real order; cash is debited from the paper '
-        f'balance and the position appears in <em>Portfolio</em> on next '
-        f'render.'
-        f'</div>',
-    )
-
-    pb_col1, pb_col2, pb_col3 = st.columns([2, 2, 3])
-    with pb_col1:
-        do_buy = st.button(
-            "▶ paper-buy this structure",
-            key="ol_paper_buy",
-            type="primary",
-            width='stretch',
-            help="Materialise all legs and insert as a Portfolio position.",
-        )
-    with pb_col2:
-        do_open_portfolio = st.button(
-            "▷ portfolio →",
-            key="ol_open_portfolio",
-            width='stretch',
-            help="Jump to the Portfolio page (no insert).",
-        )
-    with pb_col3:
-        render_html(
-            st,
-            f'<div style="font-family:JetBrains Mono,monospace;font-size:9px;'
-            f'color:{COLORS["muted"]};padding:8px 4px;line-height:1.3;">'
-            f'BSM-priced entry · close anytime in Portfolio'
-            f'</div>',
-        )
-
-    if do_buy:
-        try:
-            from volscope.data.paper_trader import paper_buy_strategy
-            group_id, cash_after = paper_buy_strategy(
-                db,
-                mat,
-                entry_iv_pct=float(iv),
-                entry_iv_percentile=(
-                    float(iv_perc) if iv_perc is not None else None
-                ),
-                spot=float(spot),
-                scenario_hint="Options Lab",
-            )
-            st.success(
-                f"Paper-bought · {mat.template_name} · {len(mat.legs)} legs · "
-                f"group {group_id[-6:]} · cash ${cash_after:,.0f}",
-            )
-        except Exception as exc:                                # noqa: BLE001
-            st.error(f"Paper-buy failed: {exc}")
-
-    if do_open_portfolio:
-        from volscope.ui.components.navigation import NavIntent, nav_to
-        nav_to(NavIntent(page="Portfolio", ticker=mat.ticker,
-                          source="Options Lab"))
-        st.rerun()
-
-
-def _render_my_open_positions(db) -> None:
-    """Compact 'currently held' panel under the Lab CTA.
-
-    Pulls active strategy groups via paper_trader.list_strategy_groups.
-    Empty state when no positions exist — encourages the operator to
-    use the paper-buy button above.
-    """
-    try:
-        from volscope.data.paper_trader import list_strategy_groups
-        groups = list_strategy_groups(db)
-    except Exception:
-        return
-    with st.expander(
-        f"📂 My open paper positions ({len(groups)})",
-        expanded=False,
-    ):
-        if not groups:
-            st.caption(
-                "No active paper positions. Use the ▶ paper-buy "
-                "button above to log your first trade."
-            )
-            return
-        for g in groups[:20]:
-            cols = st.columns([2, 2, 2, 1])
-            with cols[0]:
-                st.write(f"**{g.ticker}**")
-            with cols[1]:
-                st.write(g.strategy_template)
-            with cols[2]:
-                kind = "debit" if g.net_entry_debit > 0 else "credit"
-                st.write(f"{kind} ${abs(g.net_entry_debit):,.0f}")
-            with cols[3]:
-                st.write(f"{g.n_legs} leg{'s' if g.n_legs != 1 else ''}")
-        if len(groups) > 20:
-            st.caption(f"… +{len(groups) - 20} more on the Portfolio page.")
 
 
 # ── Preset loader ───────────────────────────────────────────────────
@@ -620,7 +468,6 @@ def _render_quickstart_tiles() -> None:
 
 def _next_friday(today: "date") -> "date":
     """Next Friday strictly after ``today`` (weekday 4)."""
-    from datetime import timedelta
     days_ahead = (4 - today.weekday()) % 7 or 7
     return today + timedelta(days=days_ahead)
 
@@ -631,7 +478,7 @@ def _next_third_friday(today: "date") -> "date":
     Monthly equity options expire on the 3rd Friday of every month
     — this is the most-traded standard expiry on US exchanges.
     """
-    from datetime import date as _date, timedelta
+    from datetime import date as _date
     # Try this month's 3rd Friday; if it's already past, roll to next month.
     for offset in range(0, 3):
         year  = today.year  + ((today.month - 1 + offset) // 12)
@@ -651,7 +498,7 @@ def _next_quarterly_friday(today: "date") -> "date":
     Quarterly expiries are the deepest-OI monthlies on most names —
     LEAPS roll-down + index rebalancing both happen on the same day.
     """
-    from datetime import date as _date, timedelta
+    from datetime import date as _date
     quarters = (3, 6, 9, 12)
     year = today.year
     for _ in range(8):                                       # at most 2 yrs
@@ -669,7 +516,7 @@ def _next_quarterly_friday(today: "date") -> "date":
 
 def _next_january_leaps(today: "date") -> "date":
     """The 3rd Friday of next January — standard LEAPS anchor."""
-    from datetime import date as _date, timedelta
+    from datetime import date as _date
     target_year = today.year + 1 if today.month >= 1 else today.year
     first = _date(target_year, 1, 1)
     first_friday = first + timedelta(days=(4 - first.weekday()) % 7)

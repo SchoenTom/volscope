@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import statistics
 import time
+from pathlib import Path
 
 import numpy as np
 import pytest
 from streamlit.testing.v1 import AppTest
+
+_APP_PATH = str(Path(__file__).resolve().parent.parent / "volscope" / "ui" / "app.py")
 
 from volscope.analytics.black_scholes import bs_delta, bs_price, implied_volatility
 from volscope.analytics.probability import pop_closed_form, pop_monte_carlo
@@ -107,7 +110,7 @@ class TestPageRenders:
     @pytest.fixture(scope="class")
     def at(self):
         at = AppTest.from_file(
-            "<repo-root>/volscope/ui/app.py",
+            _APP_PATH,
             default_timeout=90,
         )
         at.session_state["selected_ticker"] = "PYPL"
@@ -115,8 +118,8 @@ class TestPageRenders:
 
     @pytest.mark.parametrize("page", [
         "Discover", "Command", "Scope", "Scanner",
-        "Options Lab", "Builder", "Pre-Trade",
-        "LEAPS Lab", "Alerts", "Portfolio",
+        "Options Lab", "Alerts", "Heatmap",
+        "Vol Insights", "Earnings Hub", "Watchlist",
     ])
     def test_page_render_under_3s(self, at, page):
         at.session_state["active_page"] = page

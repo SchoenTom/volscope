@@ -56,7 +56,10 @@ class _FakeTicker:
         self._vol = true_vol
         self.options = tuple(options)
 
-    def history(self, period: str = "5d"):
+    def history(self, period: str = "5d", **kwargs):
+        # Accept auto_adjust / interval like real yfinance — the
+        # yfinance_safe wrapper forwards those, and a strict signature
+        # here would mask the production code path under test.
         idx = pd.date_range("2024-01-01", periods=5, freq="B")
         return pd.DataFrame({"Close": [self._spot] * 5}, index=idx)
 

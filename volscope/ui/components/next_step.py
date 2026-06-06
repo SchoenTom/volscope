@@ -135,9 +135,12 @@ NEXT_STEPS: dict[str, list[tuple[str, str, bool]]] = {
         ("Command",      "Alerts management",                   False),
     ],
     "Command": [
-        ("Bot",          "Bot status",                          False),
         ("Alerts",       "Alert rules",                         False),
-        ("Pre-Trade",    "Build a position",                    True),
+        ("Scope",        "Deep-dive a ticker",                  True),
+    ],
+    "Watchlist": [
+        ("Scope",        "Deep-dive {ticker}",                  True),
+        ("Discover",     "Find new candidates",                 False),
     ],
 }
 

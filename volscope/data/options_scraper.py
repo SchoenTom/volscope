@@ -11,7 +11,11 @@ import pandas as pd
 from volscope.analytics.black_scholes import bs_delta, implied_volatility
 from volscope.data.fundamentals import fetch_ttm_dividend_yield
 from volscope.data.risk_free import get_rate
-from volscope.utils.retry import retry
+from volscope.data.yfinance_safe import (
+    _run_with_timeout,
+    safe_history,
+    safe_option_chain,
+)
 from volscope.utils.safe import safe_num
 
 log = logging.getLogger(__name__)
@@ -171,19 +175,39 @@ def _expiry_iv_from_chain(
     return weighted * 100.0
 
 
-@retry(attempts=3, base_delay=1.5, factor=2.0)
 def _fetch_chain(yf_ticker, expiry_str: str):
-    return yf_ticker.option_chain(expiry_str)
+    """Timeout-guarded option_chain fetch (via yfinance_safe).
+
+    Returns the chain namedtuple (.calls/.puts) or None on
+    timeout / 429 / network failure. This is the ONLY IV-critical
+    fetch path; routing it through the 12 s wall-clock wrapper is
+    what stops a single hung Yahoo response from freezing the whole
+    daily scrape for 10-20 minutes per ticker.
+    """
+    return safe_option_chain(yf_ticker, expiry_str)
 
 
-@retry(attempts=3, base_delay=1.5, factor=2.0)
 def _fetch_expiries(yf_ticker) -> tuple:
-    return yf_ticker.options
+    """Timeout-guarded expiry list.
+
+    `.options` is a property whose access triggers a network fetch, so
+    it gets the same wall-clock guard as the chain/history calls.
+    Returns () on timeout / failure.
+    """
+    try:
+        result = _run_with_timeout(lambda: yf_ticker.options)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("expiry list fetch failed/timed out: %s", exc)
+        return ()
+    return tuple(result) if result else ()
 
 
-@retry(attempts=3, base_delay=1.0, factor=2.0)
 def _fetch_history(yf_ticker, period: str = "5d"):
-    return yf_ticker.history(period=period)
+    """Timeout-guarded history fetch (via yfinance_safe).
+
+    Returns an empty DataFrame on timeout / 429 / failure.
+    """
+    return safe_history(yf_ticker, period=period)
 
 
 def _fetch_intraday_spot(yf_ticker) -> Optional[float]:
@@ -280,10 +304,9 @@ def scrape_options_chain(ticker: str) -> Optional[dict]:
     near_term_oi = 0
 
     for exp_str, days in iv_candidates:
-        try:
-            chain = _fetch_chain(yf_t, exp_str)
-        except Exception as exc:
-            log.warning("option_chain(%s) failed for %s: %s", exp_str, ticker, exc)
+        chain = _fetch_chain(yf_t, exp_str)
+        if chain is None:
+            log.warning("option_chain(%s) returned no data for %s", exp_str, ticker)
             continue
 
         T = days / 365.0
@@ -330,11 +353,12 @@ def scrape_options_chain(ticker: str) -> Optional[dict]:
         nearest_exp, nearest_days = min(iv_candidates, key=lambda x: abs(x[1] - 30))
         try:
             skew_chain = _fetch_chain(yf_t, nearest_exp)
-            T_skew = nearest_days / 365.0
-            r_skew = get_rate(nearest_days)
-            iv_skew_25d = _compute_skew_25d(
-                skew_chain.calls, skew_chain.puts, spot, T_skew, r_skew, q
-            )
+            if skew_chain is not None:
+                T_skew = nearest_days / 365.0
+                r_skew = get_rate(nearest_days)
+                iv_skew_25d = _compute_skew_25d(
+                    skew_chain.calls, skew_chain.puts, spot, T_skew, r_skew, q
+                )
         except Exception as exc:
             log.debug("Skew computation failed for %s: %s", ticker, exc)
 

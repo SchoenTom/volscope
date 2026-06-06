@@ -18,7 +18,7 @@
 > the disclaimer in [`LICENSE`](LICENSE) before connecting it to
 > anything that touches real capital.
 
-## Quick start
+## Quick Start
 
 Works on macOS / Linux with Python 3.11+.
 

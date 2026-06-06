@@ -56,11 +56,19 @@ def _compute_hv_block(ticker: str) -> dict:
         hv_yz = hv_yang_zhang(df["Open"], df["High"], df["Low"], df["Close"], DEFAULT_HV_SHORT)
     except Exception:
         hv_yz = pd.Series(index=df.index, dtype=float)
+    # 30-day Yang-Zhang: the horizon-matched HV partner for iv_30d. Without
+    # it, hv_yz_30d + iv_hv_spread_matched stay frozen at seed-time values
+    # forever, which the Heatmap and Vol-Insights pages read directly.
+    try:
+        hv_yz30 = hv_yang_zhang(df["Open"], df["High"], df["Low"], df["Close"], 30)
+    except Exception:
+        hv_yz30 = pd.Series(index=df.index, dtype=float)
 
     return {
         "hv_20d": float(hv_s.iloc[-1]) if pd.notna(hv_s.iloc[-1]) else None,
         "hv_60d": float(hv_l.iloc[-1]) if pd.notna(hv_l.iloc[-1]) else None,
         "hv_yz_20d": float(hv_yz.iloc[-1]) if pd.notna(hv_yz.iloc[-1]) else None,
+        "hv_yz_30d": float(hv_yz30.iloc[-1]) if pd.notna(hv_yz30.iloc[-1]) else None,
     }
 
 
@@ -100,7 +108,8 @@ _IV_PLAUSIBILITY_CAPS: dict[str, float] = {
     "ETF": 120.0,          # any broad-market ETF (SPY, QQQ, IWM, sector XL*)
     "VOL_ETF": 400.0,      # volatility products can genuinely get wild
     "SINGLE_NAME": 500.0,  # individual stocks — meme spikes are real
-    "CRYPTO": 300.0,       # crypto pairs are volatile but bounded
+    "CRYPTO": 300.0,       # crypto pairs + crypto ETFs (IBIT, GBTC)
+    "LEVERED_ETF": 800.0,  # 2x/3x ETFs (TQQQ, SOXL) genuinely spike high
     "INDEX": 100.0,        # ^VIX, ^GSPC, etc.
 }
 
@@ -109,17 +118,20 @@ _ETF_SECTORS = {
     "Bond ETF", "Currency / Macro",
 }
 _VOL_ETF_SECTORS = {"Vol ETF"}
-_CRYPTO_SECTORS = {"Crypto (spot pairs)"}
+_CRYPTO_SECTORS = {"Crypto (spot pairs)", "Crypto ETF"}
+_LEVERED_ETF_SECTORS = {"Leveraged ETF"}
 _INDEX_SECTORS = {"Indices (read-only)"}
 
 
 def _iv_cap_for(ticker: str, sector: str | None) -> float:
     if sector in _VOL_ETF_SECTORS:
         return _IV_PLAUSIBILITY_CAPS["VOL_ETF"]
-    if sector in _ETF_SECTORS:
-        return _IV_PLAUSIBILITY_CAPS["ETF"]
+    if sector in _LEVERED_ETF_SECTORS:
+        return _IV_PLAUSIBILITY_CAPS["LEVERED_ETF"]
     if sector in _CRYPTO_SECTORS:
         return _IV_PLAUSIBILITY_CAPS["CRYPTO"]
+    if sector in _ETF_SECTORS:
+        return _IV_PLAUSIBILITY_CAPS["ETF"]
     if sector in _INDEX_SECTORS or ticker.startswith("^"):
         return _IV_PLAUSIBILITY_CAPS["INDEX"]
     return _IV_PLAUSIBILITY_CAPS["SINGLE_NAME"]
@@ -231,6 +243,14 @@ def process_ticker(db: VolScopeDB, ticker: str, today: date) -> bool:
     spread_info = iv_hv_spread(iv_30, hv_20) if iv_30 is not None and hv_20 is not None else {}
     spread = spread_info.get("spread")
 
+    # Horizon-matched spread: 30-day IV vs 30-day Yang-Zhang HV. This is the
+    # apples-to-apples number the Heatmap/Vol-Insights pages chart; the older
+    # iv_hv_spread compares iv_30d against 20-day close-to-close HV.
+    hv_yz_30d = hv_block.get("hv_yz_30d")
+    iv_hv_spread_matched = (
+        iv_30 - hv_yz_30d if iv_30 is not None and hv_yz_30d is not None else None
+    )
+
     # Per-field NULL-fallback for term-structure + sentiment columns.
     # Same pattern as iv_30d: a chain-fetch failure (Yahoo 404, missing
     # expiry, sanity-rejected solver result) should not overwrite a
@@ -258,9 +278,11 @@ def process_ticker(db: VolScopeDB, ticker: str, today: date) -> bool:
         "hv_20d": hv_20,
         "hv_60d": hv_block.get("hv_60d"),
         "hv_yz_20d": hv_block.get("hv_yz_20d"),
+        "hv_yz_30d": hv_yz_30d,
         "iv_rank": rank,
         "iv_percentile": pct,
         "iv_hv_spread": spread,
+        "iv_hv_spread_matched": iv_hv_spread_matched,
         "put_call_ratio": put_call_ratio,
         "total_call_volume": snap.get("total_call_volume"),
         "total_put_volume": snap.get("total_put_volume"),

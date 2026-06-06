@@ -231,14 +231,14 @@ def stage_backtest() -> dict:
 # ── Orchestrator ─────────────────────────────────────────────────────────
 
 # (stage, is_correctness_gate)
+# stage_leaps_render + stage_backtest removed in the IV-research refocus:
+# the LEAPS pages were deleted and backtest is no longer a product gate.
 STAGES = [
     (stage_pytest,                 True),
     (stage_external_bsm,           True),
-    (stage_leaps_render,           True),
     (stage_numeric_consistency,    True),
     (stage_data_quality,           True),
     (stage_sector_aggregator,      True),
-    (stage_backtest,               False),
 ]
 
 

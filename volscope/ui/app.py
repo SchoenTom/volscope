@@ -55,27 +55,18 @@ log = logging.getLogger(__name__)
 _PAGE_REGISTRY: dict[str, tuple[str, str]] = {
     "Onboarding": ("volscope.ui.views.onboarding_page",     "render_onboarding_page"),
     "Command":    ("volscope.ui.views.command_center_page", "render_command_center_page"),
-    "Portfolio":  ("volscope.ui.views.portfolio_page",      "render_portfolio_page"),
     "Watchlist":  ("volscope.ui.views.watchlist_page",      "render_watchlist_page"),
     "Mega-Scan":  ("volscope.ui.views.megascan_page",       "render_megascan_page"),
     "Discover":   ("volscope.ui.views.discover_page",       "render_discover_page"),
     "Alerts":     ("volscope.ui.views.alerts_page",         "render_alerts_page"),
-    "Signals":    ("volscope.ui.views.signals_page",        "render_signals_page"),
-    "Bot":        ("volscope.ui.views.bot_dashboard_page",  "render_bot_dashboard_page"),
     "Earnings Hub":("volscope.ui.views.earnings_hub_page",  "render_earnings_hub_page"),
-    "Earnings Trades":("volscope.ui.views.earnings_positions_page", "render_earnings_positions_page"),
     "Scope":      ("volscope.ui.views.scope_page",          "render_scope_page"),
     "Scanner":    ("volscope.ui.views.scan_page",           "render_scan_page"),
     "Heatmap":    ("volscope.ui.views.heatmap_page",        "render_heatmap_page"),
     "Rotation":   ("volscope.ui.views.rotation_page",       "render_rotation_page"),
     "Flow":       ("volscope.ui.views.flow_page",           "render_flow_page"),
-    "Pre-Trade":  ("volscope.ui.views.pretrade_page",       "render_pretrade_page"),
-    "Builder":    ("volscope.ui.views.strategy_builder_page","render_strategy_builder_page"),
     "Options Lab":("volscope.ui.views.options_lab_page",    "render_options_lab_page"),
     "Vol Insights":("volscope.ui.views.vol_insights_page",  "render_vol_insights_page"),
-    "LEAPS Lab":  ("volscope.ui.views.leaps_page",          "render_leaps_page"),
-    "Dossier":    ("volscope.ui.views.leaps_dossier_page",  "render_leaps_dossier_page"),
-    "Backtest":   ("volscope.ui.views.backtest_page",       "render_backtest_page"),
     # v0.9.0 — Research page: 4-test statistical gauntlet.
     "Research":   ("volscope.ui.views.research_page",       "render_research_page"),
     "Help":       ("volscope.ui.views.help_page",           "render_help_page"),
@@ -321,13 +312,11 @@ def main() -> None:
     except Exception:
         pass
 
-    # Default landing — Command Center if data exists, else Discover.
+    # Default landing — Discover is the research entry point. (Was Command
+    # Center; switched while Command is being stripped of position tracking
+    # in the refocus to IV-research-only.)
     if "active_page" not in st.session_state:
-        try:
-            empty_db = db.get_all_latest().empty
-        except Exception:
-            empty_db = False
-        st.session_state["active_page"] = "Discover" if empty_db else "Command"
+        st.session_state["active_page"] = "Discover"
 
     with st.sidebar:
         ticker, page, settings = render_sidebar(

@@ -24,6 +24,7 @@ dependencies = [
     "yfinance>=0.2.31",
     "duckdb>=0.9.0,<2.0.0",
     "streamlit>=1.35.0,<2.0.0",
+    "streamlit-lightweight-charts>=0.7.17,<1.0.0",
     "plotly>=5.17.0,<6.0.0",
     "rich>=13.0.0",
     "python-dotenv>=1.0.0",
@@ -33,21 +34,18 @@ dependencies = [
     "pydantic-settings>=2.0",
     "pyyaml>=6.0",
     "structlog>=25.0",
-    "xgboost>=2.0.0",
     "scikit-learn>=1.3.0",
     "statsmodels>=0.14.0",
     "reportlab>=4.0.0,<5.0.0",
     "typer>=0.13.0",
 ]
 
-[project.optional-dependencies]
-bot = [
-    "ib_async>=2.0,<3.0",
-    "apscheduler>=3.10,<4.0",
-    "sqlalchemy>=2.0",
+# Optional volatility-regime modelling deps (garch.py / vol_regime.py /
+# regime.py). The trading-bot extras (ib_async, apscheduler, sqlalchemy,
+# transitions) were removed in the IV-research refocus.
+forecasting = [
     "arch>=7.0",
     "hmmlearn>=0.3",
-    "transitions>=0.9",
 ]
 dev = [
     "pytest>=8.0",
@@ -100,17 +98,9 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 
-# Strict for the NEW Phase 1/2 packages only — legacy ramp-up later.
+# Strict for the core analytics/persistence math modules.
 [[tool.mypy.overrides]]
 module = [
-    "volscope.signals.factors",
-    "volscope.signals.composite",
-    "volscope.signals.filters",
-    "volscope.signals.ranking",
-    "volscope.risk.kill_switch",
-    "volscope.lifecycle.machine",
-    "volscope.scheduler.jobs",
-    "volscope.execution.ibkr_stub",
     "volscope.analytics.regime",
     "volscope.analytics.garch",
     "volscope.persistence.db",
@@ -119,8 +109,7 @@ strict = true
 
 # Deferred-import deps that aren't always installed.
 [[tool.mypy.overrides]]
-module = ["ib_async.*", "apscheduler.*", "hmmlearn.*", "arch.*",
-          "transitions.*", "sqlalchemy.*"]
+module = ["hmmlearn.*", "arch.*"]
 ignore_missing_imports = true
 
 # ── Pytest ────────────────────────────────────────────────────────
@@ -132,6 +121,8 @@ markers = [
     "integration: tests that need external services",
     "ibkr: tests that need an IBKR paper connection",
     "perf: performance smoke benchmarks",
+    "property: hypothesis property-based tests",
+    "golden: golden-master regression tests",
 ]
 asyncio_mode = "auto"
 

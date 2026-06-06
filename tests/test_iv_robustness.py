@@ -21,7 +21,7 @@ from volscope.analytics.iv_robustness import (
     detect_structural_break,
     robust_iv_rank,
 )
-from volscope.signals.factors import ivr, ivp
+from volscope.analytics.iv_thresholds import ivr, ivp
 
 
 # ── A1: robust_iv_rank ────────────────────────────────────────────

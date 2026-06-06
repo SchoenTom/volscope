@@ -6,13 +6,6 @@ from html import escape
 import pandas as pd
 import streamlit as st
 
-from volscope.analytics.backtest import (
-    bootstrap_ci,
-    build_calibration_table,
-    naive_baseline_hit_rate,
-    rolling_hit_rate,
-    run_backtest,
-)
 from volscope.analytics.earnings_crush import compute_crush_estimate, crush_badge_html
 from volscope.ui.components.chart_builders import (
     create_backtest_distribution_chart,
@@ -562,6 +555,17 @@ def _render_backtest_section(st, history: pd.DataFrame, ticker: str) -> None:
       • Bootstrap 95 % CI on the BUY-signal mean IV change
       • Verdict pill — BEATS BASELINE / IN LINE / WEAK
     """
+    # Lazy import: a failure inside the backtest analytics module must not
+    # kill the entire Scope hero page at import time — it stays contained
+    # to this one tab (matches the lazy-page pattern used elsewhere).
+    from volscope.analytics.backtest import (
+        bootstrap_ci,
+        build_calibration_table,
+        naive_baseline_hit_rate,
+        rolling_hit_rate,
+        run_backtest,
+    )
+
     # Hold-period selector — preset buttons mean the user can probe the
     # signal at multiple horizons without typing.
     hold_options = [5, 10, 21, 42, 63]

@@ -892,7 +892,12 @@ class VolScopeDB:
             self.con.close()
         except Exception:
             pass
-        self.con = duckdb.connect(self.db_path)
+        # Re-wrap in _LockedConnection — a raw duckdb handle here would
+        # drop the cross-thread mutex and re-expose the multi-tab
+        # "mutex lock failed" crash that _LockedConnection prevents
+        # (mirrors __init__ at lines 141-145).
+        raw = duckdb.connect(self.db_path, read_only=self.read_only)
+        self.con = _LockedConnection(raw)
 
     def get_sector_history(self, sector: Optional[str] = None, lookback_days: int = 365) -> pd.DataFrame:
         """Return sector_daily rows, optionally filtered by sector, most recent `lookback_days`."""

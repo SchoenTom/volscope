@@ -47,7 +47,7 @@ from volscope.ui.components.earnings_diagnostics import (
     render_pre_er_drift,
 )
 from volscope.ui.components.html_utils import page_banner_html, render_html
-from volscope.ui.styles.theme import COLORS, heat_color, seq_color
+from volscope.ui.styles.theme import COLORS, seq_color
 
 log = logging.getLogger(__name__)
 
@@ -153,23 +153,9 @@ def render_earnings_hub_page(db, settings: dict | None = None) -> None:
     # ── Sector heatmap footer ────────────────────────────────────────
     _render_sector_heatmap(enriched)
 
-    # v0.9.7 M4.B — embedded "My Earnings Trades" tab (sidebar-merge:
-    # the formerly-separate Earnings Trades page now lives one click
-    # away inside Earnings Hub via an expander, eliminating one
-    # sidebar entry without losing the capability).
-    with st.expander("📁 My Earnings Trades", expanded=False):
-        try:
-            from volscope.ui.views.earnings_positions_page import (
-                render_earnings_positions_page,
-            )
-            render_earnings_positions_page(db, settings)
-        except Exception as _exc:                                   # noqa: BLE001
-            import logging as _lg
-            _lg.getLogger("volscope.ui.earnings_hub").warning(
-                "embedded Earnings Trades render failed: %s", _exc,
-            )
-            st.info("Embedded earnings-trades view unavailable. Open it via the "
-                    "next-step footer below.")
+    # (Removed in the IV-research refocus: the embedded "My Earnings Trades"
+    # position tracker depended on the paper-trade book, which was cut.
+    # Earnings Hub is now a pure event/expected-move research view.)
 
     # v0.9.7 — cross-page weave footer (master plan §4)
     from volscope.ui.components.next_step import render_next_step_footer
@@ -914,47 +900,8 @@ def _render_tile_drawer(db, ev: dict) -> None:
                 f'</div>',
             )
 
-        # Paper-buy CTA
-        if rec.template_name is not None and impl is not None:
-            if st.button(
-                f"▶ paper-buy {rec.structure} · {ticker}",
-                key=f"eh_buy_{ticker}_{ev['earnings_date']}",
-                type="primary",
-                help=("Materialise this structure via the existing "
-                      "paper-trader engine and add the legs to Portfolio."),
-            ):
-                _paper_buy_from_drawer(db, ticker, rec.template_name, impl)
-
-
-def _paper_buy_from_drawer(db, ticker: str, template_name: str, impl) -> None:
-    """One-click: materialise the suggested template and write into
-    `positions` via the existing paper-trader."""
-    from volscope.analytics.strategy_templates import TEMPLATES
-    from volscope.data.paper_trader import paper_buy_strategy
-
-    tpl = TEMPLATES.get(template_name)
-    if tpl is None:
-        st.error(f"Unknown template: {template_name}")
-        return
-    try:
-        # Use 1d to expiry past ER for short-dated structures, else 60d
-        dte = max(7, impl.days_to_er + 7)
-        mat = tpl.materialize(
-            ticker=ticker, spot=float(impl.spot), iv_pct=float(impl.iv_used),
-            dte=int(dte), contracts=1,
-        )
-        gid, cash_after = paper_buy_strategy(
-            db, mat,
-            entry_iv_pct=float(impl.iv_used),
-            spot=float(impl.spot),
-            scenario_hint=f"Earnings Hub · {ticker} ER {impl.earnings_date.isoformat()}",
-        )
-        st.success(
-            f"Bought · {mat.template_name} · {len(mat.legs)} legs · "
-            f"group {gid[-6:]} · cash ${cash_after:,.0f}"
-        )
-    except Exception as exc:
-        st.error(f"Paper-buy failed: {exc}")
+        # (Paper-buy CTA removed in the IV-research refocus — Earnings Hub
+        # is now a pure event/expected-move research view.)
 
 
 # ── Sector heatmap footer ────────────────────────────────────────────

@@ -31,6 +31,9 @@ colourbar, and Pre-Trade strategy recommender all classify against.
 """
 from __future__ import annotations
 
+import numpy as np
+import pandas as pd
+
 # Five-band canonical thresholds.
 PERC_VERY_CHEAP: float = 20.0
 PERC_CHEAP:      float = 35.0
@@ -65,3 +68,42 @@ def classify_perc(perc: float | None) -> str:
     if p <= PERC_VERY_RICH:
         return "RICH"
     return "VERY_RICH"
+
+
+# ── IV Rank / IV Percentile ────────────────────────────────────────
+# Moved here from volscope/signals/factors.py during the IV-research
+# refocus (the signals/ bot package was removed). These are pure-math
+# IV-position helpers used by the core IV-robustness path.
+
+
+def ivr(iv_series: pd.Series, window: int = 252) -> float:
+    """
+    IV Rank — current IV's position in its trailing 252-day range.
+
+    Returns a percentage in [0, 100]. The MenthorQ 10-yr SPY study finds
+    short-premium ROI improves dramatically when IVR > 30; peak when > 50.
+
+    Returns NaN if the window has insufficient data or zero range.
+    """
+    s = iv_series.dropna().tail(window)
+    if len(s) < 20:
+        return float("nan")
+    lo, hi = float(s.min()), float(s.max())
+    if hi - lo < 1e-9:
+        return float("nan")
+    cur = float(s.iloc[-1])
+    return float(np.clip((cur - lo) / (hi - lo) * 100.0, 0.0, 100.0))
+
+
+def ivp(iv_series: pd.Series, window: int = 252) -> float:
+    """
+    IV Percentile — % of trailing days with IV below current.
+
+    Slightly preferred to IVR in normal regimes (Castillo 2026) because
+    it's robust to single-day spikes that compress IVR for the next year.
+    """
+    s = iv_series.dropna().tail(window)
+    if len(s) < 20:
+        return float("nan")
+    cur = float(s.iloc[-1])
+    return float((s < cur).sum() / len(s) * 100.0)

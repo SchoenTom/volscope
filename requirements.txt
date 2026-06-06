@@ -1,3 +1,6 @@
+# Runtime dependencies — kept in sync with [project].dependencies in
+# pyproject.toml. A bare `pip install -r requirements.txt` must produce a
+# working runtime environment (no missing-import surprises on cold install).
 numpy>=1.24.0,<2.0.0
 pandas>=2.0.0,<3.0.0
 scipy>=1.10.0,<2.0.0
@@ -6,12 +9,19 @@ duckdb>=0.9.0,<2.0.0
 streamlit>=1.35.0,<2.0.0
 streamlit-lightweight-charts>=0.7.17,<1.0.0
 plotly>=5.17.0,<6.0.0
-pytest>=7.4.0
-pytest-cov>=4.1.0
 rich>=13.0.0
 python-dotenv>=1.0.0
 requests>=2.31.0
-xgboost>=2.0.0
+httpx>=0.27.0
+pydantic>=2.0
+pydantic-settings>=2.0
+pyyaml>=6.0
+structlog>=25.0
 scikit-learn>=1.3.0
 statsmodels>=0.14.0
 reportlab>=4.0.0,<5.0.0
+typer>=0.13.0
+
+# Test tooling (also available via the [dev] extra in pyproject.toml).
+pytest>=7.4.0
+pytest-cov>=4.1.0

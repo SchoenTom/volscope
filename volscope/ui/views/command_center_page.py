@@ -40,7 +40,7 @@ from volscope.alerts.alert_engine import (
 from volscope.analytics.earnings_crush import CrushEstimate, compute_crush_estimate, crush_badge_html
 from volscope.analytics.edge_score import EdgeScore, compute_edge_table
 from volscope.analytics.ml_signal import MLPrediction, ml_badge_html, predict_buy_prob
-from volscope.analytics.position_sizing import SizingResult, compute_sizing, sizing_summary_html
+from volscope.analytics.position_sizing import compute_sizing
 from volscope.analytics.signal import VolSignal, compute_signal, market_summary
 from volscope.data.database import VolScopeDB
 from volscope.data.ticker_resolver import resolve_and_ingest
@@ -53,7 +53,6 @@ from volscope.ui.components.html_utils import page_banner_html, render_html
 from volscope.ui.components.metric_components import (
     freshness_badge,
     render_percentile_pill,
-    render_warning_card,
     vol_signal_badge_html,
 )
 from volscope.ui.styles.theme import COLORS

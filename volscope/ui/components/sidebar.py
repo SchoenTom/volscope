@@ -872,9 +872,8 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     #   - Dossier         → from LEAPS Lab footer
     # Page registry retains all entries; pages stay deep-linkable.
     NAV_GROUPS: list[tuple[str, list[str]]] = [
-        ("◆ DECISIONS",  ["Command", "Discover", "Signals", "Bot", "Alerts", "Earnings Hub", "Watchlist", "Portfolio"]),
-        ("◇ RESEARCH",   ["Scope", "Scanner", "Heatmap", "Rotation", "Flow", "Vol Insights", "Research"]),
-        ("▷ EXECUTION",  ["Pre-Trade", "Builder", "Options Lab", "LEAPS Lab", "Backtest"]),
+        ("◇ RESEARCH",   ["Discover", "Scope", "Heatmap", "Earnings Hub", "Vol Insights", "Scanner", "Alerts"]),
+        ("◆ MANAGE",     ["Watchlist", "Command", "Options Lab"]),
         ("? REFERENCE",  ["Help"]),
     ]
     pages = [p for _, group in NAV_GROUPS for p in group]
@@ -884,7 +883,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # back to Command when, e.g., they click 'Open dossier' on LEAPS
     # Lab (operator hit this on 2026-05-19: 'IM LEAPS LAB FUNKTIONIERT
     # DER OPEN DOSSIER BUTTON NICHT').
-    _DEEP_LINK_ONLY_PAGES = ("Dossier", "Mega-Scan", "Earnings Trades", "Onboarding")
+    _DEEP_LINK_ONLY_PAGES = ("Mega-Scan", "Rotation", "Flow", "Research", "Onboarding")
     pages_plus = pages + list(_DEEP_LINK_ONLY_PAGES)
     if current_page not in pages_plus:
         # Defensive: an unknown ``current_page`` typically means a

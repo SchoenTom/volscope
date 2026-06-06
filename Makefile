@@ -1,8 +1,8 @@
 .PHONY: setup test run start scrape convergence seed seed-starter seed-full seed-bot-universe seed-broad-universe quickstart quickstart-bot clean verify verify-all sectors \
         audit audit-list audit-schema synth maturity loop loop-pick loop-finalize loop-forever pause unpause \
         simulate validate autonomy-status autonomy-pause autonomy-unpause autonomy-test autonomy-logs \
-        load-universe load-universe-resume design-lint backtest-leaps \
-        unlock kill-stale fresh warm repair-iv check-alarms
+        load-universe load-universe-resume design-lint \
+        unlock kill-stale fresh warm repair-iv
 
 # ── Lock hygiene ────────────────────────────────────────────────────────
 # The DuckDB exclusive lock is the single most common reason `make start`
@@ -203,34 +203,10 @@ scrape:
 	@python scripts/ops/release_db_lock.py --force
 	python scripts/scrape/daily_scrape.py
 	$(MAKE) convergence
-	@$(MAKE) -s check-alarms || true
 
 # Recompute convergence scores for the latest snapshot. Idempotent.
 convergence:
 	python scripts/compute/compute_convergence_daily.py
-
-# Check user watchlist regime alarms — runs after every scrape via
-# the scrape target, and can also be cron'd standalone (5-min cadence)
-# so alarms fire when Streamlit isn't open. Quiet on no-op runs.
-check-alarms:
-	@python scripts/ops/check_alarms.py --quiet
-
-# v0.9.11 — one-command alarm scheduler. Generates a launchd plist
-# that calls check_alarms every 30 min during NYSE business hours
-# (09-21 NY time, weekdays). Operator runs `make schedule-alerts`
-# once; alarms then fire even when Streamlit is closed.
-schedule-alerts:
-	@python scripts/ops/install_alarm_scheduler.py
-
-unschedule-alerts:
-	@launchctl unload ~/Library/LaunchAgents/com.volscope.alarms.plist 2>/dev/null || true
-	@rm -f ~/Library/LaunchAgents/com.volscope.alarms.plist
-	@echo "[scheduler] VolScope alarm cron uninstalled."
-
-# Walk-forward backtest of the LEAPS-convergence rule.
-# Default: 365-day hold, monthly resampling, full universe.
-backtest-leaps:
-	python scripts/backtest/run_leaps_backtest.py
 
 # Aggregate daily_vol into sector_daily and classify regimes.
 # Run after each daily scrape to keep Rotation page current.
@@ -368,21 +344,13 @@ backup-encrypted:
 restore-drill:
 	@.venv/bin/python -m scripts.ops.restore_db --temp
 
-audit-verify:
-	@.venv/bin/python -m scripts.audit.verify_chain
-
 pre-merge-check:
 	@echo "── ruff ──" && .venv/bin/ruff check . && .venv/bin/ruff format --check .
-	@echo "── mypy (new packages) ──" && .venv/bin/mypy --strict --ignore-missing-imports \
-		volscope/signals volscope/risk volscope/lifecycle \
-		volscope/execution volscope/scheduler volscope/persistence || true
+	@echo "── mypy (core packages) ──" && .venv/bin/mypy --ignore-missing-imports \
+		volscope/analytics volscope/data || true
 	@echo "── pytest fast ──" && .venv/bin/python -m pytest \
 		-m "not slow and not integration and not perf and not ibkr" \
 		--tb=short -q
-	@echo "── audit-chain verify ──" && \
-		(.venv/bin/python -m scripts.audit.verify_chain 2>&1 || echo "(no DB yet — OK on fresh)")
-	@echo "── risk-thresholds unchanged ──" && \
-		.venv/bin/python scripts/audit/check_risk_thresholds_unchanged.py
 
 # ── v0.6.0 data foundation + math gate + agent orchestration ──
 migrate:
@@ -393,9 +361,6 @@ migrate-dry-run:
 
 scrape-chains:
 	@.venv/bin/python -m scripts.scrape.scrape_chains
-
-full-review:
-	@.venv/bin/python -m scripts.ops.full_review $(if $(REF),--ref $(REF))
 
 compute-sectors:
 	@.venv/bin/python -m scripts.compute.compute_sector_rotation

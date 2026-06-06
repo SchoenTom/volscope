@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import threading
 import urllib.request
 from typing import Optional
 
@@ -29,6 +30,11 @@ _SERIES: dict[int, str] = {
 }
 
 _cache: dict[str, object] = {"date": None, "curve": {}}
+# Guards _cache against partial writes when two Streamlit tab reruns
+# call _refresh_curve() concurrently on a cold boot (each chart render
+# would otherwise see a half-populated curve and solve IV at an
+# inconsistent rate).
+_cache_lock = threading.Lock()
 
 
 def _fetch_one(series: str) -> Optional[float]:
@@ -54,6 +60,8 @@ def _fetch_one(series: str) -> Optional[float]:
 
 def _refresh_curve() -> dict[int, float]:
     today = datetime.date.today()
+    # Fast path: serve a same-day cache without holding the lock across
+    # the network fetch.
     if _cache.get("date") == today and _cache.get("curve"):
         return _cache["curve"]  # type: ignore
 
@@ -64,8 +72,14 @@ def _refresh_curve() -> dict[int, float]:
             curve[days] = rate
 
     if curve:
-        _cache["date"] = today
-        _cache["curve"] = curve
+        with _cache_lock:
+            # Re-check inside the lock: another thread may have filled the
+            # cache while we were fetching. Write date+curve atomically so
+            # no reader observes a new date with a stale/empty curve.
+            if not (_cache.get("date") == today and _cache.get("curve")):
+                _cache["date"] = today
+                _cache["curve"] = curve
+        return _cache["curve"]  # type: ignore
     return curve
 
 

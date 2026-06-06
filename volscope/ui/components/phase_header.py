@@ -71,6 +71,7 @@ PAGE_TO_PHASE: dict[str, str] = {
     "Portfolio":        "EXECUTE",
     "Alerts":           "EXECUTE",
     "Command":          "EXECUTE",
+    "Watchlist":        "EXECUTE",
 
     # Reference / meta (no phase)
     "Help":             "",
