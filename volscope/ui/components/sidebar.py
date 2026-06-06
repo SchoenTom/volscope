@@ -497,7 +497,7 @@ def _render_ticker_picker(st, db) -> str:
 
     # Add-a-ticker is a secondary action — tuck it behind a collapsed
     # expander so the picker stays a single calm row by default.
-    with st.expander("＋  Add a ticker", expanded=False):
+    with st.expander("+  Add a ticker", expanded=False):
         with st.form("add_ticker_form", clear_on_submit=True):
             raw = st.text_input(
                 "Symbol",

@@ -91,7 +91,7 @@ class TestQuickstartContract:
             "seed",
             "scrape",
             "test",
-            "verify",
+            "verify-all",
             "clean",
         ):
             assert f"{target}:" in text, f"Makefile is missing target: {target}"
