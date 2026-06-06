@@ -61,7 +61,38 @@ scripts/_dev/
 # One-off scripts (e.g. sanitize.py) — keep local
 _one_off/
 
-# (memory/* IS committed — that's the agent canon)
-memory/chat-archive/
-memory/**/*.rtf
-memory/**/*.pdf
+# ── Local-only build scaffolding (NOT in the public repo) ──────────
+# Roadmaps, planning, audits, agent/AI tooling and session state that
+# were helpful for BUILDING VolScope but are not part of its function.
+# Kept on local disk, untracked.
+CLAUDE.md
+WELCOME-AGENT.md
+ROADMAP.md
+VERIFICATION.md
+progress.md
+progress.json
+.claude/
+memory/
+docs/roadmap/
+docs/process/
+docs/FEATURE_BLOAT_AUDIT.md
+docs/GOING_PUBLIC_CHECKLIST.md
+docs/INTERACTIVITY_AUDIT.md
+docs/INTERACTIVITY_HARDENING_PLAN.md
+docs/LAUNCH_CHECKLIST.md
+docs/MASTER_PLAN_2026-05-19.md
+docs/MASTER_PLAN_PRODUCT_MATURITY.md
+docs/MASTER_PLAN_USER_FEEDBACK_2026-05-16.md
+docs/PRE_LAUNCH_REPORT.md
+docs/PUBLIC_LAUNCH_MASTER_PLAN.md
+docs/decisions.md
+docs/findings.md
+# Autonomous build-loop / self-renewal tooling (local only)
+scripts/autonomous/
+scripts/ops/loop_iteration.py
+scripts/backtest/run_audits.py
+scripts/verify/verify.py
+scripts/backtest/run_strategy_simulation.py
+scripts/backtest/run_validation.py
+scripts/audit/maturity_check.py
+scripts/verify/verify_leaps_pages.py

@@ -100,15 +100,22 @@ def _add_regime_bands(fig: go.Figure, history: pd.DataFrame, x) -> None:
     """
     if "vol_regime" not in history.columns or history["vol_regime"].isna().all():
         return
+    # Keys match the actual labels written by compute_vol_regime
+    # (VOL_CRUSHED / VOL_CHEAP / VOL_FAIR / VOL_RICH / VOL_EXTREME /
+    # VOL_CRISIS), compared lower-cased. Bare aliases kept as a safety net.
     cmap = {
         "vol_crushed": rgba(COLORS["accent"], 0.05),
+        "vol_cheap":   rgba(COLORS["accent"], 0.04),
+        "vol_fair":    rgba(COLORS["accent2"], 0.04),
+        "vol_rich":    rgba(COLORS["amber"], 0.05),
+        "vol_extreme": rgba(COLORS["amber"], 0.07),
+        "vol_crisis":  rgba(COLORS["warn"], 0.08),
         "crushed":     rgba(COLORS["accent"], 0.05),
         "cheap":       rgba(COLORS["accent"], 0.04),
         "fair":        rgba(COLORS["accent2"], 0.04),
         "rich":        rgba(COLORS["amber"], 0.05),
         "extreme":     rgba(COLORS["amber"], 0.07),
         "crisis":      rgba(COLORS["warn"], 0.08),
-        "vol_crisis":  rgba(COLORS["warn"], 0.08),
     }
     xv = list(x)
     regimes = list(history["vol_regime"])
