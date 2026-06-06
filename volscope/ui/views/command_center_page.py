@@ -133,13 +133,25 @@ def _prepare_command_data_cached(
 
 @st.cache_data(ttl=300, show_spinner=False)
 def _load_vol_pulse() -> list[dict]:
-    """Fetch all four vol-index snapshots.  Cached for 5 minutes."""
-    snaps: list[dict] = []
-    for name, sym in _VOL_PULSE_SOURCES:
-        if sym is None:
-            snaps.append(bvol_snapshot())
-        else:
-            snaps.append(vol_index_snapshot(name, sym))  # type: ignore[arg-type]
+    """Fetch all four vol-index snapshots.  Cached for 5 minutes.
+
+    The four snapshots are independent network calls (FRED / Deribit /
+    yfinance) — fetched concurrently so a single slow/timing-out source
+    can't gate the whole Command Center render (was ~3s serial).
+    """
+    import concurrent.futures
+
+    def _one(name, sym):
+        return bvol_snapshot() if sym is None else vol_index_snapshot(name, sym)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+        futs = [ex.submit(_one, name, sym) for name, sym in _VOL_PULSE_SOURCES]
+        snaps: list[dict] = []
+        for f in futs:
+            try:
+                snaps.append(f.result())
+            except Exception:                                  # noqa: BLE001
+                snaps.append({})
     return snaps
 
 

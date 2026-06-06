@@ -745,15 +745,15 @@ class VolScopeDB:
         return {t: sub.drop(columns=["rn"]) for t, sub in df.groupby("ticker")}
 
     def get_all_latest(self) -> pd.DataFrame:
+        # Single-scan latest-row-per-ticker via a window function (was a
+        # self-JOIN that scanned daily_vol twice). Uses the
+        # (ticker, date) composite index.
         return self.con.execute(
             """
-            SELECT d.*
-            FROM daily_vol d
-            INNER JOIN (
-                SELECT ticker, MAX(date) AS max_date
-                FROM daily_vol
-                GROUP BY ticker
-            ) m ON d.ticker = m.ticker AND d.date = m.max_date
+            SELECT * FROM daily_vol
+            QUALIFY ROW_NUMBER() OVER (
+                PARTITION BY ticker ORDER BY date DESC
+            ) = 1
             """
         ).fetchdf()
 
