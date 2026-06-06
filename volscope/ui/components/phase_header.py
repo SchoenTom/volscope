@@ -34,8 +34,8 @@ log = logging.getLogger(__name__)
 PHASES: list[dict] = [
     {"num": "①", "key": "SCAN",        "title": "Scan",        "default_page": "Discover"},
     {"num": "②", "key": "INVESTIGATE", "title": "Investigate", "default_page": "Scope"},
-    {"num": "③", "key": "STRUCTURE",   "title": "Structure",   "default_page": "Pre-Trade"},
-    {"num": "④", "key": "EXECUTE",     "title": "Execute",     "default_page": "Options Lab"},
+    {"num": "③", "key": "STRUCTURE",   "title": "Price",       "default_page": "Options Lab"},
+    {"num": "④", "key": "EXECUTE",     "title": "Manage",      "default_page": "Command"},
 ]
 
 # Page → phase mapping. Every sidebar entry in app._PAGE_REGISTRY
@@ -49,26 +49,17 @@ PAGE_TO_PHASE: dict[str, str] = {
     "Flow":             "SCAN",
     "Mega-Scan":        "SCAN",
     "Earnings Hub":     "SCAN",
-    "Earnings Trades":  "SCAN",
     "Scanner":          "SCAN",
-    "Signals":          "SCAN",
 
     # ② INVESTIGATE — understand the candidate
     "Scope":            "INVESTIGATE",
     "Vol Insights":     "INVESTIGATE",
     "Research":         "INVESTIGATE",
 
-    # ③ STRUCTURE — build the trade
-    "Pre-Trade":        "STRUCTURE",
-    "Builder":          "STRUCTURE",
+    # ③ PRICE — value the trade (no execution)
     "Options Lab":      "STRUCTURE",
 
-    # ④ EXECUTE — ship + monitor
-    "LEAPS Lab":        "EXECUTE",
-    "Dossier":          "EXECUTE",
-    "Backtest":         "EXECUTE",
-    "Bot":              "EXECUTE",
-    "Portfolio":        "EXECUTE",
+    # ④ MANAGE — watch + alert
     "Alerts":           "EXECUTE",
     "Command":          "EXECUTE",
     "Watchlist":        "EXECUTE",

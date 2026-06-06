@@ -37,8 +37,11 @@ log = logging.getLogger(__name__)
 # time. ticker_required=True means the entry is hidden when no
 # ticker is selected.
 
+# Every (source -> target) target MUST be a page in app._PAGE_REGISTRY
+# (enforced by tests/test_next_step.py). Trimmed in the IV-research
+# refocus: all trade-execution / bot / backtest destinations were removed.
 NEXT_STEPS: dict[str, list[tuple[str, str, bool]]] = {
-    # ① SCAN
+    # ① SCAN — find candidates
     "Discover": [
         ("Scope",        "Deep-dive {ticker}",                  True),
         ("Mega-Scan",    "Deeper multi-strategy scan",          False),
@@ -59,80 +62,43 @@ NEXT_STEPS: dict[str, list[tuple[str, str, bool]]] = {
     ],
     "Mega-Scan": [
         ("Scope",        "Deep-dive a hit",                     True),
-        ("LEAPS Lab",    "Convergence-rank deep-OTM names",     False),
+        ("Discover",     "Back to the main scan",               False),
     ],
     "Earnings Hub": [
         ("Vol Insights", "Event-premium decomposition",         True),
-        ("Pre-Trade",    "Build the earnings trade",            True),
-    ],
-    "Earnings Trades": [
-        ("Earnings Hub", "Back to event scanner",               False),
-        ("Portfolio",    "Position book",                       False),
+        ("Scope",        "Deep-dive the name",                  True),
     ],
     "Scanner": [
         ("Scope",        "Deep-dive a hit",                     True),
         ("Heatmap",      "Visualise the universe",              False),
     ],
-    "Signals": [
-        ("Bot",          "What the bot wants to do",            False),
-        ("Pre-Trade",    "Override / size manually",            True),
-    ],
 
-    # ② INVESTIGATE
+    # ② INVESTIGATE — understand the candidate
     "Scope": [
         ("Vol Insights", "Skew + OI for {ticker}",              True),
         ("Options Lab",  "Price a trade on {ticker}",           True),
-        ("Pre-Trade",    "Build a position spec",               True),
+        ("Heatmap",      "See it against the universe",         False),
     ],
     "Vol Insights": [
         ("Options Lab",  "Price the EM ladder",                 True),
-        ("Pre-Trade",    "Short-premium spread",                True),
         ("Scope",        "Back to single-ticker view",          True),
+        ("Earnings Hub", "Event-premium context",               False),
     ],
     "Research": [
         ("Scope",        "Re-test on another ticker",           True),
-        ("Backtest",     "Walk-forward this rule",              False),
+        ("Discover",     "Find new candidates",                 False),
     ],
 
-    # ③ STRUCTURE
-    "Pre-Trade": [
-        ("Options Lab",  "Refine pricing",                      True),
-        ("Portfolio",    "Save as paper trade",                 True),
-        ("Alerts",       "Notify at break-even",                True),
-    ],
-    "Builder": [
-        ("Options Lab",  "Compute payoff + Greeks",             True),
-        ("Pre-Trade",    "Stage as paper position",             True),
-    ],
+    # ③ STRUCTURE — price the trade (no execution)
     "Options Lab": [
-        ("Pre-Trade",    "Stage as paper position",             True),
-        ("LEAPS Lab",    "Deep-OTM convexity scanner",          False),
-        ("Portfolio",    "Save as paper trade",                 True),
+        ("Scope",        "Back to the IV verdict",              True),
+        ("Vol Insights", "Skew + expected move",                True),
     ],
 
-    # ④ EXECUTE
-    "LEAPS Lab": [
-        ("Dossier",      "Open the trade dossier",              True),
-        ("Pre-Trade",    "Stage as paper position",             True),
-    ],
-    "Dossier": [
-        ("LEAPS Lab",    "Back to convergence scanner",         False),
-        ("Backtest",     "How does this rule perform?",         False),
-    ],
-    "Backtest": [
-        ("Research",     "Statistical gauntlet",                False),
-        ("Bot",          "Promote to live signal",              False),
-    ],
-    "Bot": [
-        ("Command",      "Operator override panel",             False),
-        ("Portfolio",    "What it currently holds",             False),
-    ],
-    "Portfolio": [
-        ("Scope",        "Per-position deep dive",              True),
-        ("Backtest",     "Re-evaluate strategy",                False),
-    ],
+    # ④ MANAGE
     "Alerts": [
         ("Command",      "Alerts management",                   False),
+        ("Scope",        "Deep-dive a ticker",                  True),
     ],
     "Command": [
         ("Alerts",       "Alert rules",                         False),
