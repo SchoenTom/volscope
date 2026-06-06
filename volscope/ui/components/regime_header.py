@@ -35,14 +35,17 @@ from volscope.ui.styles.theme import COLORS
 
 _MONO = "JetBrains Mono, SF Mono, Menlo, monospace"
 
+# (label color, plain-English read). Was raw options jargon ("LONG VEGA ·
+# iron condors / LEAPS") that a non-quant can't parse — now says what the
+# regime means for the trader in plain words.
 _REGIME_CONFIG = {
-    "VOL_CRUSHED": (COLORS["accent"],  "LONG VEGA · debit spreads / LEAPS"),
-    "VOL_CHEAP":   ("#10b981",          "BIAS LONG VEGA"),
-    "VOL_FAIR":    (COLORS["accent2"], "NEUTRAL · scalp"),
-    "VOL_RICH":    (COLORS["amber"],    "BIAS SHORT VEGA"),
-    "VOL_EXTREME": (COLORS["warn"],     "SHORT VEGA · iron condors / strangles"),
-    "VOL_CRISIS":  ("#dc2626",          "DEFENSIVE / CASH"),
-    None:          (COLORS["muted"],    "no regime data"),
+    "VOL_CRUSHED": (COLORS["accent"],  "options very cheap — favours buying premium"),
+    "VOL_CHEAP":   ("#10b981",          "options cheap — leans toward buying premium"),
+    "VOL_FAIR":    (COLORS["accent2"], "vol around normal — no edge either way"),
+    "VOL_RICH":    (COLORS["amber"],    "options rich — leans toward selling premium"),
+    "VOL_EXTREME": (COLORS["warn"],     "options very expensive — favours selling premium"),
+    "VOL_CRISIS":  ("#dc2626",          "crisis — risk-off, stay defensive"),
+    None:          (COLORS["muted"],    "no regime data yet"),
 }
 
 
@@ -118,7 +121,11 @@ def render_regime_header(db: VolScopeDB) -> None:
     except Exception:                                          # noqa: BLE001
         pass
 
-    regime_display = regime.replace("_", " ") if regime else "—"
+    # "VOL_CRUSHED" -> "Crushed" — the chip is a clean word; the signal
+    # text beside it carries the plain-English meaning.
+    regime_display = (
+        regime.replace("VOL_", "").replace("_", " ").title() if regime else "—"
+    )
 
     render_html(
         st_target := __import__("streamlit"),
@@ -127,7 +134,8 @@ def render_regime_header(db: VolScopeDB) -> None:
         f'background:{COLORS["card"]};border:1px solid {COLORS["border"]};'
         f'border-left:3px solid {color};border-radius:6px;'
         f'font-family:\'DM Sans\',sans-serif;font-size:12px;'
-        f'min-height:32px;">'
+        f'min-height:32px;" title="Market volatility regime — how expensive '
+        f'options are across the universe right now.">'
 
         # Regime chip
         f'<span style="background:{color}1a;color:{color};'
@@ -144,7 +152,9 @@ def render_regime_header(db: VolScopeDB) -> None:
         f'font-variant-numeric:tabular-nums;">'
         f'VIX <span style="color:{COLORS["text"]};font-weight:600;">{vix_str}</span>'
         f'<span style="margin:0 8px;color:{COLORS["border"]};">·</span>'
-        f'Univ IVR <span style="color:{COLORS["text"]};font-weight:600;">{ivr_str}</span>'
+        f'<span title="Median IV Rank across the universe — 0 = cheapest, '
+        f'100 = richest options have been over the past year.">Univ IV Rank '
+        f'<span style="color:{COLORS["text"]};font-weight:600;">{ivr_str}</span></span>'
         f'<span style="margin:0 8px;color:{COLORS["border"]};">·</span>'
         f'<span style="color:{COLORS["muted"]};">last scrape {snap_str}</span>'
         f'</span>'

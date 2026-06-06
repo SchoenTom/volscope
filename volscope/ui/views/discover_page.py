@@ -133,13 +133,13 @@ def _card(
 <span class="volscope-card-ticker">◈ {escape(ticker)}</span>{badge}{quality_html}
 {company_html}
 </div>
-<span class="volscope-pill volscope-pill-{perc_cls}" title="IV percentile vs 52w">P {perc:.0f}</span>
+<span class="volscope-pill volscope-pill-{perc_cls}" title="IV Percentile vs its own 52-week range (0 = cheapest, 100 = richest)">IVP {perc:.0f}</span>
 </div>
 <div class="volscope-card-context">{escape(context)}</div>
 <div class="volscope-card-stats">
 IV <strong>{iv:.1f}%</strong>
 &nbsp;·&nbsp;
-<span class="volscope-pill volscope-pill-{spread_cls}" title="IV − HV spread" style="padding:1px 8px;">S {spread:+.1f}</span>
+<span class="volscope-pill volscope-pill-{spread_cls}" title="VRP = IV minus realized vol (volatility risk premium). Positive = options pricing more move than the stock delivered." style="padding:1px 8px;">VRP {spread:+.1f}</span>
 </div>
 </div>
 """
@@ -738,7 +738,9 @@ def _render_best_setup_hero(st, latest: pd.DataFrame, db) -> None:
         f'<div style="text-align:right;">'
         f'<div style="color:{accent};font-size:24px;font-weight:700;line-height:1;">'
         f'{top.score:.0f}</div>'
-        f'<div style="color:{COLORS["muted"]};font-size:9px;letter-spacing:1px;">'
+        f'<div style="color:{COLORS["muted"]};font-size:9px;letter-spacing:1px;" '
+        f'title="Edge score 0–100 — a composite of IV cheapness, options '
+        f'volume/liquidity and the model signal. Higher = more opportunity.">'
         f'EDGE / 100</div>'
         f'</div>'
         f'</div>'
