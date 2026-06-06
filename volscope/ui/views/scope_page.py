@@ -72,7 +72,7 @@ def _render_header(st, db, ticker: str, latest: dict, history: pd.DataFrame) -> 
     )
 
 
-def _render_skew_metric(st, latest: dict) -> None:
+def _render_skew_metric(st, latest: dict, history=None) -> None:
     """Render the 25-delta skew metric if available."""
     skew = latest.get("iv_skew_25d")
     if skew is None:
@@ -95,6 +95,22 @@ def _render_skew_metric(st, latest: dict) -> None:
     else:
         label, color = "neutral skew", COLORS["muted"]
 
+    # Percentile rank of today's skew within this ticker's own skew history —
+    # the absolute vol-point number is hard to read without its context.
+    pct_html = ""
+    if history is not None and "iv_skew_25d" in getattr(history, "columns", []):
+        try:
+            from volscope.analytics.vol_cones import _percentile_of
+            perc = _percentile_of(skew_f, history["iv_skew_25d"])
+            if perc is not None:
+                _ord = int(round(perc))
+                pct_html = (
+                    f'<span style="color:{COLORS["muted"]};margin-left:8px;">'
+                    f'· {_ord}th pct of its own history</span>'
+                )
+        except Exception:
+            pct_html = ""
+
     sign = "+" if skew_f > 0 else ""
     # Demoted from 12 px hero to a 10 px secondary footnote — the 52-week
     # verdict above carries the headline.
@@ -105,7 +121,7 @@ def _render_skew_metric(st, latest: dict) -> None:
         f'25Δ skew · '
         f'<span style="color:{color};font-weight:600;">{sign}{skew_f:.1f}pt</span>'
         f'<span style="color:{COLORS["muted"]};margin-left:6px;">{label}</span>'
-        f'</div>',
+        f'{pct_html}</div>',
     )
 
 
@@ -474,7 +490,7 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
     if not _is_vol_idx:
         render_iv_verdict_hero(history)
     render_kpi_row(latest)
-    _render_skew_metric(st, latest)
+    _render_skew_metric(st, latest, history)
 
     # Legacy-flat-spread detection + banner is gone — the auto-migration
     # in VolScopeDB.__init__ silently recomputes any legacy rows on every
