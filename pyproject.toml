@@ -33,6 +33,7 @@ dependencies = [
     "reportlab>=4.0.0,<5.0.0",
 ]
 
+[project.optional-dependencies]
 # Optional volatility-regime modelling deps (garch.py / vol_regime.py /
 # regime.py). The trading-bot extras (ib_async, apscheduler, sqlalchemy,
 # transitions) were removed in the IV-research refocus.
@@ -54,8 +55,9 @@ dev = [
 ]
 
 [project.urls]
-"Roadmap" = "../../ROADMAP.md"
-"Memory canon" = "../../memory/INDEX.md"
+Homepage = "https://github.com/SchoenTom/volscope"
+Repository = "https://github.com/SchoenTom/volscope"
+Issues = "https://github.com/SchoenTom/volscope/issues"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

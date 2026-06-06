@@ -46,11 +46,15 @@ repair-iv:
 #   - make seed-broad       → ~280 tickers, ~10 min
 #   - make seed-full        → ~842 tickers, ~30-45 min
 quickstart:
-	@bash scripts/ops/keep_warm.sh
+	@echo "[1/4] installing dependencies …"
+	pip install -q --upgrade pip
 	pip install -q -r requirements.txt
-	pip install -q -e .                                    # makes volscope importable from anywhere
+	pip install -q -e .                                    # makes volscope importable from scripts/
+	@test -f .env || (cp .env.example .env && echo "[2/4] created .env (read-only research mode — API keys optional)")
 	@python scripts/ops/release_db_lock.py --force
+	@echo "[3/4] seeding a starter universe (SPY + QQQ if no watchlist) …"
 	$(MAKE) seed-watchlist
+	@echo "[4/4] launching VolScope at http://localhost:8501 …"
 	$(MAKE) run
 
 # Legacy: full 842-ticker seed. Now an explicit opt-in.

@@ -22,68 +22,61 @@
 
 ## Quick Start
 
-Works on macOS / Linux with Python 3.11+.
+macOS / Linux, Python 3.11+. Three lines — the last one does everything:
 
 ```bash
-git clone https://github.com/SchoenTom/volscope.git ~/dev/VolScope
-cd ~/dev/VolScope
+git clone https://github.com/SchoenTom/volscope.git && cd volscope
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt && pip install -e .
-cp .env.example .env             # then open .env in your editor — keys are optional for read-only research mode
-make quickstart                  # seeds your watchlist (or SPY+QQQ) + launches UI
+make quickstart
 ```
 
-`make quickstart` boots in ~2 min — it seeds your existing
-watchlist tickers if you have any, or a 2-ticker baseline of
-SPY + QQQ on a fresh DB. You grow the universe interactively from
-the sidebar add-ticker form or by pasting a TradingView watchlist
-export into **Watchlist → 📥 Import**.
+`make quickstart` is **self-contained**: it installs every dependency,
+creates a read-only `.env` (API keys are optional), seeds a 2-ticker
+starter universe (SPY + QQQ, or your existing watchlist), and opens the
+app at <http://localhost:8501>. Grow the universe from the sidebar's
+add-ticker form or **Watchlist → 📥 Import** (paste a TradingView export).
 
-For larger initial seeds:
+Bigger initial seeds:
 
 | Target | Tickers | Time |
 |---|---|---|
-| `make quickstart` (default) | watchlist tickers, or 2 | ~2 min |
+| `make quickstart` (default) | SPY + QQQ, or your watchlist | ~2 min |
 | `make quickstart-bot` | ~75 | ~4 min |
 | `make seed-broad` | ~280 | ~10 min |
 | `make quickstart-full` | ~842 | ~30-45 min |
 
-Then open <http://localhost:8501>.
+Daily afterwards: `make start` (refresh today's data + launch) or just
+`make run` (launch on existing data).
 
 ## What the UI gives you
 
-- **Scope** — single-ticker deep-dive: IV / HV / skew / 52-w range,
-  full term structure, regime status.
-- **Discover** — universe-wide ranker over composite edge scores.
-- **Heatmap** — sector × IV-percentile treemap.
-- **Rotation** — sector rotation signals.
-- **Flow** — capital-flow proxy (OI growth, Vol/OI, PCR shift,
-  IV-HV divergence, volume clustering).
-- **Vol Insights** — skew-adjusted Expected Move, Front/Back IV
+**RESEARCH**
+
+- **Discover** — universe-wide opportunity ranker: which names have the
+  cheapest / richest IV right now.
+- **Scope** — the hero single-ticker view: a one-line plain-English
+  verdict, IV vs HV, full term structure (with −7d/−30d ghost curves),
+  a volatility cone, 25Δ skew, 52-week IV range, and regime-shaded history.
+- **Heatmap** — sector × IV-percentile treemap of the whole universe.
+- **Earnings Hub** — weekly grid of implied moves, crowdedness, and
+  IV-crush calibration around earnings.
+- **Vol Insights** — skew-adjusted expected move, front/back IV
   decomposition, OI heatmap with max-pain.
-- **Earnings Hub** — weekly grid with implied moves, crowdedness,
-  IV-crush calibration.
-- **Watchlist** — TradingView-style groupings, per-list alarm
-  configuration (Telegram + macOS desktop notifications), live
-  spot + 1-day %Δ per ticker.
-- **Options Lab** — payoff surface, Greeks surface, scenario
-  matrix, time decay, probability cone. BSM-priced, IV-slider
-  driven.
-- **LEAPS Lab** — convergence scanner (vol mispricing × neglect ×
-  reversal) producing deep-OTM LEAPS dossiers.
-- **Backtest** — walk-forward strategy simulation with hit-rate,
-  Sharpe, max-drawdown per template.
-- **Pre-Trade / Builder** — decision-quality checklist + 11
-  strategy templates.
-- **Portfolio** — paper-trading book with equity curve and
-  position-level Greeks.
+- **Scanner** — filter the universe by IV rank / percentile / spread.
 - **Alerts** — watchlist-scoped or universe-wide threshold trips
   (anomaly, flow, regime, earnings).
-- **Help** — glossary + module index.
 
-The analytics layer is shared. Same BSM solver and IV/HV
-estimators power Scope, Options Lab, the paper engine, and the
-backtest.
+**MANAGE**
+
+- **Watchlist** — TradingView-style groupings, live spot + 1-day %Δ,
+  per-list alarm configuration.
+- **Command** — a market-overview dashboard plus a manual trade journal
+  ("was vol cheap when I entered?").
+- **Options Lab** — BSM-priced payoff + Greeks surfaces, scenario matrix,
+  time decay, probability cone, IV-slider driven.
+
+Every number comes from VolScope's **own** Black-Scholes-Merton + IV
+solver and Yang-Zhang HV — never Yahoo's implied-volatility column.
 
 ## Architecture
 
