@@ -73,6 +73,31 @@ def _holders(db_path: str) -> list[tuple[int, str]]:
     return [(p, c) for p, c in deduped if p != os.getpid()]
 
 
+def _full_cmdline(pid: int) -> str:
+    """Best-effort full command line for a PID (for UI detection)."""
+    try:
+        proc = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="],
+            capture_output=True, text=True, timeout=3,
+        )
+        return proc.stdout.strip()
+    except Exception:
+        return ""
+
+
+def _is_streamlit_ui(pid: int) -> bool:
+    """True if PID is the running VolScope Streamlit UI (must NOT be killed).
+
+    Killing the live UI is the single worst failure mode: an in-app
+    'refresh data' button (or `make scrape`) would terminate the very
+    server the user is looking at — Streamlit prints 'Stopping...' and the
+    browser shows a connection error. The DB lock-releaser only ever needs
+    to clear STALE writers, never the app itself.
+    """
+    cmd = _full_cmdline(pid).lower()
+    return "streamlit" in cmd or "ui/app.py" in cmd or "ui.app" in cmd
+
+
 def _kill(pid: int, escalate_seconds: float = 2.0) -> bool:
     """SIGTERM, wait, escalate to SIGKILL if still alive."""
     try:
@@ -112,11 +137,19 @@ def main() -> int:
         return 0
 
     holders = _holders(db_path)
+    # NEVER kill the live Streamlit UI — that would terminate the server the
+    # user is looking at (the 'Stopping...' / connection-error crash). The
+    # lock-releaser only clears stale writers.
+    ui_holders = [(p, c) for p, c in holders if _is_streamlit_ui(p)]
+    holders = [(p, c) for p, c in holders if not _is_streamlit_ui(p)]
+    if ui_holders:
+        print(f"[lock] leaving the running VolScope UI untouched "
+              f"(PID {', '.join(str(p) for p, _ in ui_holders)}).")
     if not holders:
-        print(f"[lock] DB is free: {db_path}")
+        print(f"[lock] no stale writer to clear: {db_path}")
         return 0
 
-    print(f"[lock] DB locked by {len(holders)} process(es):")
+    print(f"[lock] DB locked by {len(holders)} stale process(es):")
     for pid, cmd in holders:
         print(f"       PID {pid}  {cmd}")
 

@@ -14,11 +14,32 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![Status](https://img.shields.io/badge/status-IV%20research-brightgreen)
 
-> [!IMPORTANT]
-> **Research / educational software.** VolScope computes and visualises
-> volatility — it does not place orders, connect to a broker, or give
-> investment advice, and its outputs are not a recommendation. See the
-> disclaimer in [`LICENSE`](LICENSE).
+## Why VolScope
+
+A retail options trader's single hardest question — *is this option cheap
+or expensive right now?* — normally takes a Bloomberg terminal or a pile of
+spreadsheets. VolScope answers it in one glance, for any ticker, on your own
+machine. What makes it strong:
+
+- **🧮 Its own math, not Yahoo's.** Every implied vol is recomputed from the
+  bid/ask mid with VolScope's Black-Scholes-Merton Newton-Raphson solver —
+  never Yahoo's opaque, rate-limited IV column. Historical vol is
+  Yang-Zhang (drift-independent, gap-aware). The numbers are yours and they
+  are honest.
+- **📊 The views a vol desk actually reads.** IV rank & percentile (with a
+  spike-contamination guard), a **volatility cone** across horizons, a
+  **term structure that time-travels** (−7d/−30d ghost curves show shift vs
+  twist vs flatten), 25Δ skew with its own percentile rank, regime-shaded
+  IV history, and expected-move cards — IV-implied vs HV-implied.
+- **🗣️ It speaks plain English.** A one-line verdict sits above the fold on
+  every ticker: *"AAPL IV is in the 12th percentile — historically cheap;
+  earnings in 9 days."* No jargon decoding required.
+- **⚡ Fast and self-hosted.** Embedded DuckDB + Streamlit, sub-second
+  navigation after the first load. No account, no subscription, no data
+  leaving your machine.
+- **🔬 Rigorous by construction.** Put-call parity holds to 1e-6, every
+  estimator is property-tested, and analytics never crash the UI — bad
+  input returns nothing, not an exception.
 
 ## Quick Start
 
@@ -53,10 +74,11 @@ Daily afterwards: `make start` (refresh today's data + launch) or just
 **RESEARCH**
 
 - **Discover** — universe-wide opportunity ranker: which names have the
-  cheapest / richest IV right now.
-- **Scope** — the hero single-ticker view: a one-line plain-English
-  verdict, IV vs HV, full term structure (with −7d/−30d ghost curves),
-  a volatility cone, 25Δ skew, 52-week IV range, and regime-shaded history.
+  cheapest / richest IV right now, plus today's biggest movers and crowded
+  extremes.
+- **Scope** — the hero single-ticker view: a one-line plain-English verdict,
+  IV vs HV, full term structure (with −7d/−30d ghost curves), a volatility
+  cone, 25Δ skew, 52-week IV range, and regime-shaded history.
 - **Heatmap** — sector × IV-percentile treemap of the whole universe.
 - **Earnings Hub** — weekly grid of implied moves, crowdedness, and
   IV-crush calibration around earnings.
@@ -75,75 +97,34 @@ Daily afterwards: `make start` (refresh today's data + launch) or just
 - **Options Lab** — BSM-priced payoff + Greeks surfaces, scenario matrix,
   time decay, probability cone, IV-slider driven.
 
-Every number comes from VolScope's **own** Black-Scholes-Merton + IV
-solver and Yang-Zhang HV — never Yahoo's implied-volatility column.
+## How it works
 
-## Architecture
-
-```mermaid
-flowchart LR
-    UI[Streamlit UI] --> SIG[Signal engine]
-    UI --> ANA[Analytics: BSM, HV, IV rank, regime]
-    UI --> DATA[DuckDB]
-    SIG --> ANA
-    SIG --> DATA
-    PE[Paper engine] --> SIG
-    PE --> DATA
-    SCR[Yahoo scraper] -.-> YF[(yfinance)]
-    SCR --> DATA
+```
+yfinance / FRED ──► daily scrape ──► DuckDB ──► analytics ──► Streamlit UI
+(prices, chains,    (own BSM IV       (embedded,   (BSM, Yang-Zhang,   (10 focused
+ risk-free rate)     per strike)       local)       cones, regime)      research views)
 ```
 
-Embedded DuckDB; single-operator. Live broker wiring (IBKR) is
-explicitly out of scope for the public release — the codebase
-contains scaffolds but does not place orders.
+A single daily scrape recomputes IV from option-chain mids with VolScope's
+own solver and writes a tidy snapshot to an embedded DuckDB. Every page
+reads from that DB and the shared analytics layer — one BSM solver, one HV
+estimator, one source of truth, all running locally.
 
-## Status
+## Built on standard literature
 
-| Phase | State |
-|---|---|
-| 0 — Stabilise | ✅ DONE |
-| 1 — Signal engine | ✅ DONE |
-| 2 — Paper engine | ✅ Shipped (real Yahoo chains in / paper book out) |
-| 3 — Backtest validation | 🔧 in progress |
-| 4+ — Live ramp | ⏳ Out of scope for public release |
+VolScope's analytics rest on published, citable methods — and ship with
+golden-master tests that pin them to the textbook values:
 
-See [`memory/roadmaps/`](memory/roadmaps/) for the longer roadmap
-documents.
+- Hull (2018), *Options, Futures, and Other Derivatives* — Black-Scholes
+  worked examples (validation goldens).
+- Yang & Zhang (2000) — drift-independent historical-vol estimator.
+- Bali et al. (2008) — volatility-risk-premium magnitudes.
+- tastytrade Market Measures — IV-rank / percentile decision thresholds.
 
-## What this is NOT
+## Contributing & License
 
-- **Not a live trading bot.** No live broker integration. The
-  paper engine writes to local DuckDB only.
-- **Not financial advice.** Every signal is research output.
-- **Not multi-tenant.** Single-user, single-process DuckDB.
+PRs welcome — Conventional Commits, pre-commit hooks, tests green
+(`make pre-merge-check`). See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-## Citations
-
-VolScope's analytics rest on standard literature:
-
-- Hull (2018), *Options, Futures, and Other Derivatives*, 10th ed. —
-  Black-Scholes worked examples (validation goldens).
-- Yang & Zhang (2000) — drift-independent HV estimator.
-- Bali et al. (2008) — Volatility Risk Premium magnitudes.
-- López de Prado (2018), *Advances in Financial Machine Learning* —
-  CPCV, HMM regime detection.
-- tastytrade Market Measures — 21-DTE mechanical close, 50% PT
-  benchmarks.
-
-Each load-bearing decision lives in [`docs/adr/`](docs/adr/).
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Conventional Commits, PR
-only (no direct main pushes), pre-commit hooks required.
-
-## License
-
-MIT — see [`LICENSE`](LICENSE). Note the research-software /
-no-investment-advice clause at the bottom of the LICENSE file.
-
-## For agents
-
-Reading this in a Claude Code session? Start with
-[`WELCOME-AGENT.md`](WELCOME-AGENT.md), then
-[`CLAUDE.md`](CLAUDE.md), then [`memory/INDEX.md`](memory/INDEX.md).
+MIT — see [`LICENSE`](LICENSE). VolScope is research / educational software:
+it computes and visualises volatility and is not investment advice.
