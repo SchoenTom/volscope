@@ -9,7 +9,7 @@ from typing import Optional
 import duckdb
 import pandas as pd
 
-from volscope.config import DATA_DIR, DB_PATH
+from volscope.config import DB_PATH
 
 
 # Process-wide lock that serialises every execute() on the shared

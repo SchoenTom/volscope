@@ -9,15 +9,15 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from volscope.analytics.expected_move_skew import (
-    SkewAdjustedExpectedMove, compute_skew_adjusted_em,
+    compute_skew_adjusted_em,
 )
 from volscope.analytics.front_back_iv import (
-    FrontBackDecomposition, decompose_front_back_iv,
+    decompose_front_back_iv,
 )
-from volscope.analytics.oi_heatmap import OIHeatmapResult, compute_oi_heatmap
+from volscope.analytics.oi_heatmap import compute_oi_heatmap
 from volscope.ui.components.glossary import glossary
 from volscope.ui.components.html_utils import render_html
-from volscope.ui.styles.theme import COLORS, rgba
+from volscope.ui.styles.theme import COLORS
 
 
 def _esc_attr(s: str) -> str:
@@ -29,10 +29,28 @@ def render_skew_em_block(
     st, ticker: str, chain_df: pd.DataFrame, *, spot: float, dte_days: int,
 ) -> None:
     """Asymmetric Expected Move card with skew interpretation."""
-    em = compute_skew_adjusted_em(chain_df, spot=spot, dte_days=dte_days)
-    if em is None:
+    def _no_data(reason: str) -> None:
+        # Surface WHY the card is empty instead of returning silently —
+        # the live option chain is the usual culprit (Yahoo rate-limit,
+        # weekend, or a chain with no per-strike IV / delta).
+        render_html(
+            st,
+            f'<div style="background:{COLORS["surface"]};border:1px solid '
+            f'{COLORS["border"]};border-left:3px solid {COLORS["amber"]};'
+            f'border-radius:6px;padding:12px 16px;margin:10px 0;'
+            f'font-family:JetBrains Mono,monospace;font-size:11px;'
+            f'color:{COLORS["muted"]};">Skew-adjusted expected move '
+            f'unavailable for {ticker} — {reason}. The live option chain '
+            f'(yfinance) may be rate-limited or thin right now; try again '
+            f'shortly.</div>',
+        )
+
+    if chain_df is None or chain_df.empty:
+        _no_data("no live option-chain rows returned")
         return
-    if em.upside_pct is None and em.downside_pct is None:
+    em = compute_skew_adjusted_em(chain_df, spot=spot, dte_days=dte_days)
+    if em is None or (em.upside_pct is None and em.downside_pct is None):
+        _no_data("the chain lacks usable per-strike IV")
         return
 
     skew_color = COLORS["warn"] if (em.skew_25d or 0) > 5 else COLORS["accent"]

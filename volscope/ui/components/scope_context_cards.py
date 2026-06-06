@@ -23,8 +23,7 @@ cruft).
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
-from typing import Optional
+from datetime import date, datetime
 
 from volscope.ui.components.html_utils import render_html
 from volscope.ui.styles.theme import COLORS

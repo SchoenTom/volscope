@@ -12,7 +12,6 @@ from volscope.ui.components.chart_builders import (
     create_backtest_hit_rate_chart,
     create_intraday_price_chart,
     create_iv_hv_chart,
-    create_iv_range_bar,
     create_percentile_chart,
     create_skew_chart,
     create_spread_chart,
