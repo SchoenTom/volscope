@@ -115,12 +115,36 @@ def _compute_dual_score(row: pd.Series, want: str) -> float:
     return (100.0 - perc) + spread_penalty
 
 
+def _drop_stale(latest_data: pd.DataFrame, max_age_days: int = 7) -> pd.DataFrame:
+    """Drop rows whose snapshot lags far behind the freshest one.
+
+    A delisted/failed ticker (e.g. BBBY) stops updating, so its latest row
+    sits weeks behind the live universe — without this guard a zombie can
+    surface as a "cheapest vol" trade signal and undermine trust. Returns the
+    frame unchanged when there's no usable ``date`` column (bad input → no
+    raise, per the analytics contract).
+    """
+    if "date" not in latest_data.columns or latest_data.empty:
+        return latest_data
+    try:
+        dates = pd.to_datetime(latest_data["date"], errors="coerce")
+        fresh = dates.max()
+        if pd.isna(fresh):
+            return latest_data
+        return latest_data[dates >= (fresh - pd.Timedelta(days=max_age_days))]
+    except Exception:                                              # noqa: BLE001
+        return latest_data
+
+
 def find_cheapest_vol(latest_data: pd.DataFrame, n: int = 5) -> pd.DataFrame:
     """
     Top N tickers that are cheap by BOTH signals: low IV percentile and
     non-positive IV-HV spread. Cards that are only percentile-cheap but still
     have IV>HV rank below.
     """
+    if latest_data.empty:
+        return latest_data
+    latest_data = _drop_stale(latest_data)
     if latest_data.empty:
         return latest_data
     scored = latest_data.copy()
@@ -139,6 +163,9 @@ def find_richest_premium(latest_data: pd.DataFrame, n: int = 5) -> pd.DataFrame:
     Top N tickers rich by BOTH signals: high IV percentile and positive
     IV-HV spread.
     """
+    if latest_data.empty:
+        return latest_data
+    latest_data = _drop_stale(latest_data)
     if latest_data.empty:
         return latest_data
     scored = latest_data.copy()
