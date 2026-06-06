@@ -149,7 +149,9 @@ def _load_vol_pulse() -> list[dict]:
         snaps: list[dict] = []
         for f in futs:
             try:
-                snaps.append(f.result())
+                # Hard 15s cap per source — without it a stalled
+                # yfinance/Deribit socket would hang the whole Command page.
+                snaps.append(f.result(timeout=15))
             except Exception:                                  # noqa: BLE001
                 snaps.append({})
     return snaps

@@ -94,7 +94,9 @@ def _refresh_curve() -> dict[int, float]:
         if curve and not (_cache.get("date") == today and _cache.get("curve")):
             _cache["date"] = today
             _cache["curve"] = curve
-    return _cache["curve"] if curve else {}  # type: ignore
+    # Return the SHARED cache if it's populated (another thread may have
+    # filled it), not this thread's possibly-empty local `curve`.
+    return _cache.get("curve") or {}  # type: ignore
 
 
 def get_term_structure() -> dict[int, float]:

@@ -931,7 +931,7 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     # function object every rerun so the TTL never applied and the
     # 812-ticker scan_alerts ran on EVERY page render — a ~4.5 s tax).
     try:
-        _alert_n = _cached_alert_count(str(getattr(db, "path", "default")), db)
+        _alert_n = _cached_alert_count(str(getattr(db, "db_path", "default")), db)
     except Exception as exc:                                    # noqa: BLE001
         import logging as _lg
         _lg.getLogger("volscope.ui.sidebar").warning(
