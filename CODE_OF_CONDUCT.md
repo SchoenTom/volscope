@@ -1,5 +1,14 @@
 # Contributor Code of Conduct
 
+## What this project is about
+
+VolScope is **research software** — it computes and visualises volatility,
+and that is the whole remit. Contributions that add analytics, fix bugs, or
+improve documentation are welcome. Threads asking the maintainers "what
+should I do here", "should I buy DAX puts", or for any trade recommendation
+belong in your broker's chat, not in this project's issue tracker — VolScope
+gives you the numbers, never the advice.
+
 ## Our pledge
 
 We pledge to make participation in the VolScope project a welcoming,
@@ -23,15 +32,6 @@ personal appearance, race, religion, or sexual identity.
 * Public or private harassment
 * Publishing others' private information without explicit permission
 * Other conduct which could reasonably be considered inappropriate
-
-## Trading-content boundary
-
-VolScope is research software. Discussions about specific trades,
-positions, or "what should I do here" trade-recommendation questions
-belong in your broker's chat, not in this project's issue tracker. PRs
-adding analytics, fixing bugs, or improving documentation are welcome;
-threads asking the maintainers to tell you whether to buy DAX puts
-are not.
 
 ## Enforcement
 
