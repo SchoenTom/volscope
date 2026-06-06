@@ -415,20 +415,30 @@ def scan_alerts(
                 alerts.append(a)
 
     # Rules that need short history per ticker.
+    # Bulk-fetch ALL tickers' recent history + earnings in two queries
+    # instead of two per-ticker queries inside the loop (the old N+1 path
+    # was 812 get_ticker_history + 812 get_upcoming_earnings = the ~4.5s
+    # tax this scan added to every page render via the sidebar badge).
+    all_tickers = [
+        str(row.get("ticker")) for _, row in latest.iterrows() if row.get("ticker")
+    ]
+    try:
+        bulk_hist = db.get_recent_for_tickers(all_tickers, lookback_days=history_lookback)
+    except Exception:
+        bulk_hist = {}
+    er_map = _bulk_days_to_earnings(db, all_tickers)
+
     for _, row in latest.iterrows():
         ticker = str(row.get("ticker", ""))
         if not ticker:
             continue
-        try:
-            hist = db.get_ticker_history(ticker).tail(history_lookback)
-        except Exception:
-            hist = None
+        hist = bulk_hist.get(ticker) if isinstance(bulk_hist, dict) else None
         for fn in (rule_volume_spike, rule_iv_expansion, rule_iv_crush, rule_spread_signflip):
             a = fn(row, hist)
             if a is not None:
                 alerts.append(a)
 
-        days_to_er = _days_to_next_earnings(db, ticker)
+        days_to_er = er_map.get(ticker)
         for fn in (rule_earnings_imminent, rule_earnings_just_passed):
             a = fn(ticker, days_to_er)
             if a is not None:
@@ -436,6 +446,37 @@ def scan_alerts(
 
     alerts.sort(key=lambda a: (-a.severity, a.ticker))
     return alerts
+
+
+def _bulk_days_to_earnings(db, tickers: "list[str]") -> "dict[str, int]":
+    """One query → {ticker: days_to_next_earnings} (negative = most recent
+    past print). Replaces 800+ per-ticker get_upcoming_earnings calls."""
+    if not tickers:
+        return {}
+    try:
+        df = db.con.execute(
+            "SELECT ticker, earnings_date FROM earnings WHERE ticker = ANY(?)",
+            [list(tickers)],
+        ).fetchdf()
+    except Exception:
+        return {}
+    if df is None or df.empty:
+        return {}
+    today = pd.Timestamp.today().normalize()
+    df = df.copy()
+    df["earnings_date"] = pd.to_datetime(df["earnings_date"], errors="coerce")
+    df = df.dropna(subset=["earnings_date"])
+    out: dict[str, int] = {}
+    for tk, g in df.groupby("ticker"):
+        g = g.sort_values("earnings_date")
+        future = g[g["earnings_date"] >= today]
+        if not future.empty:
+            out[str(tk)] = int((future["earnings_date"].iloc[0] - today).days)
+        else:
+            past = g[g["earnings_date"] < today]
+            if not past.empty:
+                out[str(tk)] = int((past["earnings_date"].iloc[-1] - today).days)
+    return out
 
 
 def count_by_category(alerts: Iterable[Alert]) -> dict[str, int]:
