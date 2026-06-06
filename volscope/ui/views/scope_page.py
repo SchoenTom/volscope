@@ -17,6 +17,7 @@ from volscope.ui.components.chart_builders import (
     create_skew_chart,
     create_spread_chart,
     create_term_structure_chart,
+    create_vol_cone_chart,
 )
 from volscope.ui.components.error_boundary import error_boundary
 from volscope.ui.components.html_utils import page_banner_html, render_html
@@ -363,6 +364,49 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
         days_to_earnings=days_to_er,
     )
 
+    # ── Daily auto-narrative banner ────────────────────────────────────
+    # One plain-English sentence that answers the page's whole question
+    # above the fold: cheap/rich verdict + IV-vs-HV premium + cone stretch
+    # + earnings proximity, with a spike-contamination caveat when IVR is
+    # distorted. Deterministic (no LLM); see analytics/narrate.py.
+    try:
+        from volscope.analytics.narrate import (
+            cone_position_from_cone,
+            generate_scope_narrative,
+        )
+        from volscope.analytics.vol_cones import compute_vol_cone
+        _cone_pos = None
+        if "spot_price" in history.columns:
+            _spot = history["spot_price"].dropna()
+            if len(_spot) >= 30:
+                _cone_pos = cone_position_from_cone(
+                    compute_vol_cone(_spot, ticker=ticker)
+                )
+        _narr = generate_scope_narrative(
+            ticker, latest.to_dict(), days_to_er, _cone_pos,
+        )
+        if _narr.has_content:
+            _accent = {
+                "cheap": COLORS["accent"], "rich": COLORS["warn"],
+                "neutral": COLORS["amber"], "unknown": COLORS["muted"],
+            }.get(_narr.tone, COLORS["muted"])
+            _caveat_html = (
+                f'<div style="margin-top:6px;color:{COLORS["amber"]};font-size:11px;'
+                f'font-family:JetBrains Mono,monospace;">⚠ {escape(_narr.caveat)}</div>'
+                if _narr.caveat else ""
+            )
+            render_html(
+                st,
+                f'<div style="background:{COLORS["surface"]};border:1px solid '
+                f'{COLORS["border"]};border-left:4px solid {_accent};border-radius:8px;'
+                f'padding:12px 16px;margin:10px 0 14px;font-family:DM Sans,sans-serif;'
+                f'font-size:14px;line-height:1.5;color:{COLORS["text"]};">'
+                f'{escape(_narr.headline)}{_caveat_html}</div>',
+            )
+    except Exception as _narr_exc:                                  # noqa: BLE001
+        import logging as _lg
+        _lg.getLogger("volscope.ui.scope").debug("narrative failed: %s", _narr_exc)
+
     # v0.9.8 Phase D — cross-tool awareness cards. Renders zero or
     # more of: open positions / upcoming earnings / discover history
     # for this ticker. Renders nothing if none of the three apply.
@@ -521,6 +565,8 @@ def render_scope_page(db, ticker: str, settings: dict | None = None) -> None:
                 create_percentile_chart(history, earnings_dates=earnings),
                 width='stretch',
             )
+        with error_boundary(st, "Volatility Cone"):
+            st.plotly_chart(create_vol_cone_chart(history), width='stretch')
 
     with tab_price:
         _render_history_price_lwc(st, ticker, history, earnings_dates=earnings)

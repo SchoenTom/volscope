@@ -90,6 +90,45 @@ def _range_selector() -> dict:
     )
 
 
+def _add_regime_bands(fig: go.Figure, history: pd.DataFrame, x) -> None:
+    """Shade the chart background by Bayesian vol-regime (migration 008).
+
+    Contiguous runs of the same regime become a faint coloured vrect, so the
+    trader instantly sees whether a given historical IV level sat in a calm
+    or a crisis regime. Silent no-op when the column is absent / all-null
+    (e.g. a DB scraped before the regime writer was fixed).
+    """
+    if "vol_regime" not in history.columns or history["vol_regime"].isna().all():
+        return
+    cmap = {
+        "vol_crushed": rgba(COLORS["accent"], 0.05),
+        "crushed":     rgba(COLORS["accent"], 0.05),
+        "cheap":       rgba(COLORS["accent"], 0.04),
+        "fair":        rgba(COLORS["accent2"], 0.04),
+        "rich":        rgba(COLORS["amber"], 0.05),
+        "extreme":     rgba(COLORS["amber"], 0.07),
+        "crisis":      rgba(COLORS["warn"], 0.08),
+        "vol_crisis":  rgba(COLORS["warn"], 0.08),
+    }
+    xv = list(x)
+    regimes = list(history["vol_regime"])
+    n = len(regimes)
+    i = 0
+    while i < n:
+        r = regimes[i]
+        if r is None or (isinstance(r, float) and pd.isna(r)):
+            i += 1
+            continue
+        j = i
+        while j + 1 < n and regimes[j + 1] == r:
+            j += 1
+        color = cmap.get(str(r).lower())
+        if color is not None and j > i:
+            fig.add_vrect(x0=xv[i], x1=xv[j], fillcolor=color,
+                          line_width=0, layer="below")
+        i = j + 1
+
+
 def create_iv_hv_chart(
     history: pd.DataFrame, ticker: str, earnings_dates: list | None = None
 ) -> go.Figure:
@@ -148,6 +187,7 @@ def create_iv_hv_chart(
             )
         )
 
+    _add_regime_bands(fig, history, x)
     _add_earnings_markers(fig, earnings_dates)
     _add_today_gap(fig, history, label="STALE")
 
@@ -479,6 +519,36 @@ def create_term_structure_chart(history: pd.DataFrame) -> go.Figure:
     ys = [v for _, v in pts]
     slope = ys[-1] - ys[0]
 
+    # ── Time-travel ghost overlay ──────────────────────────────────────
+    # Faint -7d / -30d term-structure curves behind the current one, so the
+    # trader sees at a glance whether the whole curve parallel-shifted,
+    # twisted, or flattened over the last week / month. Zero new controls,
+    # zero new DB queries — just older rows of the same history frame.
+    def _row_pts(row) -> list[tuple[int, float]]:
+        cand = [(30, row.get("iv_30d")), (60, row.get("iv_60d")),
+                (90, row.get("iv_90d")), (180, row.get("iv_180d"))]
+        return [(d, float(v)) for d, v in cand
+                if v is not None and not pd.isna(v) and d in xs]
+
+    ghost_ys: list[float] = list(ys)
+    for _back, _label, _op in ((30, "−30d", 0.32), (7, "−7d", 0.55)):
+        if len(history) > _back:
+            gpts = _row_pts(history.iloc[-(_back + 1)])
+            if len(gpts) >= 2:
+                gx = [d for d, _ in gpts]
+                gy = [v for _, v in gpts]
+                ghost_ys += gy
+                fig.add_trace(go.Scatter(
+                    x=gx, y=gy, mode="lines+markers",
+                    line=dict(color=COLORS["muted"], width=1, dash="dot"),
+                    marker=dict(size=5, color=COLORS["muted"]),
+                    opacity=_op, hoverinfo="skip", showlegend=False,
+                ))
+                fig.add_annotation(
+                    x=gx[-1], y=gy[-1], text=_label, showarrow=False,
+                    xshift=15, font=dict(color=COLORS["muted"], size=8, family=_MONO),
+                )
+
     if slope > 0.5:
         verdict = f"CONTANGO · +{slope:.1f}pt"
         verdict_color = COLORS["accent2"]
@@ -524,9 +594,109 @@ def create_term_structure_chart(history: pd.DataFrame) -> go.Figure:
     )
     layout["xaxis"]["tickvals"] = xs
     layout["xaxis"]["ticktext"] = [tick_labels.get(d, f"{d}d") for d in xs]
-    layout["xaxis"]["range"] = [xs[0] - 10, xs[-1] + 15]
-    pad = max(1.0, (max(ys) - min(ys)) * 0.6)
-    layout["yaxis"]["range"] = [min(ys) - pad, max(ys) + pad]
+    layout["xaxis"]["range"] = [xs[0] - 10, xs[-1] + 22]
+    # y-range spans current + ghost curves so nothing clips.
+    pad = max(1.0, (max(ghost_ys) - min(ghost_ys)) * 0.6)
+    layout["yaxis"]["range"] = [min(ghost_ys) - pad, max(ghost_ys) + pad]
+    fig.update_layout(**layout)
+    return fig
+
+
+def create_vol_cone_chart(history: pd.DataFrame) -> go.Figure:
+    """Volatility cone — realized-vol percentile bands across horizons.
+
+    The cone is the chart a vol trader opens first each morning: it shows,
+    for each look-back window (10d … 252d), the 5/25/50/75/95th percentile
+    band of that window's own realized vol over the past ~2y, with the
+    CURRENT realized vol overlaid as dots. A dot near the top of its band
+    means realized vol is historically stretched at that horizon; near the
+    bottom means it's compressed. Reads the close series already in the
+    daily_vol history frame — no new query.
+    """
+    from volscope.analytics.vol_cones import compute_vol_cone
+
+    fig = go.Figure()
+    layout = _base_layout("VOLATILITY CONE")
+    layout["height"] = 300
+    layout["margin"] = dict(l=52, r=28, t=52, b=40)
+    layout["yaxis"]["ticksuffix"] = "%"
+    layout["showlegend"] = False
+
+    if history is None or history.empty or "spot_price" not in history.columns:
+        fig.update_layout(**layout)
+        return fig
+    spot = history["spot_price"].dropna()
+    if len(spot) < 30:
+        fig.update_layout(**layout)
+        return fig
+
+    cone = compute_vol_cone(spot, ticker="X")
+    pts = [p for p in cone.points if p.percentiles]
+    if len(pts) < 2:
+        fig.update_layout(**layout)
+        return fig
+
+    xs = [p.window for p in pts]
+
+    def _band(pct: int) -> list:
+        return [p.percentiles.get(pct) for p in pts]
+
+    p5, p25, p50, p75, p95 = _band(5), _band(25), _band(50), _band(75), _band(95)
+
+    # 5–95 envelope (light), then 25–75 body (denser) via fill='tonexty'.
+    fig.add_trace(go.Scatter(x=xs, y=p95, mode="lines", line=dict(width=0),
+                             hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=xs, y=p5, mode="lines", line=dict(width=0),
+                             fill="tonexty", fillcolor=rgba(COLORS["accent2"], 0.07),
+                             hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=xs, y=p75, mode="lines", line=dict(width=0),
+                             hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=xs, y=p25, mode="lines", line=dict(width=0),
+                             fill="tonexty", fillcolor=rgba(COLORS["accent2"], 0.16),
+                             hoverinfo="skip", showlegend=False))
+    # Median line.
+    fig.add_trace(go.Scatter(x=xs, y=p50, mode="lines",
+                             line=dict(color=COLORS["muted"], width=1.5, dash="dash"),
+                             hoverinfo="skip", showlegend=False))
+
+    # Current realized-vol dots, coloured by where they sit in their band.
+    cx, cy, ccolor, ctext = [], [], [], []
+    for p in pts:
+        if p.current_vol is None:
+            continue
+        perc = p.current_perc
+        if perc is not None and perc >= 75:
+            col = COLORS["warn"]
+        elif perc is not None and perc <= 25:
+            col = COLORS["accent"]
+        else:
+            col = COLORS["text"]
+        cx.append(p.window)
+        cy.append(p.current_vol)
+        ccolor.append(col)
+        ctext.append(
+            f"{p.window}d · RV {p.current_vol:.1f}%"
+            + (f" · {perc:.0f}th pct" if perc is not None else "")
+        )
+    if cx:
+        fig.add_trace(go.Scatter(
+            x=cx, y=cy, mode="lines+markers",
+            line=dict(color=COLORS["accent"], width=2),
+            marker=dict(size=11, color=ccolor, line=dict(color=COLORS["bg"], width=2)),
+            text=ctext, hoverinfo="text", showlegend=False,
+        ))
+
+    layout["title"] = dict(
+        text=(
+            "VOLATILITY CONE&nbsp;&nbsp;"
+            f"<span style='color:{COLORS['muted']};font-family:{_MONO};font-size:10px;'>"
+            f"{cone.summary}</span>"
+        ),
+        font=dict(color=COLORS["text"], size=14, family=_SANS),
+        x=0.01, xanchor="left",
+    )
+    layout["xaxis"]["tickvals"] = xs
+    layout["xaxis"]["ticktext"] = [f"{w}d" for w in xs]
     fig.update_layout(**layout)
     return fig
 
