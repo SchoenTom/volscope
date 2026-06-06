@@ -152,6 +152,30 @@ def create_iv_hv_chart(
 
     x = history["date"] if "date" in history.columns else history.index
 
+    # ── Directional vol-premium ribbon — the chart's whole thesis ──
+    # Fill the band BETWEEN implied and realized vol, coloured by sign:
+    # green where IV sits below realized (options cheap), red where IV sits
+    # above realized (options rich). This makes the page's one question the
+    # dominant visual. Four zero-width traces using fill="tonexty".
+    if has_iv and has_hv:
+        _iv = history["iv_30d"]
+        _hv = history["hv_20d"]
+        _pair = pd.concat([_iv, _hv], axis=1)
+        _upper = _pair.max(axis=1)
+        _lower = _pair.min(axis=1)
+        # rich band (IV above HV) → warn red
+        fig.add_trace(go.Scatter(x=x, y=_hv, mode="lines", line=dict(width=0),
+                                 hoverinfo="skip", showlegend=False))
+        fig.add_trace(go.Scatter(x=x, y=_upper, mode="lines", line=dict(width=0),
+                                 fill="tonexty", fillcolor=rgba(COLORS["warn"], 0.13),
+                                 hoverinfo="skip", showlegend=False))
+        # cheap band (IV below HV) → accent green
+        fig.add_trace(go.Scatter(x=x, y=_hv, mode="lines", line=dict(width=0),
+                                 hoverinfo="skip", showlegend=False))
+        fig.add_trace(go.Scatter(x=x, y=_lower, mode="lines", line=dict(width=0),
+                                 fill="tonexty", fillcolor=rgba(COLORS["accent"], 0.13),
+                                 hoverinfo="skip", showlegend=False))
+
     # HV 60d (background context) — thinnest, most muted
     if has_hv60:
         fig.add_trace(
@@ -187,9 +211,7 @@ def create_iv_hv_chart(
                 y=history["iv_30d"],
                 mode="lines",
                 name="IV 30d",
-                line=dict(color=COLORS["accent"], width=2.2, shape="spline"),
-                fill="tozeroy",
-                fillcolor="rgba(0,212,170,0.04)",
+                line=dict(color=COLORS["accent"], width=2.4, shape="spline"),
                 hovertemplate="IV 30d · %{y:.1f}%<extra></extra>",
             )
         )
