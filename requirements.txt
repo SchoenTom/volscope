@@ -2,7 +2,7 @@
 # pyproject.toml. A bare `pip install -r requirements.txt` must produce a
 # working runtime environment (no missing-import surprises on cold install).
 numpy>=1.24.0,<2.0.0
-pandas>=2.0.0,<3.0.0
+pandas>=2.0.0,<4.0.0
 scipy>=1.10.0,<2.0.0
 yfinance>=0.2.31
 duckdb>=0.9.0,<2.0.0
