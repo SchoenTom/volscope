@@ -1,41 +1,27 @@
+<div align="center">
+
 # ◈ VolScope
 
-> ### Is the option market pricing more movement than the stock has delivered?
->
-> That one question — **implied vs realized volatility** — is what VolScope
-> is built around. Type any ticker and its hero chart answers it at a glance,
-> wrapped in the context a vol desk reads: IV rank, a volatility cone, a
-> time-travelling term structure, 25Δ skew, and a plain-English verdict —
-> all from VolScope's **own** Black-Scholes solver (never Yahoo's IV). The
-> volatility screen you'd otherwise rent from Bloomberg, self-hosted in a
-> browser tab.
+### Is this stock's implied volatility cheap or expensive?
+
+<img src="docs/assets/hero.png" alt="VolScope — implied vs realized volatility, green where options are cheap, red where rich" width="900">
 
 [![CI](https://github.com/SchoenTom/volscope/actions/workflows/ci.yml/badge.svg)](https://github.com/SchoenTom/volscope/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-![Status](https://img.shields.io/badge/status-IV%20research-brightgreen)
+&nbsp;![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+&nbsp;[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+&nbsp;![Status](https://img.shields.io/badge/status-IV%20research-brightgreen)
 
-## The chart at its heart — Implied vs Realized Volatility
+</div>
 
-This is what VolScope *is*. Everything else exists to add context to it.
+**VolScope is a self-hosted volatility research terminal.** Type any ticker and
+the chart above answers one question at a glance — *is the option market pricing
+more movement than the stock has actually delivered?* Around it sits the context
+a vol desk reads: IV rank, a volatility cone, a time-travelling term structure,
+25Δ skew, and a one-line plain-English verdict — all computed by VolScope's
+**own** Black-Scholes solver, **never** Yahoo's IV. The volatility screen you'd
+otherwise rent from Bloomberg, running in a browser tab on your own machine.
 
-```
- vol %                                    AAPL · IMPLIED vs REALIZED
-  ▲
-  │            ╭──╮                ← IV 30d (what options cost)
-  │      ╭─────╯  ╰────╮      ╭────
-  │ ─────╯   · · · · · ╰──────╯· · ← HV 20d (what the stock did)
-  │  ░░░░░░  ▒▒▒▒▒▒▒▒  ░░░░░  ▓▓▓   ← background shaded by vol regime
-  └────────────────────────────────►  time      ◆ = earnings
-        IV above HV → options RICH   ·   IV below HV → options CHEAP
-```
-
-When the **implied-vol** line (what options are charging) sits above
-**realized vol** (what the stock has actually moved), the market is paying
-up for movement — options are *rich*. When it dips below, they're *cheap*.
-The background is shaded by volatility regime, earnings dates are flagged,
-and a one-line verdict sits above it. It is the first, largest chart on the
-Scope page — front and centre, because it is the product.
+> **▶ Get started in one click:** download the ZIP, double-click **`VolScope.app`** — no terminal, no commands. [Full steps ↓](#run-volscope--just-double-click)
 
 ## Why VolScope
 
