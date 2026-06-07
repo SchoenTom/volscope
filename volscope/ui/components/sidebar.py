@@ -886,10 +886,26 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
     #   - Dossier         → from LEAPS Lab footer
     # Page registry retains all entries; pages stay deep-linkable.
     NAV_GROUPS: list[tuple[str, list[str]]] = [
-        ("◇ RESEARCH",   ["Discover", "Scope", "Heatmap", "Earnings Hub", "Vol Insights", "Scanner", "Alerts"]),
-        ("◆ MANAGE",     ["Watchlist", "Command", "Options Lab"]),
-        ("? REFERENCE",  ["Help"]),
+        ("RESEARCH",   ["Discover", "Scope", "Heatmap", "Earnings Hub", "Vol Insights", "Scanner", "Alerts"]),
+        ("MANAGE",     ["Watchlist", "Command", "Options Lab"]),
+        ("REFERENCE",  ["Help"]),
     ]
+    # One consistent icon vocabulary (native Material icons via the
+    # st.button icon= param) instead of the old emoji/glyph/arrow mix —
+    # the single biggest "this is a real product" upgrade for the rail.
+    _NAV_ICONS: dict[str, str] = {
+        "Discover":     ":material/explore:",
+        "Scope":        ":material/query_stats:",
+        "Heatmap":      ":material/grid_view:",
+        "Earnings Hub": ":material/event:",
+        "Vol Insights": ":material/bolt:",
+        "Scanner":      ":material/radar:",
+        "Alerts":       ":material/notifications:",
+        "Watchlist":    ":material/bookmark:",
+        "Command":      ":material/tune:",
+        "Options Lab":  ":material/science:",
+        "Help":         ":material/help:",
+    }
     pages = [p for _, group in NAV_GROUPS for p in group]
     # v0.9.11 — pages reachable by deep-link / button-driven nav but
     # not surfaced in the sidebar nav. Without this allowlist, the
@@ -941,10 +957,12 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
 
     page = current_page
     for group_label, group_pages in NAV_GROUPS:
+        # Quiet, uniform group header (muted tier, not a loud accent) — a
+        # wayfinding label, not a button.
         render_html(
             st,
-            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;'
-            f'color:#5b8cff;letter-spacing:0.04em;margin-top:12px;margin-bottom:5px;'
+            f'<div style="font-family:\'DM Sans\',sans-serif;font-size:10px;'
+            f'color:#6c7286;letter-spacing:0.12em;margin-top:14px;margin-bottom:6px;'
             f'font-weight:600;text-transform:uppercase;">{group_label}</div>',
         )
         for p in group_pages:
@@ -952,12 +970,12 @@ def render_sidebar(db, current_ticker: str, current_page: str) -> tuple[str, str
             badge = ""
             if p == "Alerts" and _alert_n > 0:
                 badge = f"  ({_alert_n})"
-            label = (f"▸ {p}{badge}" if is_active else f"  {p}{badge}")
             if st.button(
-                label,
+                f"{p}{badge}",
                 key=f"nav_btn_{p}",
                 width='stretch',
                 type="primary" if is_active else "secondary",
+                icon=_NAV_ICONS.get(p),
             ):
                 page = p
 
