@@ -64,11 +64,22 @@ setup, then a double-click forever after.
 
 ### ① First launch — once (~2 min)
 
-1. **Download & unzip.** On the [repo page](https://github.com/SchoenTom/volscope): **Code ▸ Download ZIP**, then double-click the downloaded ZIP to unzip it.
+1. **Download & unzip.** On the [repo page](https://github.com/SchoenTom/volscope): **Code ▸ Download ZIP**, then double-click the downloaded ZIP to unzip it (it lands in your **Downloads** folder).
 2. **Open Terminal.** Press **⌘ + Space**, type `Terminal`, press **Enter**.
-3. In the Terminal window type **`bash `** (the word *bash* followed by one space) — then **drag the `Start VolScope.command` file** from the unzipped folder onto the Terminal window. Its full location fills in for you.
-4. Press **Enter**. VolScope installs its environment, fetches a starter
-   universe, and opens. ☕ (~2 minutes — only this first time.)
+3. **Copy this one line, paste it into Terminal, press Enter:**
+   ```bash
+   cd "$(ls -dt ~/Downloads/volscope-*/ 2>/dev/null | head -1)" && bash "Start VolScope.command"
+   ```
+   That installs VolScope's private environment, fetches a starter universe, and
+   opens it. ☕ (~2 minutes — only this first time.)
+
+<details>
+<summary>Unzipped somewhere other than Downloads? (click)</summary>
+
+In Terminal, type **`bash `** (the word *bash* and one space), then **drag the
+`Start VolScope.command` file** from your unzipped folder onto the Terminal
+window — its location fills in for you — and press **Enter**.
+</details>
 
 ### ② Every time after that
 
