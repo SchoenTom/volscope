@@ -1,0 +1,13 @@
+# VolScope is a dark volatility terminal. Force the dark base + brand palette
+# so it renders identically regardless of the viewer's OS light/dark setting.
+# Without this, a user whose system is in Light Mode saw a broken light sidebar
+# (Streamlit's base theme silently follows prefers-color-scheme).
+[theme]
+base = "dark"
+primaryColor = "#00d4aa"
+backgroundColor = "#0a0b0f"
+secondaryBackgroundColor = "#12131a"
+textColor = "#e0e4ef"
+
+[browser]
+gatherUsageStats = false
