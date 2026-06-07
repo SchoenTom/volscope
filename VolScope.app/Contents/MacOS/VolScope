@@ -25,10 +25,13 @@ RES_DIR="$APP_DIR/Contents/Resources"
 # quarantine flag, which makes a fresh double-click fail with
 # '…does not have permission to open "(null)"'. Re-set both here, so AFTER
 # this first (Terminal-launched) run, double-clicking VolScope.app just works.
-chmod +x "$MACOS_DIR/VolScope" 2>/dev/null || true
+chmod -R +x "$APP_DIR/Contents/MacOS" 2>/dev/null || true
 [ -f "$REPO/Start VolScope.command" ] && chmod +x "$REPO/Start VolScope.command" 2>/dev/null || true
-xattr -dr com.apple.quarantine "$APP_DIR" 2>/dev/null || true
-xattr -dr com.apple.quarantine "$REPO/Start VolScope.command" 2>/dev/null || true
+xattr -cr "$APP_DIR" 2>/dev/null || true                     # clear ALL attrs (incl. quarantine)
+xattr -c "$REPO/Start VolScope.command" 2>/dev/null || true
+# Ad-hoc code-sign the bundle (no certificate needed) so Gatekeeper accepts
+# the unsigned app on a normal double-click after this first run.
+codesign --force --deep --sign - "$APP_DIR" 2>/dev/null || true
 
 LOG_DIR="$HOME/Library/Logs/VolScope"
 mkdir -p "$LOG_DIR"
