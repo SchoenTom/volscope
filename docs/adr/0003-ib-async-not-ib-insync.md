@@ -14,7 +14,7 @@ The two community Python clients for Interactive Brokers:
    changes.
 2. **`ib_async` 2.1.0** (released 2025-12-08, conda-forge 2025-12-18) —
    community fork of `ib_insync` under the `ib-api-reloaded` org,
-   maintained by Matt Stancliff. **Drop-in API compatible**
+   actively maintained. **Drop-in API compatible**
    (`from ib_async import *`). BSD-2 licensed. Python 3.10+ including
    3.13/3.14. Actively tracks TWS protocol updates.
 3. **Official `ibapi`** — verbose EClient/EWrapper callbacks; useful as

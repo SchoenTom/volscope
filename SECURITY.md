@@ -2,8 +2,7 @@
 
 ## Reporting a vulnerability
 
-**Please do not open a public issue for security problems.** Email the
-maintainer directly at **tom.schoen@uni-konstanz.de**, or use GitHub's
+**Please do not open a public issue for security problems.** Use GitHub's
 private security advisory (**Security → Report a vulnerability**). Expect an
 acknowledgement within ~5 working days.
 
