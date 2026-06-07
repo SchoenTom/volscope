@@ -81,10 +81,13 @@ In Terminal, type **`bash `** (the word *bash* and one space), then **drag the
 window — its location fills in for you — and press **Enter**.
 </details>
 
-### ② Every time after that
+That Terminal step is the **only** time you'll ever need it.
 
-Just **double-click `VolScope.app`** 🟢 — it opens in its own clean window in a
-couple of seconds. Quit it like any app (**Dock → Quit**) to stop the local server.
+### ② Every time after that — just the icon
+
+**Double-click `VolScope.app`** 🟢 — it opens in its own clean window in a couple
+of seconds. No Terminal, nothing to type. Quit it like any app
+(**Dock → Quit**) to stop the local server.
 
 > *Requires **Python 3.11+** on your Mac (free from [python.org](https://www.python.org/downloads/)). VolScope builds its own isolated environment and never touches your system Python. Everything runs locally — no account, no subscription, no data ever leaves your machine.*
 
