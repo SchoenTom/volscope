@@ -99,5 +99,7 @@ class TestQuickstartContract:
     def test_readme_mentions_quickstart(self):
         readme = Path(__file__).resolve().parent.parent / "README.md"
         text = readme.read_text()
+        # Both run paths must stay documented: the double-click app (the
+        # headline for non-technical users) and the make-quickstart dev path.
+        assert "VolScope.app" in text
         assert "make quickstart" in text
-        assert "Quick Start" in text

@@ -64,9 +64,30 @@ machine. What makes it strong:
   estimator is property-tested, and analytics never crash the UI — bad
   input returns nothing, not an exception.
 
-## Quick Start
+## Run VolScope — just double-click
 
-macOS / Linux, Python 3.11+. Three lines — the last one does everything:
+**No terminal. No commands.** Download, unzip, double-click **`VolScope.app`**.
+
+1. On the [repo page](https://github.com/SchoenTom/volscope): **Code ▸ Download ZIP**, then unzip.
+2. Double-click **`VolScope.app`**. The first launch quietly builds a private
+   environment and fetches a starter universe (~2 min, one time only); every
+   launch after that opens in a couple of seconds.
+3. VolScope opens in its own clean window. Quit it like any app (Dock → Quit)
+   to stop the local server.
+
+> **First time only — macOS Gatekeeper.** Because the app isn't code-signed,
+> macOS asks once: **right-click `VolScope.app` → Open → Open**. A normal
+> double-click works ever after. *(If Finder still refuses, the included
+> `Start VolScope.command` does the exact same thing.)*
+
+Needs **Python 3.11+** installed on your Mac — the app builds its own isolated
+environment and never touches your system Python. Everything runs locally; no
+account, no subscription, no data leaves your machine.
+
+<details>
+<summary><b>Developer / command-line setup</b></summary>
+
+macOS / Linux, Python 3.11+:
 
 ```bash
 git clone https://github.com/SchoenTom/volscope.git && cd volscope
@@ -74,23 +95,13 @@ python3 -m venv .venv && source .venv/bin/activate
 make quickstart
 ```
 
-`make quickstart` is **self-contained**: it installs every dependency,
-creates a read-only `.env` (API keys are optional), seeds a 2-ticker
-starter universe (SPY + QQQ, or your existing watchlist), and opens the
-app at <http://localhost:8501>. Grow the universe from the sidebar's
-add-ticker form or **Watchlist → 📥 Import** (paste a TradingView export).
+`make quickstart` is self-contained: installs every dependency, seeds a
+starter universe (SPY + QQQ), and opens the app at <http://localhost:8501>.
+Bigger seeds: `make quickstart-bot` (~75), `make seed-broad` (~280),
+`make quickstart-full` (~842). Daily afterwards: `make start` (refresh +
+launch) or `make run` (launch on existing data).
 
-Bigger initial seeds:
-
-| Target | Tickers | Time |
-|---|---|---|
-| `make quickstart` (default) | SPY + QQQ, or your watchlist | ~2 min |
-| `make quickstart-bot` | ~75 | ~4 min |
-| `make seed-broad` | ~280 | ~10 min |
-| `make quickstart-full` | ~842 | ~30-45 min |
-
-Daily afterwards: `make start` (refresh today's data + launch) or just
-`make run` (launch on existing data).
+</details>
 
 ## What the UI gives you
 

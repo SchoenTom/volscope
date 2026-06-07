@@ -1,0 +1,122 @@
+#!/bin/bash
+# VolScope launcher — this script IS the app's main process.
+#
+# Double-click VolScope.app → this runs (no Terminal, no commands): it sets
+# up a private Python environment on first launch, starts the local VolScope
+# server, and opens VolScope in a chromeless window. Quitting the app (Dock →
+# Quit) stops the server. Everything below is invisible to the user.
+set -u
+
+PORT=8501
+URL="http://127.0.0.1:${PORT}"
+HEALTH="${URL}/_stcore/health"
+
+# ── Resolve the repo root from this script's own location ──────────────
+# Path: <REPO>/VolScope.app/Contents/MacOS/VolScope
+SELF="$0"
+while [ -h "$SELF" ]; do SELF="$(readlink "$SELF")"; done
+MACOS_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+APP_DIR="$(cd "$MACOS_DIR/../.." && pwd)"          # …/VolScope.app
+REPO="$(cd "$APP_DIR/.." && pwd)"                  # repo root
+RES_DIR="$APP_DIR/Contents/Resources"
+
+LOG_DIR="$HOME/Library/Logs/VolScope"
+mkdir -p "$LOG_DIR"
+SETUP_LOG="$LOG_DIR/setup.log"
+SERVER_LOG="$LOG_DIR/server.log"
+
+VENV="$REPO/.venv"
+STREAMLIT="$VENV/bin/streamlit"
+APP_PY="$REPO/volscope/ui/app.py"
+
+notify() { osascript -e "display notification \"$1\" with title \"VolScope\"" >/dev/null 2>&1 || true; }
+alertbox() { osascript -e "display dialog \"$1\" with title \"VolScope\" buttons {\"OK\"} default button \"OK\" with icon caution" >/dev/null 2>&1 || true; }
+
+# ── Sanity: are the program files where we expect? ─────────────────────
+if [ ! -f "$APP_PY" ]; then
+  alertbox "VolScope couldn't find its program files. Please keep VolScope.app inside the VolScope folder you downloaded, then open it again."
+  exit 1
+fi
+
+# ── Open a chromeless window immediately (falls back to default browser) ─
+open_window() {
+  local target="$1"
+  local b
+  for b in "Google Chrome" "Brave Browser" "Microsoft Edge" "Chromium"; do
+    if [ -d "/Applications/$b.app" ]; then
+      open -na "$b" --args --app="$target" >/dev/null 2>&1 && return 0
+    fi
+  done
+  open "$target" >/dev/null 2>&1
+}
+
+open_window "file://$RES_DIR/splash.html"
+
+# ── Pick a Python >= 3.11 for the one-time environment setup ───────────
+find_python() {
+  local c p
+  for c in python3.13 python3.12 python3.11 python3; do
+    p="$(command -v "$c" 2>/dev/null)" || continue
+    if "$p" -c 'import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 11) else 1)' 2>/dev/null; then
+      echo "$p"; return 0
+    fi
+  done
+  return 1
+}
+
+# ── First launch: build the private environment (all wheels, no compiler) ─
+if [ ! -x "$STREAMLIT" ]; then
+  notify "Setting up VolScope — about 2 minutes (one time only)…"
+  PY="$(find_python)"
+  if [ -z "${PY:-}" ]; then
+    alertbox "VolScope needs Python 3.11 or newer. Install it from python.org, then open VolScope again."
+    exit 1
+  fi
+  {
+    echo "== $(date) VolScope setup =="
+    "$PY" -m venv "$VENV"
+    "$VENV/bin/python" -m pip install --upgrade pip
+    "$VENV/bin/python" -m pip install -r "$REPO/requirements.txt"
+  } >>"$SETUP_LOG" 2>&1
+  if [ ! -x "$STREAMLIT" ]; then
+    alertbox "Setup didn't finish. Details are in: ~/Library/Logs/VolScope/setup.log"
+    exit 1
+  fi
+  # Seed a small starter set so the first view isn't empty. Non-fatal and
+  # time-boxed — VolScope opens fine even if this is slow or offline.
+  notify "Fetching starter market data…"
+  ( cd "$REPO" && PYTHONPATH="$REPO" "$VENV/bin/python" scripts/ops/seed_database.py \
+      --tickers SPY,QQQ,AAPL,NVDA,TSLA,META,GLD,TLT ) >>"$SETUP_LOG" 2>&1 &
+  SEED_PID=$!
+  ( sleep 120; kill "$SEED_PID" >/dev/null 2>&1 ) >/dev/null 2>&1 &
+  WATCHDOG=$!
+  wait "$SEED_PID" 2>/dev/null || true
+  kill "$WATCHDOG" >/dev/null 2>&1 || true
+  notify "VolScope is ready."
+fi
+
+# ── Already running? Just open the window and stop here. ───────────────
+if curl -sf "$HEALTH" >/dev/null 2>&1; then
+  open_window "$URL"
+  exit 0
+fi
+
+# ── Start the server (headless, no auto-browser, no stdin prompt) ──────
+# PYTHONPATH lets `import volscope` resolve from the source tree, so no
+# editable install / compile step is ever needed.
+cd "$REPO" || exit 1
+PYTHONPATH="$REPO" "$STREAMLIT" run "$APP_PY" \
+  --server.headless true \
+  --server.port "$PORT" \
+  --server.address 127.0.0.1 \
+  --browser.gatherUsageStats false \
+  </dev/null >>"$SERVER_LOG" 2>&1 &
+SERVER_PID=$!
+
+# Stop the server cleanly when VolScope is quit (Dock → Quit).
+cleanup() { kill "$SERVER_PID" >/dev/null 2>&1; }
+trap cleanup EXIT INT TERM
+
+# The splash window polls the server and switches itself to VolScope once it
+# is healthy. Stay alive (owning the server) until the app is quit.
+wait "$SERVER_PID"

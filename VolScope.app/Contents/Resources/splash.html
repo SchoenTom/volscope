@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VolScope</title>
+<style>
+  :root { --accent:#00d4aa; --accent2:#5b8cff; --text:#e0e4ef; --muted:#8a8f9e; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(91,140,255,0.10), transparent 60%),
+      linear-gradient(180deg, #0a0b0f 0%, #12131a 100%);
+    color:var(--text);
+    font-family:'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:100vh; gap:26px; -webkit-font-smoothing:antialiased; user-select:none;
+  }
+  .mark { position:relative; width:120px; height:120px; }
+  .diamond {
+    position:absolute; inset:0; margin:auto; transform:rotate(45deg);
+    border-radius:10px;
+  }
+  .d1 { width:104px; height:104px; border:3px solid var(--accent);
+        box-shadow:0 0 30px -6px var(--accent); animation:breathe 2.6s ease-in-out infinite; }
+  .d2 { width:62px; height:62px; border:2px solid var(--accent2);
+        animation:breathe 2.6s ease-in-out infinite reverse; }
+  .dot { position:absolute; inset:0; margin:auto; width:12px; height:12px;
+         border-radius:50%; background:var(--accent); box-shadow:0 0 16px var(--accent); }
+  @keyframes breathe { 0%,100% { opacity:0.55; } 50% { opacity:1; } }
+  .wordmark {
+    font-size:30px; font-weight:700; letter-spacing:0.5px;
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .status { color:var(--muted); font-size:13px; letter-spacing:0.4px; }
+  .sub { color:#5b6070; font-size:11px; margin-top:-16px; }
+  .bar { width:180px; height:3px; border-radius:3px; overflow:hidden;
+         background:rgba(255,255,255,0.06); }
+  .bar > span { display:block; height:100%; width:40%; border-radius:3px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation:slide 1.4s linear infinite; }
+  @keyframes slide { from { transform:translateX(-120px); } to { transform:translateX(200px); } }
+</style>
+</head>
+<body>
+  <div class="mark">
+    <div class="diamond d1"></div>
+    <div class="diamond d2"></div>
+    <div class="dot"></div>
+  </div>
+  <div class="wordmark">VolScope</div>
+  <div class="bar"><span></span></div>
+  <div class="status" id="status">Starting your volatility workbench…</div>
+  <div class="sub" id="sub">First launch installs a few things — about two minutes.</div>
+
+<script>
+  var HEALTH = "http://127.0.0.1:8501/_stcore/health";
+  var APP = "http://127.0.0.1:8501";
+  var tries = 0;
+  function poll() {
+    tries++;
+    if (tries === 6) {
+      document.getElementById("sub").textContent =
+        "Almost there — fetching market data on first run can take a moment.";
+    }
+    // no-cors: resolves (opaque) once the server answers, rejects while down.
+    fetch(HEALTH, { mode: "no-cors", cache: "no-store" })
+      .then(function () { window.location.href = APP; })
+      .catch(function () { setTimeout(poll, 1500); });
+  }
+  // Give the launcher a head start before the first probe.
+  setTimeout(poll, 1200);
+</script>
+</body>
+</html>
