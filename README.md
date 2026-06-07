@@ -65,26 +65,29 @@ That's it. VolScope builds its private environment (~2 min the first time),
 fetches a starter universe, and opens in its own window. **Run the same line
 any time** to launch it again.
 
-> **Why a command, not just a double-click?** macOS strips the "this file may
-> run" flag from *anything* downloaded as a ZIP — a built-in security default,
-> nothing to do with VolScope. The line above launches it the one way that
-> always works, on any Mac.
+> **Why a command, not a double-click?** macOS strips the "may run" flag from
+> anything downloaded as a ZIP, and the newest macOS (Sequoia) blocks unsigned
+> apps launched from Finder. The command sidesteps both — it's the one way that
+> works on every Mac, every time.
 
 <details>
-<summary><b>Bonus: launch from the app icon</b> (after the first run)</summary>
+<summary><b>Bonus: launch from the app icon</b></summary>
 
-That first run also repairs the **`VolScope.app`** icon (restores the run flag,
-clears the download quarantine, ad-hoc-signs the bundle). So from then on you
-can also just **double-click the VolScope icon** — it opens in a clean window
-with no Terminal. Quit it like any app (**Dock → Quit**) to stop the server.
+The first run repairs the **`VolScope.app`** icon (restores the run flag, clears
+the download quarantine, ad-hoc-signs it), so on most Macs you can then just
+**double-click the VolScope icon** — a clean window, no Terminal.
+
+On **macOS Sequoia (15)** the very first icon-open shows *"Apple could not
+verify…"* (the app isn't App-Store-notarized — it's a personal tool). Approve it
+once: **System Settings → Privacy & Security → scroll to "VolScope was blocked"
+→ Open Anyway**. After that, the icon opens normally. *(Don't want the fuss? Just
+keep using the one command above — it never asks.)*
 
 *Unzipped somewhere other than Downloads?* In Terminal type **`bash `** (with a
 space), drag the **`Start VolScope.command`** file onto the window, press Enter.
 </details>
 
 *Requires **Python 3.11+** on your Mac (free from [python.org](https://www.python.org/downloads/)). VolScope builds its own isolated environment and never touches your system Python. Everything runs locally — no account, no subscription, no data ever leaves your machine.*
-
-> *Requires **Python 3.11+** on your Mac (free from [python.org](https://www.python.org/downloads/)). VolScope builds its own isolated environment and never touches your system Python. Everything runs locally — no account, no subscription, no data ever leaves your machine.*
 
 <details>
 <summary><b>Developer / command-line setup</b></summary>
