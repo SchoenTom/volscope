@@ -21,7 +21,7 @@ a vol desk reads: IV rank, a volatility cone, a time-travelling term structure,
 **own** Black-Scholes solver, **never** Yahoo's IV. The volatility screen you'd
 otherwise rent from Bloomberg, running in a browser tab on your own machine.
 
-> **▶ Get started:** download the ZIP → one quick one-time setup → then it's just a double-click on the **VolScope** icon. [How ↓](#-run-volscope)
+> **▶ Get started:** download the ZIP → paste **one line** into Terminal → VolScope opens. [How ↓](#-run-volscope)
 
 ## Why VolScope
 
@@ -52,42 +52,37 @@ machine. What makes it strong:
 
 ## ▶ Run VolScope
 
-Download the ZIP from GitHub and unzip it — you'll get a `volscope-…` folder
-with a **VolScope** app icon inside. It runs in two small steps: a one-time
-setup, then a double-click forever after.
+**One command.** Download the ZIP, unzip it, then run a single line in Terminal:
 
-> **Why a one-time step?** macOS strips the "this file may run" flag from
-> anything downloaded as a ZIP (a built-in security default — nothing to do with
-> VolScope). So the **first** launch goes through Terminal once to install
-> VolScope's private environment. That same step re-enables the flag, so from
-> then on the **`VolScope.app`** icon opens with a normal double-click.
-
-### ① First launch — once (~2 min)
-
-1. **Download & unzip.** On the [repo page](https://github.com/SchoenTom/volscope): **Code ▸ Download ZIP**, then double-click the downloaded ZIP to unzip it (it lands in your **Downloads** folder).
+1. **Download & unzip.** On the [repo page](https://github.com/SchoenTom/volscope): **Code ▸ Download ZIP**, then double-click the downloaded ZIP (it lands in your **Downloads** folder).
 2. **Open Terminal.** Press **⌘ + Space**, type `Terminal`, press **Enter**.
-3. **Copy this one line, paste it into Terminal, press Enter:**
+3. **Paste this one line and press Enter:**
    ```bash
    cd "$(ls -dt ~/Downloads/volscope-*/ 2>/dev/null | head -1)" && bash "Start VolScope.command"
    ```
-   That installs VolScope's private environment, fetches a starter universe, and
-   opens it. ☕ (~2 minutes — only this first time.)
+
+That's it. VolScope builds its private environment (~2 min the first time),
+fetches a starter universe, and opens in its own window. **Run the same line
+any time** to launch it again.
+
+> **Why a command, not just a double-click?** macOS strips the "this file may
+> run" flag from *anything* downloaded as a ZIP — a built-in security default,
+> nothing to do with VolScope. The line above launches it the one way that
+> always works, on any Mac.
 
 <details>
-<summary>Unzipped somewhere other than Downloads? (click)</summary>
+<summary><b>Bonus: launch from the app icon</b> (after the first run)</summary>
 
-In Terminal, type **`bash `** (the word *bash* and one space), then **drag the
-`Start VolScope.command` file** from your unzipped folder onto the Terminal
-window — its location fills in for you — and press **Enter**.
+That first run also repairs the **`VolScope.app`** icon (restores the run flag,
+clears the download quarantine, ad-hoc-signs the bundle). So from then on you
+can also just **double-click the VolScope icon** — it opens in a clean window
+with no Terminal. Quit it like any app (**Dock → Quit**) to stop the server.
+
+*Unzipped somewhere other than Downloads?* In Terminal type **`bash `** (with a
+space), drag the **`Start VolScope.command`** file onto the window, press Enter.
 </details>
 
-That Terminal step is the **only** time you'll ever need it.
-
-### ② Every time after that — just the icon
-
-**Double-click `VolScope.app`** 🟢 — it opens in its own clean window in a couple
-of seconds. No Terminal, nothing to type. Quit it like any app
-(**Dock → Quit**) to stop the local server.
+*Requires **Python 3.11+** on your Mac (free from [python.org](https://www.python.org/downloads/)). VolScope builds its own isolated environment and never touches your system Python. Everything runs locally — no account, no subscription, no data ever leaves your machine.*
 
 > *Requires **Python 3.11+** on your Mac (free from [python.org](https://www.python.org/downloads/)). VolScope builds its own isolated environment and never touches your system Python. Everything runs locally — no account, no subscription, no data ever leaves your machine.*
 

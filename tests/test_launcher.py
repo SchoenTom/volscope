@@ -1,9 +1,9 @@
-"""Integrity guards for the macOS VolScope.app launcher.
+"""Integrity guards for the macOS VolScope launcher.
 
-The launcher is what turns VolScope into a double-click app for non-technical
-users. If a refactor renames the seed script, moves app.py, or breaks the
-bootstrap's shell syntax, the app silently fails to open — these tests fail
-loudly instead.
+VolScope.app is an AppleScript applet (a real Mach-O executable that macOS
+launches reliably — a plain shell-script .app fails with a "(null)" error).
+Its launch logic lives in scripts/ops/launch_app.sh. These tests fail loudly
+if a refactor breaks the bundle structure or the paths the launcher drives.
 """
 from __future__ import annotations
 
@@ -16,44 +16,60 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
 _APP = _ROOT / "VolScope.app"
-_BOOT = _APP / "Contents" / "MacOS" / "VolScope"
+_EXEC = _APP / "Contents" / "MacOS" / "applet"
 _PLIST = _APP / "Contents" / "Info.plist"
-_ICNS = _APP / "Contents" / "Resources" / "VolScope.icns"
+_ICON = _APP / "Contents" / "Resources" / "applet.icns"
 _SPLASH = _APP / "Contents" / "Resources" / "splash.html"
+_SCPT = _APP / "Contents" / "Resources" / "Scripts" / "main.scpt"
+_LAUNCH = _ROOT / "scripts" / "ops" / "launch_app.sh"
+_COMMAND = _ROOT / "Start VolScope.command"
+
+_MACHO_MAGICS = {
+    b"\xca\xfe\xba\xbe",  # universal (fat) binary
+    b"\xcf\xfa\xed\xfe",  # 64-bit little-endian
+    b"\xfe\xed\xfa\xcf",  # 64-bit big-endian
+}
 
 
 def test_bundle_files_exist():
-    for p in (_BOOT, _PLIST, _ICNS, _SPLASH):
+    for p in (_EXEC, _PLIST, _ICON, _SPLASH, _SCPT, _LAUNCH, _COMMAND):
         assert p.exists(), f"missing launcher file: {p.relative_to(_ROOT)}"
 
 
-def test_info_plist_valid_and_points_at_bootstrap():
+def test_app_executable_is_a_macho_binary():
+    # The whole point of the applet: a real launchable executable, not a script.
+    with _EXEC.open("rb") as fh:
+        magic = fh.read(4)
+    assert magic in _MACHO_MAGICS, f"applet is not a Mach-O binary (magic={magic!r})"
+
+
+def test_info_plist_points_at_the_applet():
     with _PLIST.open("rb") as fh:
         meta = plistlib.load(fh)
-    assert meta["CFBundleExecutable"] == "VolScope"
+    assert meta["CFBundleExecutable"] == "applet"
     assert meta["CFBundleIdentifier"] == "com.volscope.app"
-    # The icon file the plist names must exist (".icns" optional in the key).
-    icon = meta["CFBundleIconFile"]
-    assert (_APP / "Contents" / "Resources" / icon).with_suffix(".icns").exists()
+    assert meta["CFBundleName"] == "VolScope"
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash not available")
-def test_bootstrap_shell_syntax_is_valid():
-    res = subprocess.run(["bash", "-n", str(_BOOT)], capture_output=True, text=True)
+def test_launch_script_shell_syntax_is_valid():
+    res = subprocess.run(["bash", "-n", str(_LAUNCH)], capture_output=True, text=True)
     assert res.returncode == 0, res.stderr
+    res2 = subprocess.run(["bash", "-n", str(_COMMAND)], capture_output=True, text=True)
+    assert res2.returncode == 0, res2.stderr
 
 
-def test_bootstrap_references_real_paths():
-    text = _BOOT.read_text()
-    # The things the bootstrap drives must actually exist in the repo.
+def test_launch_script_references_real_paths():
+    text = _LAUNCH.read_text()
     assert (_ROOT / "volscope" / "ui" / "app.py").exists()
     assert "volscope/ui/app.py" in text
     assert (_ROOT / "scripts" / "ops" / "seed_database.py").exists()
     assert "scripts/ops/seed_database.py" in text
     assert (_ROOT / "requirements.txt").exists()
-    # Must launch headless with no stdin prompt (the documented hang fix).
     assert "--server.headless true" in text
     assert "</dev/null" in text
+    # The first-run launcher must call the launch logic.
+    assert "scripts/ops/launch_app.sh" in _COMMAND.read_text()
 
 
 def test_splash_targets_the_health_endpoint():
