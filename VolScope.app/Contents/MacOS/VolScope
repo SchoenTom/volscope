@@ -20,6 +20,16 @@ APP_DIR="$(cd "$MACOS_DIR/../.." && pwd)"          # …/VolScope.app
 REPO="$(cd "$APP_DIR/.." && pwd)"                  # repo root
 RES_DIR="$APP_DIR/Contents/Resources"
 
+# ── Self-heal the download (so the icon is double-clickable afterwards) ──
+# A GitHub ZIP + macOS unzip strips the "executable" flag and adds a
+# quarantine flag, which makes a fresh double-click fail with
+# '…does not have permission to open "(null)"'. Re-set both here, so AFTER
+# this first (Terminal-launched) run, double-clicking VolScope.app just works.
+chmod +x "$MACOS_DIR/VolScope" 2>/dev/null || true
+[ -f "$REPO/Start VolScope.command" ] && chmod +x "$REPO/Start VolScope.command" 2>/dev/null || true
+xattr -dr com.apple.quarantine "$APP_DIR" 2>/dev/null || true
+xattr -dr com.apple.quarantine "$REPO/Start VolScope.command" 2>/dev/null || true
+
 LOG_DIR="$HOME/Library/Logs/VolScope"
 mkdir -p "$LOG_DIR"
 SETUP_LOG="$LOG_DIR/setup.log"
@@ -75,6 +85,21 @@ if [ ! -x "$STREAMLIT" ]; then
   {
     echo "== $(date) VolScope setup =="
     "$PY" -m venv "$VENV"
+    # Bulletproof pip on Anaconda Pythons: their sys.version carries an extra
+    # "| packaged by Anaconda |" segment that breaks
+    # platform.python_implementation() mid-install. A tiny sitecustomize shim
+    # normalises it for every interpreter start (pip's process included).
+    VSITE="$("$VENV/bin/python" -c 'import site; print(site.getsitepackages()[0])' 2>/dev/null)"
+    if [ -n "$VSITE" ]; then
+      printf '%s\n' \
+        'import sys as _s' \
+        'if "Anaconda" in _s.version and _s.version.count("|") >= 2:' \
+        '    _p = _s.version.split("|")' \
+        '    if len(_p) >= 3:' \
+        '        try: _s.version = _p[0].strip() + " " + " ".join(x.strip() for x in _p[2:])' \
+        '        except Exception: pass' \
+        > "$VSITE/sitecustomize.py"
+    fi
     "$VENV/bin/python" -m pip install --upgrade pip
     "$VENV/bin/python" -m pip install -r "$REPO/requirements.txt"
   } >>"$SETUP_LOG" 2>&1

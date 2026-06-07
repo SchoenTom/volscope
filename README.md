@@ -21,7 +21,7 @@ a vol desk reads: IV rank, a volatility cone, a time-travelling term structure,
 **own** Black-Scholes solver, **never** Yahoo's IV. The volatility screen you'd
 otherwise rent from Bloomberg, running in a browser tab on your own machine.
 
-> **▶ Get started in one click:** download the ZIP, double-click **`VolScope.app`** — no terminal, no commands. [Full steps ↓](#run-volscope--just-double-click)
+> **▶ Get started:** download the ZIP → one quick one-time setup → then it's just a double-click on the **VolScope** icon. [How ↓](#-run-volscope)
 
 ## Why VolScope
 
@@ -50,25 +50,32 @@ machine. What makes it strong:
   estimator is property-tested, and analytics never crash the UI — bad
   input returns nothing, not an exception.
 
-## Run VolScope — just double-click
+## ▶ Run VolScope
 
-**No terminal. No commands.** Download, unzip, double-click **`VolScope.app`**.
+Download the ZIP from GitHub and unzip it — you'll get a `volscope-…` folder
+with a **VolScope** app icon inside. It runs in two small steps: a one-time
+setup, then a double-click forever after.
 
-1. On the [repo page](https://github.com/SchoenTom/volscope): **Code ▸ Download ZIP**, then unzip.
-2. Double-click **`VolScope.app`**. The first launch quietly builds a private
-   environment and fetches a starter universe (~2 min, one time only); every
-   launch after that opens in a couple of seconds.
-3. VolScope opens in its own clean window. Quit it like any app (Dock → Quit)
-   to stop the local server.
+> **Why a one-time step?** macOS strips the "this file may run" flag from
+> anything downloaded as a ZIP (a built-in security default — nothing to do with
+> VolScope). So the **first** launch goes through Terminal once to install
+> VolScope's private environment. That same step re-enables the flag, so from
+> then on the **`VolScope.app`** icon opens with a normal double-click.
 
-> **First time only — macOS Gatekeeper.** Because the app isn't code-signed,
-> macOS asks once: **right-click `VolScope.app` → Open → Open**. A normal
-> double-click works ever after. *(If Finder still refuses, the included
-> `Start VolScope.command` does the exact same thing.)*
+### ① First launch — once (~2 min)
 
-Needs **Python 3.11+** installed on your Mac — the app builds its own isolated
-environment and never touches your system Python. Everything runs locally; no
-account, no subscription, no data leaves your machine.
+1. **Download & unzip.** On the [repo page](https://github.com/SchoenTom/volscope): **Code ▸ Download ZIP**, then double-click the downloaded ZIP to unzip it.
+2. **Open Terminal.** Press **⌘ + Space**, type `Terminal`, press **Enter**.
+3. In the Terminal window type **`bash `** (the word *bash* followed by one space) — then **drag the `Start VolScope.command` file** from the unzipped folder onto the Terminal window. Its full location fills in for you.
+4. Press **Enter**. VolScope installs its environment, fetches a starter
+   universe, and opens. ☕ (~2 minutes — only this first time.)
+
+### ② Every time after that
+
+Just **double-click `VolScope.app`** 🟢 — it opens in its own clean window in a
+couple of seconds. Quit it like any app (**Dock → Quit**) to stop the local server.
+
+> *Requires **Python 3.11+** on your Mac (free from [python.org](https://www.python.org/downloads/)). VolScope builds its own isolated environment and never touches your system Python. Everything runs locally — no account, no subscription, no data ever leaves your machine.*
 
 <details>
 <summary><b>Developer / command-line setup</b></summary>
