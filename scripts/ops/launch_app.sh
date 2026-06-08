@@ -56,13 +56,29 @@ if curl -sf "$HEALTH" >/dev/null 2>&1; then
   exit 0
 fi
 
+_py_ok() { "$1" -c 'import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 11) else 1)' 2>/dev/null; }
+
 find_python() {
-  local c p
-  for c in python3.13 python3.12 python3.11 python3; do
+  # When launched from Finder (the .app icon), $PATH is the minimal launchd
+  # one — it does NOT include Homebrew / Anaconda / python.org. So search the
+  # PATH first, then the common install locations explicitly, so the icon
+  # finds the same Python the user's Terminal would.
+  local c d p names dirs
+  names="python3.13 python3.12 python3.11 python3"
+  for c in $names; do
     p="$(command -v "$c" 2>/dev/null)" || continue
-    if "$p" -c 'import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 11) else 1)' 2>/dev/null; then
-      echo "$p"; return 0
-    fi
+    _py_ok "$p" && { echo "$p"; return 0; }
+  done
+  dirs="/opt/homebrew/bin /usr/local/bin /opt/anaconda3/bin \
+        $HOME/anaconda3/bin $HOME/miniconda3/bin $HOME/miniforge3/bin \
+        /Library/Frameworks/Python.framework/Versions/3.13/bin \
+        /Library/Frameworks/Python.framework/Versions/3.12/bin \
+        /Library/Frameworks/Python.framework/Versions/3.11/bin"
+  for d in $dirs; do
+    for c in $names; do
+      p="$d/$c"
+      [ -x "$p" ] && _py_ok "$p" && { echo "$p"; return 0; }
+    done
   done
   return 1
 }
